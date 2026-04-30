@@ -71,21 +71,32 @@ fastTrack (intent="meteen contact met sales") skipt:
 
 **Stage** is afgeleid uit gedrag (niet gevraagd). Volgorde: `sales_ready > koopintentie > vergelijkend > orienterend > nieuwsgierig`. Logica in `deriveStage()`.
 
-## Tone of voice — STRICT
+## Tone of voice
 
-> Alle chat-copy: **lowercase + geen leestekens**. Geen punten, komma's, vraagtekens, bullet-points, em-dashes of interpuncten.
+**Default rule: lowercase + geen leestekens.** Geen punten, em-dashes (`—`), interpuncten (`·`) of bullet-points in normale chat-copy.
 
-Wel toegestaan:
+**Uitzondering: warme/persoonlijke momenten** (lead-capture, sales-ready bevestigingen) mogen `?`, `,` en `!` gebruiken voor warmte. Voorbeeld lead-capture:
+- ✅ `"wat is je naam?"`
+- ✅ `"mag ik je e-mail adres, zodat ik je de brochure alvast kan mailen?"`
+- ✅ `"dank! ik zorg dat deze zo direct naar je wordt gemaild"`
+
+**Functionele bot-vragen** (intent, focus, timeline, size, followup) blijven terse zonder vraagteken:
+- ✅ `"waar ben je vooral benieuwd naar"`
+- ✅ `"wanneer zou je willen kopen of starten"`
+
+**Chip-labels altijd schoon** — geen vraagtekens of komma's:
+- ✅ `"beschikbare units"` `"liever niet"` `"geschikt als belegging"`
+- ❌ `"liever niet?"` `"geschikt als belegging?"`
+
+Wel altijd toegestaan:
 - ALL-CAPS labels met letter-spacing (`tracking-[0.18em]`) — REPP brandbook subheader stijl
 - Cijfers, `€`, `m²`, percent-tekens
 - Brand display "De Hofman" mag titlecase blijven (bv. in IntroScreen hero)
 
-Voorbeelden:
-- ✅ `"hoi ik ben jesse van repp"`
-- ✅ `"wat is je voornaam en je mailadres"`
-- ✅ `"helder de l units zijn nu het meest concreet beschikbaar xl is uit en xxl volgt later"`
-- ❌ `"Hoi, ik ben Jesse van REPP."`
-- ❌ `"Begin · 60 seconden"` (`·` is een leesteken)
+Anti-patterns:
+- ❌ `"Hoi, ik ben Jesse van REPP."` (titlecase + brandnaam in caps in chat)
+- ❌ `"Begin · 60 seconden"` (`·` interpunct)
+- ❌ `"helder, voor jou..."` in functionele bot-vraag (komma in terse copy)
 
 Voor placeholder/fallback tekst gebruik `'nog niet'` ipv `'—'`.
 

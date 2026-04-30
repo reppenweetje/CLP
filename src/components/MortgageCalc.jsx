@@ -34,7 +34,7 @@ export default function MortgageCalc({ price, indicative = false }) {
         <div className="text-[12px] text-ink-soft">per maand</div>
       </div>
       <div className="text-[11px] text-ink-mute leading-snug">
-        lening €{formatEuro(loan)} · prijs €{formatEuro(price)}{indicative ? ' indicatief' : ''}
+        lening €{formatEuro(loan)} bij prijs €{formatEuro(price)}{indicative ? ' indicatief' : ''}
       </div>
 
       <div className="mt-4 space-y-3">

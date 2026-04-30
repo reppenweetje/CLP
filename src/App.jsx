@@ -213,13 +213,13 @@ export default function App() {
     if (q === 'intent') {
       // fast track meteen contact slaat focus en flow over
       if (opt.fastTrack) {
-        dispatch({ type: 'ANSWER', key: 'intent', value: opt, next: 'lead' })
+        dispatch({ type: 'ANSWER', key: 'intent', value: opt, next: 'lead-name' })
         dispatch({
           type: 'APPEND',
           messages: [
             { kind: 'user-text', text: userTextFromOpt(opt) },
-            { kind: 'bot-text', text: 'top dan brengen we je vandaag nog in contact' },
-            { kind: 'bot-text', text: 'wat is je voornaam en je mailadres' },
+            { kind: 'bot-text', text: 'top, dan brengen we je vandaag nog in contact' },
+            { kind: 'bot-text', text: 'wat is je naam?' },
           ],
         })
         return
@@ -242,14 +242,14 @@ export default function App() {
       const merged = { ...state.answers, focus: opt }
       const personaNext = derivePersona(merged)
       const microIntro = pickMicroIntro(personaNext, state.answers.intent)
-      dispatch({ type: 'ANSWER', key: 'focus', value: opt, next: 'lead' })
+      dispatch({ type: 'ANSWER', key: 'focus', value: opt, next: 'lead-name' })
       dispatch({
         type: 'APPEND',
         messages: [
           { kind: 'user-text', text: userTextFromOpt(opt) },
           { kind: 'bot-text', text: microIntro },
           { kind: 'gallery', payload: { images: project.gallery, intro: 'een paar sfeerbeelden van de hofman' } },
-          { kind: 'bot-text', text: 'wat is je voornaam en je mailadres' },
+          { kind: 'bot-text', text: 'wat is je naam?' },
         ],
       })
       return
@@ -354,18 +354,19 @@ export default function App() {
 
   const onChatInputSend = (text) => {
     const q = state.currentQuestion
-    if (q === 'lead') {
-      handleLeadFreeText(text)
+    if (q === 'lead-name') {
+      handleLeadNameText(text)
+    } else if (q === 'lead-email') {
+      handleLeadEmailText(text)
     } else if (q === 'lead-phone') {
       handleLeadPhoneText(text)
     }
   }
 
-  function handleLeadFreeText(text) {
+  function handleLeadNameText(text) {
     const parsed = parseLeadInput(text)
     const draft = mergeLead(state.leadDraft, parsed)
     const userBubble = { kind: 'user-text', text }
-    const triedEmail = text.includes('@')
 
     if (!draft.firstName && !draft.email) {
       dispatch({ type: 'LEAD_DRAFT', draft })
@@ -373,16 +374,57 @@ export default function App() {
         type: 'APPEND',
         messages: [
           userBubble,
-          {
-            kind: 'bot-text',
-            text: triedEmail
-              ? 'het mailadres lijkt niet helemaal te kloppen kun je je voornaam en mailadres opnieuw typen'
-              : 'kreeg er even nog geen voornaam en mailadres uit kun je het opnieuw proberen',
-          },
+          { kind: 'bot-text', text: 'kreeg je naam niet helemaal mee, kun je het opnieuw typen?' },
         ],
       })
       return
     }
+
+    // user gaf naam plus email in 1 keer skip de email vraag
+    if (draft.email && draft.firstName) {
+      dispatch({ type: 'LEAD_DRAFT', draft })
+      dispatch({
+        type: 'APPEND',
+        messages: [
+          userBubble,
+          { kind: 'bot-text', text: 'dank! ik zorg dat deze zo direct naar je wordt gemaild' },
+          { kind: 'bot-text', text: 'wil je ook je 06 delen zodat ik je ook via whatsapp persoonlijk kan helpen?' },
+        ],
+      })
+      dispatch({ type: 'SET_QUESTION', next: 'lead-phoneAsk' })
+      return
+    }
+
+    // alleen email gegeven geen naam
+    if (draft.email && !draft.firstName) {
+      dispatch({ type: 'LEAD_DRAFT', draft })
+      dispatch({
+        type: 'APPEND',
+        messages: [
+          userBubble,
+          { kind: 'bot-text', text: 'dankje! en hoe heet je?' },
+        ],
+      })
+      return
+    }
+
+    // naam binnen vraag email apart
+    dispatch({ type: 'LEAD_DRAFT', draft })
+    dispatch({
+      type: 'APPEND',
+      messages: [
+        userBubble,
+        { kind: 'bot-text', text: 'mag ik je e-mail adres, zodat ik je de brochure alvast kan mailen?' },
+      ],
+    })
+    dispatch({ type: 'SET_QUESTION', next: 'lead-email' })
+  }
+
+  function handleLeadEmailText(text) {
+    const parsed = parseLeadInput(text)
+    const draft = mergeLead(state.leadDraft, parsed)
+    const userBubble = { kind: 'user-text', text }
+    const triedEmail = text.includes('@')
 
     if (!draft.email) {
       dispatch({ type: 'LEAD_DRAFT', draft })
@@ -393,40 +435,22 @@ export default function App() {
           {
             kind: 'bot-text',
             text: triedEmail
-              ? `dankje ${draft.firstName.toLowerCase()} het mailadres pakte ik niet helemaal op kun je het opnieuw tikken`
-              : `dankje ${draft.firstName.toLowerCase()} en je mailadres`,
+              ? 'het mailadres lijkt niet helemaal te kloppen, kun je het opnieuw tikken?'
+              : 'kreeg er geen mailadres uit, kun je het opnieuw typen?',
           },
         ],
       })
       return
     }
 
-    if (!draft.firstName) {
-      dispatch({ type: 'LEAD_DRAFT', draft })
-      dispatch({
-        type: 'APPEND',
-        messages: [
-          userBubble,
-          { kind: 'bot-text', text: 'kreeg je mailadres en hoe heet je' },
-        ],
-      })
-      return
-    }
-
-    // beide gevonden eventueel ook telefoon
-    if (draft.phone) {
-      finishLead(draft, [userBubble])
-      return
-    }
-
-    // tweede vraag apart phoneAsk chips
+    // email binnen
     dispatch({ type: 'LEAD_DRAFT', draft })
     dispatch({
       type: 'APPEND',
       messages: [
         userBubble,
-        { kind: 'bot-text', text: `dankje ${draft.firstName.toLowerCase()} de brochure stuur ik straks naar ${draft.email}` },
-        { kind: 'bot-text', text: 'wil je ook je 06 zodat ik je via whatsapp persoonlijk kan helpen' },
+        { kind: 'bot-text', text: 'dank! ik zorg dat deze zo direct naar je wordt gemaild' },
+        { kind: 'bot-text', text: 'wil je ook je 06 delen zodat ik je ook via whatsapp persoonlijk kan helpen?' },
       ],
     })
     dispatch({ type: 'SET_QUESTION', next: 'lead-phoneAsk' })
@@ -536,8 +560,10 @@ export default function App() {
         { id: 'no', label: 'liever niet' },
       ],
     }
-  } else if (state.currentQuestion === 'lead') {
-    inputConfig = { placeholder: 'voornaam en mailadres', inputMode: 'email' }
+  } else if (state.currentQuestion === 'lead-name') {
+    inputConfig = { placeholder: 'je naam', inputMode: undefined }
+  } else if (state.currentQuestion === 'lead-email') {
+    inputConfig = { placeholder: 'je e-mail adres', inputMode: 'email' }
   } else if (state.currentQuestion === 'lead-phone') {
     inputConfig = { placeholder: '06 12 34 56 78', inputMode: 'tel', validate: isValidPhoneText }
   }
