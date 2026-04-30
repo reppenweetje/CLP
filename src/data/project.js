@@ -255,7 +255,6 @@ export const project = {
   ],
 
   whatsappNumber: '+31612345678',
-  // brochure pdf url voor in chat bekijken en op thankyou cta
-  // vervang door werkelijke gehoste pdf url productie
-  brochureUrl: 'https://repp.nl/dehofman/brochure.pdf',
+  // brochure pdf wordt direct vanuit public uitgeleverd door vercel
+  brochureUrl: '/brochure.pdf',
 }

@@ -1,15 +1,20 @@
 # REPP · Conversational Landing Page (CLP)
 
-Mobile-first conversational landing page demo voor REPP — pilot **De Hofman**
-(14 hoogwaardige bedrijfsunits in Haarlem Waarderpolder).
+Mobile-first conversational landing page demo voor REPP — pilot **De Hofman**, 14 hoogwaardige bedrijfsunits in Haarlem Waarderpolder.
 
-Doel van de demo: bewijzen dat een gestructureerde conversational flow op mobiel
-beter werkt dan een klassieke landingspagina, door:
+> Voelt als chat, werkt als een gestructureerde verkoopassistent. Niet één centraal lead-formulier maar een doorlopende thread met chips en vrije-tekst input. Bouwt persona, aankoopfase en leadscore op uit gedrag — sales krijgt een compleet profiel terug.
 
-- aankoopfase herkennen uit gedrag (i.p.v. expliciet vragen),
-- vroeg maar logisch lead-gegevens verzamelen,
-- snackable content op het juiste moment,
-- en sales een duidelijk profiel + actieadvies geven.
+## Voor wie
+
+- **REPP intern** — om te beoordelen of een conversational-mobile-first flow beter werkt dan een klassieke landingspagina voor social-ad traffic
+- **Pilotproject De Hofman** — werkelijke prijzen + actuele beschikbaarheid van de 14 units uit `kopen.repp.nl`
+- **Architectuur is herbruikbaar** voor andere REPP-projecten (Project R, etc.) — vervang `src/data/project.js`
+
+## Live demo
+
+Vercel deploy van `main`. URL volgt na eerste import in Vercel-org.
+
+URL-tip: append `?debug=1` om het interne demo-paneel direct te openen — zichtbaar voor REPP, onzichtbaar voor consument in productie.
 
 ## Run lokaal
 
@@ -18,106 +23,94 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`. Voeg `?debug=1` toe om het demo-paneel direct
-geopend te zien (zichtbaar voor REPP, onzichtbaar voor consumenten).
-
-## Build
+Open `http://localhost:5174` (poort vanwege parallelle dev-servers in deze workspace).
 
 ```bash
-npm run build
+npm run build      # production bundle in dist/
+npm run preview    # preview de build lokaal
 ```
 
-Output staat in `dist/`. Vercel deployt automatisch met deze setup (Vite
-zero-config).
+## Voor Claude Code sessies
 
-## Architectuur
+Lees [CLAUDE.md](CLAUDE.md) — conventies, valkuilen, REPP huisstijl tokens, en een task-recipe voor copy aanpassen, nieuwe bubbles toevoegen of een ander project in de demo zetten.
 
-```
-src/
-  data/
-    project.js           — alle De Hofman content (vervangbaar per project)
-    flow.js              — vragen, keuzes, scores
-  lib/
-    scoring.js           — score, persona, aankoopfase, temperatuur
-    recommendation.js    — content-cards, unitadvies, salesactie, copy
-  components/
-    AppShell.jsx         — sticky header, progress, debug-toggle
-    IntroScreen.jsx
-    QuestionStep.jsx     — generiek voor alle keuze-vragen
-    MicroValue.jsx       — eerste waarde voor de leadform
-    LeadForm.jsx         — voornaam + e-mail + optioneel 06
-    Recommendation.jsx   — unit + content advies
-    ThankYou.jsx         — afsluitscherm + WhatsApp deeplink
-    DebugPanel.jsx       — interne demo-view
-    ChoiceButton.jsx
-    BotBubble.jsx
-    ContentCard.jsx
-    ProgressIndicator.jsx
-  App.jsx                — orchestratie + state (useReducer)
-```
-
-## Flow
+## Wat de demo doet
 
 ```
-intro → intent → focus(persona-variant) → microValue
-      → leadForm → timeline → size → recommendation
-      → followup → thankyou
+intro
+  ↓ ┌──────────────────────── fast-track ────────────────────────┐
+  ↓ │                                                              │
+intent (5 chips)                                                    │
+  ↓                                                                 │
+focus (persona-variant)                                             │
+  ↓                                                                 │
+micro-value (gallery + 1 zin context)                               │
+  ↓                                                                 │
+lead capture (vrije-tekst → regex parser)                          ←┘
+  ↓
+phone-ask (chips ja/nee)
+  ↓
+timeline (5 chips)
+  ↓
+size (5 chips)
+  ↓
+recommendation (unit-card + content)
+  ↓
+moreInfo branch (5-6 chips, optional rich content drilldowns)
+  ↓
+followup (5 chips)
+  ↓
+thankyou (cta-card met WhatsApp deeplink + brochure)
 ```
 
-- **intent**: één keuze, signaleert (impliciet) intentie + persona.
-- **focus**: variant op basis van persona — eigen-gebruiker krijgt gebruiksvraag,
-  belegger krijgt prioriteit-vraag, onbekend krijgt eigenaar/belegger-vraag.
-- **microValue**: 1 zin context + 1 contentcard die past bij gegeven antwoorden.
-  Pas hier vragen we naam/e-mail/06 — gegevens als verdiende ruil.
-- **timeline + size**: na lead, om persona te verrijken voor unit-advies en
-  aankoopfase.
-- **recommendation**: aanbevolen unit (L of XXL) + 4 content-cards op maat.
-- **followup**: hoe wil je verder — bepaalt sales-ready stage.
-- **thankyou**: WhatsApp deeplink met geprefilled bericht + brochure-CTA.
+**Aankoopfase** wordt afgeleid uit gedrag (niet gevraagd):
+- nieuwsgierig · oriënterend · vergelijkend · koopintentie · sales-ready
 
-## Aankoopfase
+## Belangrijkste features
 
-Afgeleid uit antwoorden (niet expliciet gevraagd):
+| Feature | Wat het doet |
+|---|---|
+| **Chat-thread layout** | Cumulative bubbles met REPP-avatar, chips of input sticky onder |
+| **Vrije-tekst lead capture** | Geen 3-velden formulier — user typt vrij, regex parser haalt naam/mail/06 eruit. 1Password-vriendelijk |
+| **Persona-fork** | Eigen-gebruiker / belegger / onbekend bepaalt focus-vraag, content cards, copy en sales-actie |
+| **Site-plan met live status** | 14 units gekleurd (beschikbaar / verkocht / verkocht ov / coming soon) — tap voor m² + prijs detail |
+| **Maandlast-calculator** | Sliders voor eigen vermogen + rente, live update van geschatte maandlast (20 jaar annuïtair) |
+| **Rich content bubbles** | Gallery (snap-carousel), locatie (drone + reistijd-pills), prijslijst, aankoopproces, planning, highlights, belegger-voordelen, brochure |
+| **MoreInfo branch** | Tussen recommendation en followup kan user zelf onderwerpen kiezen om uit te diepen — past bij elke aankoopfase |
+| **WhatsApp escape** | Permanent icoon in header voor ultra-hot leads |
+| **FastTrack** | "Meteen contact met sales"-chip skipt de hele flow naar sales-ready |
+| **Persistent state** | localStorage — refresh herstelt de hele thread |
+| **Demo-paneel** | Aankoopfase + temperatuur + score + persona + alle antwoorden + risico-afhaak voor sales-evaluatie |
 
-| Fase           | Signaal                                                |
-|----------------|--------------------------------------------------------|
-| Nieuwsgierig   | "Ik kijk gewoon even rond" + geen termijn              |
-| Oriënterend    | Focus ingevuld, termijn 6mnd+/onbekend                 |
-| Vergelijkend   | Prijzen/plattegronden gekozen, termijn 3-12mnd         |
-| Koopintentie   | Termijn ≤3mnd + concrete grootte/intentie              |
-| Sales-ready    | Vervolg = WhatsApp nu, bel mij, of plan afspraak       |
+## Tech keuzes
 
-## Leadscore
+| Keuze | Waarom |
+|---|---|
+| Vite + React + Tailwind v4 | Snel scaffolden, geen TS overhead voor demo, v4 met `@theme` tokens past bij REPP design system |
+| Geen TS | Demo-snelheid; product-stadium is moment om TS te introduceren |
+| useReducer + localStorage | Eenvoudig + persistent zonder Redux of Zustand voor deze scope |
+| Regex parser voor lead-input | Demo werkt zonder LLM; later vervang `parseLeadInput()` door Anthropic API call met dezelfde return-shape |
+| Geen `<form>` of `autocomplete=` | 1Password / LastPass / Chrome Autofill triggeren niet — voelt echt als chat |
+| Tailwind v4 `@theme` in CSS | REPP brand tokens centraal in `src/index.css`, zonder aparte config file |
 
-Optelsom van alle keuzes + lead-gegevens. Zie `src/lib/scoring.js`.
-Indicatief: 0-30 cold, 30-60 warm, 60-100 hot, 100+ sales-ready.
+## Documentatie
 
-## Re-use voor andere REPP-projecten
+- [CLAUDE.md](CLAUDE.md) — conventies, architectuur, anti-patterns voor Claude Code sessies
+- [src/data/project.js](src/data/project.js) — alle De Hofman content op één plek
+- [src/data/flow.js](src/data/flow.js) — vragen, chip-opties, scores
+- [src/lib/scoring.js](src/lib/scoring.js) — persona, stage, temperatuur, leadscore-logica
+- [src/lib/recommendation.js](src/lib/recommendation.js) — unit-advies, copy-keuzes, salesactie
 
-`src/data/project.js` en (delen van) `src/data/flow.js` vervangen volstaat
-voor een ander project. UI en scoring blijven gelijk. Voor projectspecifieke
-focus-varianten kunnen extra `focus_*`-vragen in `flow.js` toegevoegd worden.
+## Roadmap
 
-## Demo-mode
+Zie [CLAUDE.md](CLAUDE.md#roadmap) voor de volgorde. Top-3 productie-stappen:
 
-Debug-paneel toont:
-- aankoopfase + temperatuur
-- score + persona
-- alle antwoorden + lead-gegevens
-- aanbevolen content-cards, unit en salesactie
-- afhaak-risico
+1. **AI-mode na lead-capture** — vervang scripted vragen door Claude API met function-calling. Architectuur is klaar.
+2. **CRM-koppeling op `finishLead()`** — single point van capture, drop-in `POST /api/lead`.
+3. **Live unit-status uit `kopen.repp.nl`** — voorkom drift met de werkelijke verkoop.
 
-Open via "DEMO"-knop rechtsboven, of `?debug=1` in URL.
-
-## Wat de demo bewust **niet** is
-
-- geen echte CRM-koppeling
-- geen echte mail
-- geen echte WhatsApp API (deeplink wel — `wa.me/...`)
-- geen multi-projectkeuze (één project per build)
-- geen A/B-tooling
-
-## Tech stack
+## Stack
 
 - Vite 5 · React 18 · Tailwind v4 (`@tailwindcss/vite`)
-- Vercel-compatible (zero-config)
+- Vercel zero-config deploy
+- Bundle: ~200KB JS · ~37KB CSS · 11MB brochure-PDF static
