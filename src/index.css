@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
+
+  --color-paper: #ffffff;
+  --color-canvas: #f7f6f1;
+  --color-canvas-2: #efeee8;
+  --color-mist: #d8d6d6;
+  --color-mist-light: #ebeae5;
+  --color-ink: #1d1d1f;
+  --color-ink-soft: #6b6a66;
+  --color-ink-mute: #9a9893;
+
+  --color-midnite: #0f0f70;
+  --color-midnite-soft: #1b1b8a;
+  --color-klein: #1b23aa;
+  --color-neon: #edff00;
+  --color-gold: #c9a45c;
+}
+
+html, body, #root {
+  height: 100%;
+  background: var(--color-canvas);
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
+}
+
+input, textarea, button, select {
+  font-family: inherit;
+  font-size: 16px;
+}
+
+*::-webkit-scrollbar { width: 6px; height: 6px; }
+*::-webkit-scrollbar-thumb { background: rgba(15,15,112,0.12); border-radius: 999px; }
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fade-up 0.32s ease-out both; }
+
+@keyframes dot-bounce {
+  0%, 80%, 100% { transform: scale(0.55); opacity: 0.45; }
+  40% { transform: scale(1); opacity: 1; }
+}
+.typing-dot { animation: dot-bounce 1.2s infinite ease-in-out both; }
+.typing-dot:nth-child(2) { animation-delay: 0.16s; }
+.typing-dot:nth-child(3) { animation-delay: 0.32s; }
+
+/* Onderstreping-only input style passend bij REPP brandbook */
+.repp-underline-input {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--color-mist);
+  border-radius: 0;
+  padding: 10px 0;
+  width: 100%;
+  font-size: 16px;
+  color: var(--color-ink);
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+.repp-underline-input::placeholder { color: var(--color-ink-mute); }
+.repp-underline-input:focus { border-color: var(--color-midnite); }
+
+/* Pill-knop varianten */
+.repp-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 12px 22px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  transition: all 0.18s ease;
+}

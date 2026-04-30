@@ -1,0 +1,28 @@
+import Avatar from './Avatar.jsx'
+
+// content card als bot bubble compact mooie kaart in de chat
+export default function ContentBubble({ tag, title, body, image }) {
+  return (
+    <div className="flex gap-2.5 items-start fade-up">
+      <Avatar />
+      <div className="flex-1 min-w-0">
+        <div className="rounded-3xl rounded-tl-md overflow-hidden bg-paper border border-mist-light">
+          {image && (
+            <div className="aspect-[16/9] overflow-hidden bg-canvas-2">
+              <img src={image} alt="" className="w-full h-full object-cover" />
+            </div>
+          )}
+          <div className="p-4">
+            {tag && (
+              <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium">
+                {tag}
+              </div>
+            )}
+            <div className="text-[15px] font-semibold text-ink leading-snug mt-1.5">{title}</div>
+            <div className="text-[13px] text-ink-soft leading-relaxed mt-1.5">{body}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
