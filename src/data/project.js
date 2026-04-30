@@ -48,32 +48,33 @@ export const project = {
     },
   },
 
-  // 14 units site plan (situatietekening)
-  // posities zijn schematisch 2 rijen van 7 of vergelijkbaar voor het demo grid
+  // 14 units site plan
+  // statuses zoals op kopen repp nl beschikbaar verkocht verkocht ov gereserveerd plus coming soon
   sitePlan: {
     rows: [
       { units: [
-        { id: 'u01', type: 'L', state: 'sold' },
-        { id: 'u02', type: 'L', state: 'sold' },
-        { id: 'u03', type: 'L', state: 'available' },
-        { id: 'u04', type: 'L', state: 'available' },
-        { id: 'u05', type: 'L', state: 'reserved' },
-        { id: 'u06', type: 'L', state: 'sold' },
-        { id: 'u07', type: 'L', state: 'available' },
+        { number: 1, type: 'L', state: 'sold' },
+        { number: 2, type: 'L', state: 'sold' },
+        { number: 3, type: 'L', state: 'available' },
+        { number: 4, type: 'L', state: 'available' },
+        { number: 5, type: 'L', state: 'reserved' },
+        { number: 6, type: 'L', state: 'sold_ov' },
+        { number: 7, type: 'L', state: 'available' },
       ]},
       { units: [
-        { id: 'u08', type: 'XL', state: 'sold' },
-        { id: 'u09', type: 'XL', state: 'sold' },
-        { id: 'u10', type: 'XL', state: 'sold' },
-        { id: 'u11', type: 'XL', state: 'sold' },
-        { id: 'u12', type: 'XXL', state: 'coming_soon' },
-        { id: 'u13', type: 'XXL', state: 'coming_soon' },
-        { id: 'u14', type: 'XXL', state: 'coming_soon' },
+        { number: 8, type: 'XL', state: 'sold' },
+        { number: 9, type: 'XL', state: 'sold' },
+        { number: 10, type: 'XL', state: 'sold' },
+        { number: 11, type: 'XL', state: 'sold' },
+        { number: 12, type: 'XXL', state: 'coming_soon' },
+        { number: 13, type: 'XXL', state: 'coming_soon' },
+        { number: 14, type: 'XXL', state: 'coming_soon' },
       ]},
     ],
     legend: [
       { state: 'available', label: 'beschikbaar' },
-      { state: 'reserved', label: 'in optie' },
+      { state: 'reserved', label: 'gereserveerd' },
+      { state: 'sold_ov', label: 'verkocht ov' },
       { state: 'sold', label: 'verkocht' },
       { state: 'coming_soon', label: 'later in verkoop' },
     ],

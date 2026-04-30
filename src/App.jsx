@@ -43,7 +43,7 @@ function reducer(state, action) {
         ...state,
         view: 'chat',
         messages: [
-          { id: nextId(), kind: 'bot-text', text: 'hoi ik ben r van repp' },
+          { id: nextId(), kind: 'bot-text', text: 'hoi ik ben jesse van repp' },
           { id: nextId(), kind: 'bot-text', text: 'ik help je in 60 seconden ontdekken wat de hofman voor jou interessant maakt' },
           { id: nextId(), kind: 'bot-text', text: intentQ.label },
         ],
@@ -135,9 +135,10 @@ function buildMoreInfoMessages(id) {
   }
 }
 
+// strict nl mobiel 06 plus 8 cijfers of plus 316 plus 8 cijfers
 function isValidPhoneText(text) {
   const stripped = (text || '').replace(/[\s-]/g, '')
-  return /(?:\+?316|06)\d{8}/.test(stripped)
+  return /^(?:\+316\d{8}|316\d{8}|06\d{8})$/.test(stripped)
 }
 
 export default function App() {
@@ -302,6 +303,7 @@ export default function App() {
     const draft = mergeLead(state.leadDraft, parsed)
 
     const userBubble = { kind: 'user-text', text }
+    const triedEmail = text.includes('@')
 
     if (!draft.firstName && !draft.email) {
       dispatch({ type: 'LEAD_DRAFT', draft })
@@ -309,7 +311,12 @@ export default function App() {
         type: 'APPEND',
         messages: [
           userBubble,
-          { kind: 'bot-text', text: 'kreeg er even niet helemaal uit wat je naam en mailadres zijn kun je ze opnieuw typen' },
+          {
+            kind: 'bot-text',
+            text: triedEmail
+              ? 'het mailadres lijkt niet helemaal te kloppen kun je je voornaam en mailadres opnieuw typen'
+              : 'kreeg er even nog geen voornaam en mailadres uit kun je het opnieuw proberen',
+          },
         ],
       })
       return
@@ -321,7 +328,12 @@ export default function App() {
         type: 'APPEND',
         messages: [
           userBubble,
-          { kind: 'bot-text', text: `dankje ${draft.firstName.toLowerCase()} en je mailadres` },
+          {
+            kind: 'bot-text',
+            text: triedEmail
+              ? `dankje ${draft.firstName.toLowerCase()} het mailadres pakte ik niet helemaal op kun je het opnieuw tikken`
+              : `dankje ${draft.firstName.toLowerCase()} en je mailadres`,
+          },
         ],
       })
       return
@@ -380,7 +392,10 @@ export default function App() {
       type: 'APPEND',
       messages: [
         ...prependMessages,
-        { kind: 'bot-text', text: `dankje ${lead.firstName.toLowerCase()}` },
+        {
+          kind: 'bot-text',
+          text: `top ${lead.firstName.toLowerCase()} de brochure plattegronden en prijslijst stuur ik nu naar ${lead.email}`,
+        },
         { kind: 'bot-text', text: flow.questions.timeline.label },
       ],
     })

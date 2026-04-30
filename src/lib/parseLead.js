@@ -2,7 +2,8 @@
 // werkt zonder llm voor de demo straks vervangbaar door een echte ai call
 // die ook nuance kan oppakken zoals tikfouten variaties of context
 
-const EMAIL_RE = /([a-z0-9._+-]+)@([a-z0-9-]+\.[a-z0-9.-]+)/i
+// stricter email check vereist minimaal 1 char voor de dot en 2 char tld
+const EMAIL_RE = /([a-z0-9._%+-]+)@([a-z0-9-]+\.[a-z]{2,})/i
 // strip alle spaties en streepjes uit de tekst voordat we hierop matchen
 const PHONE_STRIPPED_RE = /(?:\+?316|06)\d{8}/
 const FILLER_RE = /\b(ik|ben|heet|en|is|mijn|naam|email|mailadres|mail|adres|telefoon|nummer|tel|bereikbaar|op|via|kan|me|bellen|whatsappen|whatsapp|prima|hoor|hi|hallo|hoi|graag|gewoon|via|de|het|een|noem|met|maar|of|ook)\b/gi

@@ -21,8 +21,7 @@ export const flow = {
       options: [
         { id: 'units_beschikbaar', label: 'beschikbare units', score: 25 },
         { id: 'prijzen_plattegronden', label: 'prijzen en plattegronden', score: 20 },
-        { id: 'past_bij_bedrijf', label: 'past bij mijn bedrijf', score: 15, persona: 'eigen_gebruiker' },
-        { id: 'belegging', label: 'als belegging', score: 15, persona: 'belegger' },
+        { id: 'belegging', label: 'geschikt als belegging', score: 15, persona: 'belegger' },
         { id: 'kijkt_rond', label: 'kijk eerst even rond', score: 5 },
       ],
     },
