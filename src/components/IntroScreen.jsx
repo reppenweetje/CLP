@@ -4,7 +4,7 @@ import { project } from '../data/project.js'
 // neon cta enige neon op de hele app
 export default function IntroScreen({ onStart }) {
   return (
-    <div className="flex-1 flex flex-col mx-auto w-full max-w-md px-4 pt-2 pb-4">
+    <div className="flex-1 flex flex-col mx-auto w-full max-w-md px-4 pt-2 pb-4 overflow-y-auto">
       <div className="relative rounded-3xl overflow-hidden mb-6 fade-up bg-canvas-2">
         <img src={project.hero} alt="" className="w-full h-72 object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-paper/95 via-paper/30 to-transparent" />

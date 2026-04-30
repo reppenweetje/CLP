@@ -3,7 +3,7 @@ import ProgressIndicator from './ProgressIndicator.jsx'
 // header met repp logomark dunne goud divider en demo toggle
 export default function AppShell({ children, progress, onBack, onDebugToggle, debugOpen, hideHeader }) {
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-canvas text-ink">
+    <div className="h-[100dvh] flex flex-col bg-canvas text-ink overflow-hidden">
       {!hideHeader && (
         <header className="sticky top-0 z-20 bg-canvas/85 backdrop-blur-md">
           <div className="mx-auto w-full max-w-md px-4 h-14 flex items-center justify-between gap-3">

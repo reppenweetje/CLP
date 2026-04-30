@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef } from 'react'
+import { useEffect, useReducer } from 'react'
 import { project } from './data/project.js'
 import { flow } from './data/flow.js'
 import {
@@ -28,6 +28,7 @@ const initial = {
   messages: [],
   currentQuestion: null,
   answers: {},
+  moreInfoSeen: [],
   debugOpen: false,
 }
 
@@ -62,6 +63,9 @@ function reducer(state, action) {
       }
     }
 
+    case 'MORE_INFO_SEEN':
+      return { ...state, moreInfoSeen: [...state.moreInfoSeen, action.id] }
+
     case 'TOGGLE_DEBUG':
       return { ...state, debugOpen: !state.debugOpen }
 
@@ -73,7 +77,6 @@ function reducer(state, action) {
   }
 }
 
-// kies een korte content card en intro voor het micro value moment
 function pickMicroIntro(persona, intent) {
   if (persona === 'belegger') return 'helder voor jou tellen vooral verhuur en schaarste'
   if (intent?.id === 'units_beschikbaar') return 'helder de l units zijn nu het meest concreet beschikbaar xl is uit en xxl volgt later'
@@ -83,15 +86,6 @@ function pickMicroIntro(persona, intent) {
   return 'duidelijk we zetten direct de juiste info voor je klaar'
 }
 
-function pickMicroCardId(persona, intent) {
-  if (persona === 'belegger') return 'investor'
-  if (intent?.id === 'units_beschikbaar') return 'scarcity'
-  if (intent?.id === 'prijzen_plattegronden') return 'price'
-  if (intent?.id === 'past_bij_bedrijf') return 'features'
-  return 'project'
-}
-
-// build user message text from a chosen option
 function userTextFromOpt(opt) {
   return opt.label
 }
@@ -111,10 +105,53 @@ function buildAnswerSummary(answers) {
   return parts.join('  en  ')
 }
 
+// alle beschikbare meer info opties met persona filter
+const MORE_INFO_DEFS = {
+  location: { label: 'meer over locatie' },
+  sitePlan: { label: 'situatietekening' },
+  price: { label: 'prijslijst' },
+  planning: { label: 'planning' },
+  process: { label: 'aankoopproces' },
+  highlights: { label: 'highlights' },
+  investor: { label: 'belegger voordelen', personas: ['belegger', 'onbekend'] },
+}
+
+function moreInfoChips(persona, seen) {
+  const opts = []
+  for (const [id, def] of Object.entries(MORE_INFO_DEFS)) {
+    if (seen.includes(id)) continue
+    if (def.personas && !def.personas.includes(persona)) continue
+    opts.push({ id, label: def.label })
+  }
+  opts.push({ id: '__continue', label: 'meteen verder' })
+  return opts
+}
+
+// gegenereerde rich bubble payload op basis van id
+function buildMoreInfoMessages(id) {
+  switch (id) {
+    case 'location':
+      return [{ kind: 'location', payload: { location: project.location, projectName: project.displayName } }]
+    case 'sitePlan':
+      return [{ kind: 'site-plan', payload: { sitePlan: project.sitePlan } }]
+    case 'price':
+      return [{ kind: 'price', payload: { units: project.units } }]
+    case 'planning':
+      return [{ kind: 'planning', payload: { planning: project.planning } }]
+    case 'process':
+      return [{ kind: 'process', payload: { steps: project.process } }]
+    case 'highlights':
+      return [{ kind: 'highlights', payload: { highlights: project.highlights } }]
+    case 'investor':
+      return [{ kind: 'investor', payload: { benefits: project.investorBenefits, intro: 'kort wat de hofman voor beleggers interessant maakt' } }]
+    default:
+      return []
+  }
+}
+
 export default function App() {
   const [state, dispatch] = useReducer(reducer, initial)
 
-  // ?debug=1 opent debug panel direct
   useEffect(() => {
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
@@ -130,7 +167,6 @@ export default function App() {
 
   const start = () => dispatch({ type: 'START_CHAT' })
 
-  // when user picks a chip we append messages and set next question
   const onChipPick = (opt) => {
     const q = state.currentQuestion
     if (!q) return
@@ -154,18 +190,16 @@ export default function App() {
       const merged = { ...state.answers, focus: opt }
       const personaNext = derivePersona(merged)
       const microIntro = pickMicroIntro(personaNext, state.answers.intent)
-      const cardId = pickMicroCardId(personaNext, state.answers.intent)
-      const card = project.contentCards.find((c) => c.id === cardId)
       dispatch({ type: 'ANSWER', key: 'focus', value: opt, next: null })
       dispatch({
         type: 'APPEND',
         messages: [
           { kind: 'user-text', text: userTextFromOpt(opt) },
           { kind: 'bot-text', text: microIntro },
-          card ? { kind: 'content-card', payload: card } : null,
+          { kind: 'gallery', payload: { images: project.gallery, intro: 'een paar sfeerbeelden van de hofman' } },
           { kind: 'bot-text', text: 'laat even weten hoe ik je het beste kan bereiken' },
           { kind: 'lead-form' },
-        ].filter(Boolean),
+        ],
       })
       return
     }
@@ -187,7 +221,7 @@ export default function App() {
       const unit = recommendUnit(merged, project)
       const personaNext = derivePersona(merged)
       const copy = recommendCopy(personaNext)
-      dispatch({ type: 'ANSWER', key: 'size', value: opt, next: 'followup' })
+      dispatch({ type: 'ANSWER', key: 'size', value: opt, next: 'moreInfo' })
       dispatch({
         type: 'APPEND',
         messages: [
@@ -198,9 +232,32 @@ export default function App() {
           },
           { kind: 'unit-card', payload: unit },
           { kind: 'bot-text', text: copy },
-          { kind: 'bot-text', text: flow.questions.followup.label },
+          { kind: 'bot-text', text: 'wil je nog ergens meer over weten of meteen verder' },
         ],
       })
+      return
+    }
+
+    if (q === 'moreInfo') {
+      if (opt.id === '__continue') {
+        dispatch({ type: 'ANSWER', key: '__moreInfoSkip', value: true, next: 'followup' })
+        dispatch({
+          type: 'APPEND',
+          messages: [
+            { kind: 'user-text', text: userTextFromOpt(opt) },
+            { kind: 'bot-text', text: flow.questions.followup.label },
+          ],
+        })
+      } else {
+        dispatch({ type: 'MORE_INFO_SEEN', id: opt.id })
+        dispatch({
+          type: 'APPEND',
+          messages: [
+            { kind: 'user-text', text: userTextFromOpt(opt) },
+            ...buildMoreInfoMessages(opt.id),
+          ],
+        })
+      }
       return
     }
 
@@ -246,7 +303,7 @@ export default function App() {
   const reset = () => dispatch({ type: 'RESET' })
   const toggleDebug = () => dispatch({ type: 'TOGGLE_DEBUG' })
 
-  // current question gives us the right chip-set
+  // chips voor huidige stap
   let chipQuestion = null
   if (state.currentQuestion === 'intent') chipQuestion = flow.questions.intent
   else if (state.currentQuestion === 'focus') {
@@ -254,12 +311,17 @@ export default function App() {
   } else if (state.currentQuestion === 'timeline') chipQuestion = flow.questions.timeline
   else if (state.currentQuestion === 'size') chipQuestion = flow.questions.size
   else if (state.currentQuestion === 'followup') chipQuestion = flow.questions.followup
+  else if (state.currentQuestion === 'moreInfo') {
+    chipQuestion = {
+      key: 'moreInfo',
+      label: 'meer info',
+      options: moreInfoChips(persona, state.moreInfoSeen),
+    }
+  }
 
-  // progress: count answered chip-questions (5 total: intent, focus, timeline, size, followup)
-  // + lead form. Total = 6
   const answeredCount = ['intent', 'focus', 'lead', 'timeline', 'size', 'followup']
     .filter((k) => state.answers[k]).length
-  const progress = state.view === 'chat' ? { current: Math.max(1, answeredCount + 1), total: 6 } : null
+  const progress = state.view === 'chat' ? { current: Math.min(6, Math.max(1, answeredCount + 1)), total: 6 } : null
 
   return (
     <AppShell
@@ -279,7 +341,11 @@ export default function App() {
             onReset={reset}
           />
           {chipQuestion && (
-            <SuggestedChips options={chipQuestion.options} onPick={onChipPick} />
+            <SuggestedChips
+              options={chipQuestion.options}
+              onPick={onChipPick}
+              hint={state.currentQuestion === 'moreInfo' && state.moreInfoSeen.length === 0 ? 'tap een onderwerp of ga verder' : null}
+            />
           )}
         </div>
       )}

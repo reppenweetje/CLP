@@ -3,7 +3,7 @@
 export default function SuggestedChips({ options, onPick, hint }) {
   if (!options || options.length === 0) return null
   return (
-    <div className="border-t border-mist-light bg-canvas/95 backdrop-blur-md px-4 pt-3 pb-4 sticky bottom-0">
+    <div className="border-t border-mist-light bg-canvas/95 backdrop-blur-md px-4 pt-3 pb-4 shrink-0">
       {hint && (
         <div className="text-[11px] tracking-wider text-ink-mute uppercase mb-2">{hint}</div>
       )}
