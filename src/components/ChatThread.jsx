@@ -49,7 +49,7 @@ export default function ChatThread({ messages, onBrochure, onReset }) {
           case 'location':
             return <LocationBubble key={m.id} location={m.payload.location} projectName={m.payload.projectName} />
           case 'site-plan':
-            return <SitePlanBubble key={m.id} sitePlan={m.payload.sitePlan} />
+            return <SitePlanBubble key={m.id} sitePlan={m.payload.sitePlan} units={m.payload.units} />
           case 'highlights':
             return <HighlightsBubble key={m.id} highlights={m.payload.highlights} intro={m.payload.intro} />
           case 'process':

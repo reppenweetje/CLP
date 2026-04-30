@@ -123,7 +123,7 @@ function buildMoreInfoMessages(id) {
     case 'location':
       return [{ kind: 'location', payload: { location: project.location, projectName: project.displayName } }]
     case 'sitePlan':
-      return [{ kind: 'site-plan', payload: { sitePlan: project.sitePlan } }]
+      return [{ kind: 'site-plan', payload: { sitePlan: project.sitePlan, units: project.units } }]
     case 'price':
       return [{ kind: 'price', payload: { units: project.units } }]
     case 'process':

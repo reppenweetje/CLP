@@ -48,32 +48,31 @@ export const project = {
     },
   },
 
-  // 14 units site plan
-  // statuses zoals op kopen repp nl beschikbaar verkocht verkocht ov gereserveerd plus coming soon
+  // 14 units site plan met actuele beschikbaarheid uit kopen repp nl
+  // 2 rijen van 7 xl op de hoeken xxl op de uiteinden l in het midden
   sitePlan: {
     rows: [
       { units: [
-        { number: 1, type: 'L', state: 'sold' },
+        { number: 1, type: 'XL', state: 'sold' },
         { number: 2, type: 'L', state: 'sold' },
-        { number: 3, type: 'L', state: 'available' },
+        { number: 3, type: 'L', state: 'sold' },
         { number: 4, type: 'L', state: 'available' },
-        { number: 5, type: 'L', state: 'reserved' },
-        { number: 6, type: 'L', state: 'sold_ov' },
-        { number: 7, type: 'L', state: 'available' },
+        { number: 5, type: 'L', state: 'sold_ov' },
+        { number: 6, type: 'L', state: 'available' },
+        { number: 7, type: 'XXL', state: 'coming_soon' },
       ]},
       { units: [
         { number: 8, type: 'XL', state: 'sold' },
-        { number: 9, type: 'XL', state: 'sold' },
-        { number: 10, type: 'XL', state: 'sold' },
-        { number: 11, type: 'XL', state: 'sold' },
-        { number: 12, type: 'XXL', state: 'coming_soon' },
-        { number: 13, type: 'XXL', state: 'coming_soon' },
+        { number: 9, type: 'L', state: 'sold' },
+        { number: 10, type: 'L', state: 'sold' },
+        { number: 11, type: 'L', state: 'sold_ov' },
+        { number: 12, type: 'L', state: 'available' },
+        { number: 13, type: 'L', state: 'available' },
         { number: 14, type: 'XXL', state: 'coming_soon' },
       ]},
     ],
     legend: [
       { state: 'available', label: 'beschikbaar' },
-      { state: 'reserved', label: 'gereserveerd' },
       { state: 'sold_ov', label: 'verkocht ov' },
       { state: 'sold', label: 'verkocht' },
       { state: 'coming_soon', label: 'later in verkoop' },
@@ -103,23 +102,27 @@ export const project = {
     },
     {
       type: 'XL',
-      size: 134,
+      size: 113,
       levels: 2,
+      priceFrom: 259500,
+      pricePerM2: 2296,
       state: 'sold_out',
       stateLabel: 'uitverkocht',
       uses: ['werkplaats', 'showroom', 'combinatie'],
       image: '/images/exterieur.jpg',
-      pitch: 'grotere variant inmiddels volledig verkocht',
+      pitch: 'iets ruimere variant op de hoeken inmiddels uitverkocht',
       specs: [
-        'circa 134 m² over twee lagen',
+        'circa 113 m² over twee lagen',
         'elektrische overheaddeur',
         'eigen parkeerplaats',
       ],
     },
     {
       type: 'XXL',
-      size: 191.4,
+      size: 191,
       levels: 3,
+      priceFrom: 515500,
+      pricePerM2: 2698,
       state: 'coming_soon',
       stateLabel: 'volgt later in verkoop',
       uses: ['3-laagse bedrijfsunit', 'variant met bedrijfsgebonden woning'],
