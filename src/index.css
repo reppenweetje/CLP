@@ -81,3 +81,43 @@ input, textarea, button, select {
   letter-spacing: 0.01em;
   transition: all 0.18s ease;
 }
+
+/* range slider in repp stijl */
+.repp-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: var(--color-mist-light);
+  border-radius: 999px;
+  outline: none;
+}
+.repp-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-midnite);
+  border: 2px solid var(--color-paper);
+  box-shadow: 0 1px 4px rgba(15,15,112,0.2);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.repp-range::-webkit-slider-thumb:active {
+  transform: scale(1.1);
+}
+.repp-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-midnite);
+  border: 2px solid var(--color-paper);
+  box-shadow: 0 1px 4px rgba(15,15,112,0.2);
+  cursor: pointer;
+}
+.repp-range::-moz-range-track {
+  height: 4px;
+  background: var(--color-mist-light);
+  border-radius: 999px;
+}

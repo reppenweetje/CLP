@@ -23,6 +23,7 @@ export const flow = {
         { id: 'prijzen_plattegronden', label: 'prijzen en plattegronden', score: 20 },
         { id: 'belegging', label: 'geschikt als belegging', score: 15, persona: 'belegger' },
         { id: 'kijkt_rond', label: 'kijk eerst even rond', score: 5 },
+        { id: 'direct_contact', label: 'meteen contact met sales', score: 40, fastTrack: true },
       ],
     },
 

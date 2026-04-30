@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Avatar from './Avatar.jsx'
+import MortgageCalc from './MortgageCalc.jsx'
 
 // 14 units 2 rijen volgens werkelijke situatietekening
 // status kleuren matchen de officiele kopen repp nl plattegrond
@@ -114,6 +115,11 @@ function UnitDetail({ unit, typeData }) {
       {typeData.priceFrom && typeData.pricePerM2 && (
         <div className="px-4 pb-3 text-[11px] text-ink-mute leading-relaxed">
           {`circa €${typeData.pricePerM2.toLocaleString('nl-NL')} per m² ${unit.state === 'coming_soon' ? 'indicatief' : 'v o n excl btw'}`}
+        </div>
+      )}
+      {typeData.priceFrom && unit.state !== 'sold' && (
+        <div className="px-4 pb-4">
+          <MortgageCalc price={typeData.priceFrom} indicative={unit.state === 'coming_soon'} />
         </div>
       )}
     </div>

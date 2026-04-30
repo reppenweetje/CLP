@@ -13,6 +13,7 @@ import ProcessBubble from './ProcessBubble.jsx'
 import PlanningBubble from './PlanningBubble.jsx'
 import InvestorBubble from './InvestorBubble.jsx'
 import PriceBubble from './PriceBubble.jsx'
+import BrochureBubble from './BrochureBubble.jsx'
 
 // scrollable chat thread auto scrollt naar laatste message
 export default function ChatThread({ messages, onBrochure, onReset }) {
@@ -60,6 +61,8 @@ export default function ChatThread({ messages, onBrochure, onReset }) {
             return <InvestorBubble key={m.id} benefits={m.payload.benefits} intro={m.payload.intro} />
           case 'price':
             return <PriceBubble key={m.id} units={m.payload.units} />
+          case 'brochure':
+            return <BrochureBubble key={m.id} url={m.payload.url} hero={m.payload.hero} projectName={m.payload.projectName} />
           case 'cta-card':
             return (
               <CtaBubble

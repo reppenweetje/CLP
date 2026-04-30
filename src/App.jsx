@@ -22,8 +22,11 @@ import SuggestedChips from './components/SuggestedChips.jsx'
 import ChatInput from './components/ChatInput.jsx'
 import DebugPanel from './components/DebugPanel.jsx'
 
+// counter voor message ids
 let _id = 0
 const nextId = () => ++_id
+
+const STORAGE_KEY = 'clp-state-v2'
 
 const initial = {
   view: 'intro',
@@ -33,6 +36,42 @@ const initial = {
   leadDraft: {},
   moreInfoSeen: [],
   debugOpen: false,
+}
+
+function loadPersisted() {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (parsed?._idCounter) _id = parsed._idCounter
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function persist(state) {
+  if (typeof window === 'undefined') return
+  try {
+    const toSave = {
+      view: state.view,
+      messages: state.messages,
+      currentQuestion: state.currentQuestion,
+      answers: state.answers,
+      leadDraft: state.leadDraft,
+      moreInfoSeen: state.moreInfoSeen,
+      _idCounter: _id,
+    }
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave))
+  } catch {}
+}
+
+function clearPersisted() {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.removeItem(STORAGE_KEY)
+  } catch {}
 }
 
 function reducer(state, action) {
@@ -80,7 +119,6 @@ function pickMicroIntro(persona, intent) {
   if (persona === 'belegger') return 'helder voor jou tellen vooral verhuur en schaarste'
   if (intent?.id === 'units_beschikbaar') return 'helder de l units zijn nu het meest concreet beschikbaar xl is uit en xxl volgt later'
   if (intent?.id === 'prijzen_plattegronden') return 'duidelijk we sturen je zo plattegronden prijslijst en m² prijs'
-  if (intent?.id === 'past_bij_bedrijf') return 'tof we kijken even waar de hofman aansluit op wat jij zoekt'
   if (intent?.id === 'kijkt_rond') return 'no stress laat me je in 30 seconden de essentie geven'
   return 'duidelijk we zetten direct de juiste info voor je klaar'
 }
@@ -98,12 +136,12 @@ function buildAnswerSummary(answers) {
   return parts.join('  en  ')
 }
 
-// max 5 a 6 chips voor moreInfo zoals brief vraagt
 const MORE_INFO_DEFS = {
   location: { label: 'meer over locatie' },
   sitePlan: { label: 'situatietekening' },
   price: { label: 'prijslijst' },
   process: { label: 'aankoopproces' },
+  brochure: { label: 'open brochure' },
   investor: { label: 'belegger voordelen', personas: ['belegger', 'onbekend'] },
 }
 
@@ -128,6 +166,8 @@ function buildMoreInfoMessages(id) {
       return [{ kind: 'price', payload: { units: project.units } }]
     case 'process':
       return [{ kind: 'process', payload: { steps: project.process } }]
+    case 'brochure':
+      return [{ kind: 'brochure', payload: { url: project.brochureUrl, hero: project.hero, projectName: project.displayName } }]
     case 'investor':
       return [{ kind: 'investor', payload: { benefits: project.investorBenefits, intro: 'kort wat de hofman voor beleggers interessant maakt' } }]
     default:
@@ -135,14 +175,23 @@ function buildMoreInfoMessages(id) {
   }
 }
 
-// strict nl mobiel 06 plus 8 cijfers of plus 316 plus 8 cijfers
+// strict nl mobiel
 function isValidPhoneText(text) {
   const stripped = (text || '').replace(/[\s-]/g, '')
   return /^(?:\+316\d{8}|316\d{8}|06\d{8})$/.test(stripped)
 }
 
 export default function App() {
-  const [state, dispatch] = useReducer(reducer, initial)
+  const [state, dispatch] = useReducer(reducer, initial, (init) => {
+    const loaded = loadPersisted()
+    if (loaded) return { ...init, ...loaded, debugOpen: false }
+    return init
+  })
+
+  // sla state op bij elke verandering zodat een refresh de flow niet verliest
+  useEffect(() => {
+    if (state.view === 'chat') persist(state)
+  }, [state])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -157,12 +206,24 @@ export default function App() {
 
   const start = () => dispatch({ type: 'START_CHAT' })
 
-  // chip handler voor multi keuze stappen
   const onChipPick = (opt) => {
     const q = state.currentQuestion
     if (!q) return
 
     if (q === 'intent') {
+      // fast track meteen contact slaat focus en flow over
+      if (opt.fastTrack) {
+        dispatch({ type: 'ANSWER', key: 'intent', value: opt, next: 'lead' })
+        dispatch({
+          type: 'APPEND',
+          messages: [
+            { kind: 'user-text', text: userTextFromOpt(opt) },
+            { kind: 'bot-text', text: 'top dan brengen we je vandaag nog in contact' },
+            { kind: 'bot-text', text: 'wat is je voornaam en je mailadres' },
+          ],
+        })
+        return
+      }
       const personaNext = derivePersona({ intent: opt })
       const focusKey = flow.focusVariant(personaNext)
       const focusQ = flow.questions[focusKey]
@@ -188,7 +249,7 @@ export default function App() {
           { kind: 'user-text', text: userTextFromOpt(opt) },
           { kind: 'bot-text', text: microIntro },
           { kind: 'gallery', payload: { images: project.gallery, intro: 'een paar sfeerbeelden van de hofman' } },
-          { kind: 'bot-text', text: 'stel jezelf even kort voor voornaam mailadres en als je wilt je 06 zodat ik je info kan sturen' },
+          { kind: 'bot-text', text: 'wat is je voornaam en je mailadres' },
         ],
       })
       return
@@ -205,7 +266,10 @@ export default function App() {
         })
         dispatch({ type: 'SET_QUESTION', next: 'lead-phone' })
       } else {
-        finishLead(state.leadDraft, [{ kind: 'user-text', text: userTextFromOpt(opt) }, { kind: 'bot-text', text: 'helemaal goed' }])
+        finishLead(state.leadDraft, [
+          { kind: 'user-text', text: userTextFromOpt(opt) },
+          { kind: 'bot-text', text: 'helemaal goed' },
+        ])
       }
       return
     }
@@ -281,14 +345,13 @@ export default function App() {
           { kind: 'user-text', text: userTextFromOpt(opt) },
           { kind: 'bot-text', text: tc.lead },
           { kind: 'bot-text', text: tc.body },
-          { kind: 'cta-card', payload: { waLink: wa, summary: sum } },
+          { kind: 'cta-card', payload: { waLink: wa, summary: sum, brochureUrl: project.brochureUrl } },
         ],
       })
       return
     }
   }
 
-  // text handler voor chat input vrije tekst
   const onChatInputSend = (text) => {
     const q = state.currentQuestion
     if (q === 'lead') {
@@ -301,7 +364,6 @@ export default function App() {
   function handleLeadFreeText(text) {
     const parsed = parseLeadInput(text)
     const draft = mergeLead(state.leadDraft, parsed)
-
     const userBubble = { kind: 'user-text', text }
     const triedEmail = text.includes('@')
 
@@ -357,13 +419,14 @@ export default function App() {
       return
     }
 
-    // vraag of we ook 06 mogen
+    // tweede vraag apart phoneAsk chips
     dispatch({ type: 'LEAD_DRAFT', draft })
     dispatch({
       type: 'APPEND',
       messages: [
         userBubble,
-        { kind: 'bot-text', text: `dankje ${draft.firstName.toLowerCase()} wil je ook je 06 zodat ik je via whatsapp persoonlijk kan helpen` },
+        { kind: 'bot-text', text: `dankje ${draft.firstName.toLowerCase()} de brochure stuur ik straks naar ${draft.email}` },
+        { kind: 'bot-text', text: 'wil je ook je 06 zodat ik je via whatsapp persoonlijk kan helpen' },
       ],
     })
     dispatch({ type: 'SET_QUESTION', next: 'lead-phoneAsk' })
@@ -387,7 +450,36 @@ export default function App() {
 
   function finishLead(lead, prependMessages = []) {
     dispatch({ type: 'LEAD_DRAFT', draft: lead })
-    dispatch({ type: 'ANSWER', key: 'lead', value: lead, next: 'timeline' })
+    dispatch({ type: 'ANSWER', key: 'lead', value: lead, next: null })
+
+    // fast track skip alle overige vragen ga direct naar thankyou als sales ready
+    if (state.answers.intent?.fastTrack) {
+      const tc = thankYouCopy('sales_ready', persona, lead.firstName)
+      const wa = whatsAppDeeplink(project, lead.firstName, 'direct contact aangevraagd')
+      // forceer followup waarde voor scoring en debug
+      dispatch({
+        type: 'ANSWER',
+        key: 'followup',
+        value: { id: 'wa_nu', label: 'direct contact', score: 32 },
+        next: null,
+      })
+      dispatch({
+        type: 'APPEND',
+        messages: [
+          ...prependMessages,
+          {
+            kind: 'bot-text',
+            text: `top ${lead.firstName.toLowerCase()} de brochure plattegronden en prijslijst stuur ik nu naar ${lead.email}`,
+          },
+          { kind: 'bot-text', text: tc.lead },
+          { kind: 'bot-text', text: tc.body },
+          { kind: 'cta-card', payload: { waLink: wa, summary: 'direct contact aangevraagd', brochureUrl: project.brochureUrl } },
+        ],
+      })
+      return
+    }
+
+    dispatch({ type: 'SET_QUESTION', next: 'timeline' })
     dispatch({
       type: 'APPEND',
       messages: [
@@ -403,14 +495,24 @@ export default function App() {
 
   const onBrochure = () => {
     if (typeof window !== 'undefined') {
-      window.alert('demo brochure download zou hier starten')
+      if (project.brochureUrl && project.brochureUrl !== '#') {
+        window.open(project.brochureUrl, '_blank', 'noopener,noreferrer')
+      } else {
+        window.alert('demo brochure download zou hier starten')
+      }
     }
   }
 
-  const reset = () => dispatch({ type: 'RESET' })
+  // direct whatsapp deeplink voor de header escape
+  const headerWaLink = whatsAppDeeplink(project, state.answers.lead?.firstName || '', 'graag info over de hofman')
+
+  const reset = () => {
+    clearPersisted()
+    _id = 0
+    dispatch({ type: 'RESET' })
+  }
   const toggleDebug = () => dispatch({ type: 'TOGGLE_DEBUG' })
 
-  // welke chips horen bij huidige stap
   let chipQuestion = null
   let inputConfig = null
   if (state.currentQuestion === 'intent') chipQuestion = flow.questions.intent
@@ -435,7 +537,7 @@ export default function App() {
       ],
     }
   } else if (state.currentQuestion === 'lead') {
-    inputConfig = { placeholder: 'je antwoord typ hier', inputMode: 'email' }
+    inputConfig = { placeholder: 'voornaam en mailadres', inputMode: 'email' }
   } else if (state.currentQuestion === 'lead-phone') {
     inputConfig = { placeholder: '06 12 34 56 78', inputMode: 'tel', validate: isValidPhoneText }
   }
@@ -450,6 +552,7 @@ export default function App() {
       onDebugToggle={toggleDebug}
       debugOpen={state.debugOpen}
       hideHeader={state.view === 'intro'}
+      waLink={headerWaLink}
     >
       {state.view === 'intro' && <IntroScreen onStart={start} />}
 
@@ -461,10 +564,7 @@ export default function App() {
             onReset={reset}
           />
           {chipQuestion && (
-            <SuggestedChips
-              options={chipQuestion.options}
-              onPick={onChipPick}
-            />
+            <SuggestedChips options={chipQuestion.options} onPick={onChipPick} />
           )}
           {inputConfig && (
             <ChatInput
