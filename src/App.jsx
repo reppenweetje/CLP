@@ -13,11 +13,13 @@ import {
   thankYouCopy,
   whatsAppDeeplink,
 } from './lib/recommendation.js'
+import { parseLeadInput, mergeLead } from './lib/parseLead.js'
 
 import AppShell from './components/AppShell.jsx'
 import IntroScreen from './components/IntroScreen.jsx'
 import ChatThread from './components/ChatThread.jsx'
 import SuggestedChips from './components/SuggestedChips.jsx'
+import ChatInput from './components/ChatInput.jsx'
 import DebugPanel from './components/DebugPanel.jsx'
 
 let _id = 0
@@ -28,6 +30,7 @@ const initial = {
   messages: [],
   currentQuestion: null,
   answers: {},
+  leadDraft: {},
   moreInfoSeen: [],
   debugOpen: false,
 }
@@ -47,31 +50,27 @@ function reducer(state, action) {
         currentQuestion: 'intent',
       }
     }
-
-    case 'APPEND': {
+    case 'APPEND':
       return {
         ...state,
         messages: [...state.messages, ...action.messages.map((m) => ({ id: nextId(), ...m }))],
       }
-    }
-
-    case 'ANSWER': {
+    case 'ANSWER':
       return {
         ...state,
         answers: { ...state.answers, [action.key]: action.value },
         currentQuestion: action.next ?? null,
       }
-    }
-
+    case 'SET_QUESTION':
+      return { ...state, currentQuestion: action.next ?? null }
+    case 'LEAD_DRAFT':
+      return { ...state, leadDraft: action.draft }
     case 'MORE_INFO_SEEN':
       return { ...state, moreInfoSeen: [...state.moreInfoSeen, action.id] }
-
     case 'TOGGLE_DEBUG':
       return { ...state, debugOpen: !state.debugOpen }
-
     case 'RESET':
       return { ...initial, debugOpen: state.debugOpen }
-
     default:
       return state
   }
@@ -90,12 +89,6 @@ function userTextFromOpt(opt) {
   return opt.label
 }
 
-function leadSummary(lead) {
-  const parts = [lead.firstName, lead.email]
-  if (lead.phone) parts.push(lead.phone)
-  return parts.join('  ')
-}
-
 function buildAnswerSummary(answers) {
   const parts = []
   if (answers.intent) parts.push(answers.intent.label)
@@ -105,14 +98,12 @@ function buildAnswerSummary(answers) {
   return parts.join('  en  ')
 }
 
-// alle beschikbare meer info opties met persona filter
+// max 5 a 6 chips voor moreInfo zoals brief vraagt
 const MORE_INFO_DEFS = {
   location: { label: 'meer over locatie' },
   sitePlan: { label: 'situatietekening' },
   price: { label: 'prijslijst' },
-  planning: { label: 'planning' },
   process: { label: 'aankoopproces' },
-  highlights: { label: 'highlights' },
   investor: { label: 'belegger voordelen', personas: ['belegger', 'onbekend'] },
 }
 
@@ -127,7 +118,6 @@ function moreInfoChips(persona, seen) {
   return opts
 }
 
-// gegenereerde rich bubble payload op basis van id
 function buildMoreInfoMessages(id) {
   switch (id) {
     case 'location':
@@ -136,17 +126,18 @@ function buildMoreInfoMessages(id) {
       return [{ kind: 'site-plan', payload: { sitePlan: project.sitePlan } }]
     case 'price':
       return [{ kind: 'price', payload: { units: project.units } }]
-    case 'planning':
-      return [{ kind: 'planning', payload: { planning: project.planning } }]
     case 'process':
       return [{ kind: 'process', payload: { steps: project.process } }]
-    case 'highlights':
-      return [{ kind: 'highlights', payload: { highlights: project.highlights } }]
     case 'investor':
       return [{ kind: 'investor', payload: { benefits: project.investorBenefits, intro: 'kort wat de hofman voor beleggers interessant maakt' } }]
     default:
       return []
   }
+}
+
+function isValidPhoneText(text) {
+  const stripped = (text || '').replace(/[\s-]/g, '')
+  return /(?:\+?316|06)\d{8}/.test(stripped)
 }
 
 export default function App() {
@@ -155,9 +146,7 @@ export default function App() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
-    if (params.get('debug') === '1') {
-      dispatch({ type: 'TOGGLE_DEBUG' })
-    }
+    if (params.get('debug') === '1') dispatch({ type: 'TOGGLE_DEBUG' })
   }, [])
 
   const persona = derivePersona(state.answers)
@@ -167,6 +156,7 @@ export default function App() {
 
   const start = () => dispatch({ type: 'START_CHAT' })
 
+  // chip handler voor multi keuze stappen
   const onChipPick = (opt) => {
     const q = state.currentQuestion
     if (!q) return
@@ -190,17 +180,32 @@ export default function App() {
       const merged = { ...state.answers, focus: opt }
       const personaNext = derivePersona(merged)
       const microIntro = pickMicroIntro(personaNext, state.answers.intent)
-      dispatch({ type: 'ANSWER', key: 'focus', value: opt, next: null })
+      dispatch({ type: 'ANSWER', key: 'focus', value: opt, next: 'lead' })
       dispatch({
         type: 'APPEND',
         messages: [
           { kind: 'user-text', text: userTextFromOpt(opt) },
           { kind: 'bot-text', text: microIntro },
           { kind: 'gallery', payload: { images: project.gallery, intro: 'een paar sfeerbeelden van de hofman' } },
-          { kind: 'bot-text', text: 'laat even weten hoe ik je het beste kan bereiken' },
-          { kind: 'lead-form' },
+          { kind: 'bot-text', text: 'stel jezelf even kort voor voornaam mailadres en als je wilt je 06 zodat ik je info kan sturen' },
         ],
       })
+      return
+    }
+
+    if (q === 'lead-phoneAsk') {
+      if (opt.id === 'yes') {
+        dispatch({
+          type: 'APPEND',
+          messages: [
+            { kind: 'user-text', text: userTextFromOpt(opt) },
+            { kind: 'bot-text', text: 'top tap je 06 in' },
+          ],
+        })
+        dispatch({ type: 'SET_QUESTION', next: 'lead-phone' })
+      } else {
+        finishLead(state.leadDraft, [{ kind: 'user-text', text: userTextFromOpt(opt) }, { kind: 'bot-text', text: 'helemaal goed' }])
+      }
       return
     }
 
@@ -240,7 +245,7 @@ export default function App() {
 
     if (q === 'moreInfo') {
       if (opt.id === '__continue') {
-        dispatch({ type: 'ANSWER', key: '__moreInfoSkip', value: true, next: 'followup' })
+        dispatch({ type: 'SET_QUESTION', next: 'followup' })
         dispatch({
           type: 'APPEND',
           messages: [
@@ -282,13 +287,100 @@ export default function App() {
     }
   }
 
-  const onLeadSubmit = (lead) => {
+  // text handler voor chat input vrije tekst
+  const onChatInputSend = (text) => {
+    const q = state.currentQuestion
+    if (q === 'lead') {
+      handleLeadFreeText(text)
+    } else if (q === 'lead-phone') {
+      handleLeadPhoneText(text)
+    }
+  }
+
+  function handleLeadFreeText(text) {
+    const parsed = parseLeadInput(text)
+    const draft = mergeLead(state.leadDraft, parsed)
+
+    const userBubble = { kind: 'user-text', text }
+
+    if (!draft.firstName && !draft.email) {
+      dispatch({ type: 'LEAD_DRAFT', draft })
+      dispatch({
+        type: 'APPEND',
+        messages: [
+          userBubble,
+          { kind: 'bot-text', text: 'kreeg er even niet helemaal uit wat je naam en mailadres zijn kun je ze opnieuw typen' },
+        ],
+      })
+      return
+    }
+
+    if (!draft.email) {
+      dispatch({ type: 'LEAD_DRAFT', draft })
+      dispatch({
+        type: 'APPEND',
+        messages: [
+          userBubble,
+          { kind: 'bot-text', text: `dankje ${draft.firstName.toLowerCase()} en je mailadres` },
+        ],
+      })
+      return
+    }
+
+    if (!draft.firstName) {
+      dispatch({ type: 'LEAD_DRAFT', draft })
+      dispatch({
+        type: 'APPEND',
+        messages: [
+          userBubble,
+          { kind: 'bot-text', text: 'kreeg je mailadres en hoe heet je' },
+        ],
+      })
+      return
+    }
+
+    // beide gevonden eventueel ook telefoon
+    if (draft.phone) {
+      finishLead(draft, [userBubble])
+      return
+    }
+
+    // vraag of we ook 06 mogen
+    dispatch({ type: 'LEAD_DRAFT', draft })
+    dispatch({
+      type: 'APPEND',
+      messages: [
+        userBubble,
+        { kind: 'bot-text', text: `dankje ${draft.firstName.toLowerCase()} wil je ook je 06 zodat ik je via whatsapp persoonlijk kan helpen` },
+      ],
+    })
+    dispatch({ type: 'SET_QUESTION', next: 'lead-phoneAsk' })
+  }
+
+  function handleLeadPhoneText(text) {
+    const parsed = parseLeadInput(text)
+    if (!parsed.phone) {
+      dispatch({
+        type: 'APPEND',
+        messages: [
+          { kind: 'user-text', text },
+          { kind: 'bot-text', text: 'kreeg er geen 06 nummer uit kun je het opnieuw tikken' },
+        ],
+      })
+      return
+    }
+    const lead = { ...state.leadDraft, phone: parsed.phone }
+    finishLead(lead, [{ kind: 'user-text', text }])
+  }
+
+  function finishLead(lead, prependMessages = []) {
+    dispatch({ type: 'LEAD_DRAFT', draft: lead })
     dispatch({ type: 'ANSWER', key: 'lead', value: lead, next: 'timeline' })
     dispatch({
       type: 'APPEND',
       messages: [
-        { kind: 'user-text', text: leadSummary(lead) },
-        { kind: 'bot-text', text: `mooi ${lead.firstName.toLowerCase()}` },
+        ...prependMessages,
+        { kind: 'bot-text', text: `dankje ${lead.firstName.toLowerCase()}` },
         { kind: 'bot-text', text: flow.questions.timeline.label },
       ],
     })
@@ -303,8 +395,9 @@ export default function App() {
   const reset = () => dispatch({ type: 'RESET' })
   const toggleDebug = () => dispatch({ type: 'TOGGLE_DEBUG' })
 
-  // chips voor huidige stap
+  // welke chips horen bij huidige stap
   let chipQuestion = null
+  let inputConfig = null
   if (state.currentQuestion === 'intent') chipQuestion = flow.questions.intent
   else if (state.currentQuestion === 'focus') {
     chipQuestion = flow.questions[flow.focusVariant(derivePersona({ intent: state.answers.intent }))]
@@ -317,6 +410,19 @@ export default function App() {
       label: 'meer info',
       options: moreInfoChips(persona, state.moreInfoSeen),
     }
+  } else if (state.currentQuestion === 'lead-phoneAsk') {
+    chipQuestion = {
+      key: 'lead-phoneAsk',
+      label: 'phone ask',
+      options: [
+        { id: 'yes', label: 'ja prima' },
+        { id: 'no', label: 'liever niet' },
+      ],
+    }
+  } else if (state.currentQuestion === 'lead') {
+    inputConfig = { placeholder: 'je antwoord typ hier', inputMode: 'email' }
+  } else if (state.currentQuestion === 'lead-phone') {
+    inputConfig = { placeholder: '06 12 34 56 78', inputMode: 'tel', validate: isValidPhoneText }
   }
 
   const answeredCount = ['intent', 'focus', 'lead', 'timeline', 'size', 'followup']
@@ -336,7 +442,6 @@ export default function App() {
         <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-md">
           <ChatThread
             messages={state.messages}
-            onLeadSubmit={onLeadSubmit}
             onBrochure={onBrochure}
             onReset={reset}
           />
@@ -344,7 +449,14 @@ export default function App() {
             <SuggestedChips
               options={chipQuestion.options}
               onPick={onChipPick}
-              hint={state.currentQuestion === 'moreInfo' && state.moreInfoSeen.length === 0 ? 'tap een onderwerp of ga verder' : null}
+            />
+          )}
+          {inputConfig && (
+            <ChatInput
+              placeholder={inputConfig.placeholder}
+              inputMode={inputConfig.inputMode}
+              validate={inputConfig.validate}
+              onSend={onChatInputSend}
             />
           )}
         </div>

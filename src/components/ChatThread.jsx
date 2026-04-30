@@ -4,7 +4,6 @@ import UserMessage from './UserMessage.jsx'
 import TypingIndicator from './TypingIndicator.jsx'
 import ContentBubble from './ContentBubble.jsx'
 import UnitBubble from './UnitBubble.jsx'
-import InlineLeadForm from './InlineLeadForm.jsx'
 import CtaBubble from './CtaBubble.jsx'
 import GalleryBubble from './GalleryBubble.jsx'
 import LocationBubble from './LocationBubble.jsx'
@@ -16,7 +15,7 @@ import InvestorBubble from './InvestorBubble.jsx'
 import PriceBubble from './PriceBubble.jsx'
 
 // scrollable chat thread auto scrollt naar laatste message
-export default function ChatThread({ messages, onLeadSubmit, onBrochure, onReset }) {
+export default function ChatThread({ messages, onBrochure, onReset }) {
   const endRef = useRef(null)
 
   useEffect(() => {
@@ -61,8 +60,6 @@ export default function ChatThread({ messages, onLeadSubmit, onBrochure, onReset
             return <InvestorBubble key={m.id} benefits={m.payload.benefits} intro={m.payload.intro} />
           case 'price':
             return <PriceBubble key={m.id} units={m.payload.units} />
-          case 'lead-form':
-            return <InlineLeadForm key={m.id} onSubmit={onLeadSubmit} />
           case 'cta-card':
             return (
               <CtaBubble
