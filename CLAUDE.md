@@ -73,32 +73,54 @@ fastTrack (intent="meteen contact met sales") skipt:
 
 ## Tone of voice
 
-**Default rule: lowercase + geen leestekens.** Geen punten, em-dashes (`—`), interpuncten (`·`) of bullet-points in normale chat-copy.
+**Sentence case + Nederlandse interpunctie.** Hoofdletter aan begin van zinnen, punt aan einde, vraagteken bij vragen, komma's voor leesritme. Brand-namen consistent: **REPP** altijd in caps, **De Hofman** in titlecase (D + H caps).
 
-**Uitzondering: warme/persoonlijke momenten** (lead-capture, sales-ready bevestigingen) mogen `?`, `,` en `!` gebruiken voor warmte. Voorbeeld lead-capture:
-- ✅ `"wat is je naam?"`
-- ✅ `"mag ik je e-mail adres, zodat ik je de brochure alvast kan mailen?"`
-- ✅ `"dank! ik zorg dat deze zo direct naar je wordt gemaild"`
+**Doel**: menselijk, rustig, professioneel, kort, helder. Geen makelaarstaal, geen overdreven AI-chatbotstijl.
 
-**Functionele bot-vragen** (intent, focus, timeline, size, followup) blijven terse zonder vraagteken:
-- ✅ `"waar ben je vooral benieuwd naar"`
-- ✅ `"wanneer zou je willen kopen of starten"`
+**Bot-bubbles**: max 1-2 zinnen. Lange uitleg in losse bubbles knippen. Stem is "we" (organisatie), niet "ik".
 
-**Chip-labels altijd schoon** — geen vraagtekens of komma's:
-- ✅ `"beschikbare units"` `"liever niet"` `"geschikt als belegging"`
-- ❌ `"liever niet?"` `"geschikt als belegging?"`
+### Wat niet
 
-Wel altijd toegestaan:
-- ALL-CAPS labels met letter-spacing (`tracking-[0.18em]`) — REPP brandbook subheader stijl
+- ❌ Tijdsbeloften: "in 60 seconden", "binnen 1 minuut", "nu direct"
+- ❌ Populair-jargon: "no stress", "topper", "lekker bezig", "fixen we dit", "een fluitje"
+- ❌ Oude lowercase-only stijl zonder hoofdletters of punten
+- ❌ Interpuncten `·` en em-dashes `—` (zie `npm run check-copy`)
+- ❌ Emoji's en smileys `:)` — niet in deze flow
+- ❌ "Alles is opgeslagen", "Bedankt!", "Klaar!" als single-bubble close-out — gebruiker denkt dan dat hij klaar is. Combineer altijd met de volgende vraag in dezelfde of meteen volgende bubble.
+
+### Wel
+
+- ALL-CAPS labels met letter-spacing (`tracking-[0.18em]`) voor subheaders — REPP brandbook stijl
 - Cijfers, `€`, `m²`, percent-tekens
-- Brand display "De Hofman" mag titlecase blijven (bv. in IntroScreen hero)
+- Lichte warmte zoals "Dank." of "Helder." in bevestigingen — kort en zonder uitroepteken
 
-Anti-patterns:
-- ❌ `"Hoi, ik ben Jesse van REPP."` (titlecase + brandnaam in caps in chat)
-- ❌ `"Begin · 60 seconden"` (`·` interpunct)
-- ❌ `"helder, voor jou..."` in functionele bot-vraag (komma in terse copy)
+### Voorbeelden — mee
 
-Voor placeholder/fallback tekst gebruik `'nog niet'` ipv `'—'`.
+- ✅ `"Hoi, ik ben Jesse van REPP."`
+- ✅ `"Helder. Dan zorgen we dat je de juiste informatie krijgt."`
+- ✅ `"Waar kijk je vooral naar?"`
+- ✅ `"Mag ik je e-mailadres, zodat we je de brochure alvast kunnen mailen?"`
+- ✅ `"Goed. Dan kunnen we je straks de juiste info sturen. Nog één vraag zodat we weten welke plattegrond en prijsinformatie het meest relevant is."`
+
+### Voorbeelden — tegen
+
+- ❌ `"hoi ik ben jesse van repp"` (oude lowercase stijl)
+- ❌ `"In 60 seconden ontdek je..."` (tijdsbelofte)
+- ❌ `"Top jesse, ik mail je nu de brochure :)"` (populair + smiley)
+- ❌ `"Begin · 60 seconden"` (tijdsbelofte + interpunct)
+- ❌ `"Bedankt!"` op zichzelf (close-out moment)
+
+### Chip-labels
+
+Sentence case eerste woord, geen punten of vraagtekens.
+
+- ✅ `"Voor mijn bedrijf"` `"Beschikbare units"` `"Liever niet"`
+- ❌ `"Voor mijn bedrijf?"` (vraagteken op chip)
+- ❌ `"voor mijn bedrijf"` (lowercase oude stijl)
+
+User-input in user-bubble blijft verbatim — geen hercase van wat de bezoeker typte.
+
+Voor placeholder/fallback tekst gebruik `'Nog niet'` ipv `'—'`.
 
 ## REPP huisstijl tokens (`src/index.css`)
 

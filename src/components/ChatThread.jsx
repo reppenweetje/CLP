@@ -6,6 +6,7 @@ import ContentBubble from './ContentBubble.jsx'
 import UnitBubble from './UnitBubble.jsx'
 import CtaBubble from './CtaBubble.jsx'
 import GalleryBubble from './GalleryBubble.jsx'
+import UspCardsBubble from './UspCardsBubble.jsx'
 import LocationBubble from './LocationBubble.jsx'
 import SitePlanBubble from './SitePlanBubble.jsx'
 import HighlightsBubble from './HighlightsBubble.jsx'
@@ -47,6 +48,8 @@ export default function ChatThread({ messages, onBrochure, onReset }) {
             return <UnitBubble key={m.id} unit={m.payload} />
           case 'gallery':
             return <GalleryBubble key={m.id} images={m.payload.images} intro={m.payload.intro} />
+          case 'usp-cards':
+            return <UspCardsBubble key={m.id} cards={m.payload.cards} intro={m.payload.intro} />
           case 'location':
             return <LocationBubble key={m.id} location={m.payload.location} projectName={m.payload.projectName} />
           case 'site-plan':

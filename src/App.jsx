@@ -1,5 +1,5 @@
 import { useEffect, useReducer } from 'react'
-import { project } from './data/project.js'
+import { project, uspCardOrder } from './data/project.js'
 import { flow } from './data/flow.js'
 import {
   computeScore,
@@ -12,6 +12,7 @@ import {
   recommendCopy,
   thankYouCopy,
   whatsAppDeeplink,
+  leadConfidence,
 } from './lib/recommendation.js'
 import { parseLeadInput, mergeLead } from './lib/parseLead.js'
 
@@ -22,11 +23,10 @@ import SuggestedChips from './components/SuggestedChips.jsx'
 import ChatInput from './components/ChatInput.jsx'
 import DebugPanel from './components/DebugPanel.jsx'
 
-// counter voor message ids
 let _id = 0
 const nextId = () => ++_id
 
-const STORAGE_KEY = 'clp-state-v2'
+const STORAGE_KEY = 'clp-state-v3'
 
 const initial = {
   view: 'intro',
@@ -82,8 +82,8 @@ function reducer(state, action) {
         ...state,
         view: 'chat',
         messages: [
-          { id: nextId(), kind: 'bot-text', text: 'hoi ik ben jesse van repp' },
-          { id: nextId(), kind: 'bot-text', text: 'ik help je in 60 seconden ontdekken wat de hofman voor jou interessant maakt' },
+          { id: nextId(), kind: 'bot-text', text: 'Hoi, ik ben Jesse van REPP.' },
+          { id: nextId(), kind: 'bot-text', text: 'Ik help je snel de juiste informatie over De Hofman te vinden.' },
           { id: nextId(), kind: 'bot-text', text: intentQ.label },
         ],
         currentQuestion: 'intent',
@@ -115,12 +115,12 @@ function reducer(state, action) {
   }
 }
 
-function pickMicroIntro(persona, intent) {
-  if (persona === 'belegger') return 'helder voor jou tellen vooral verhuur en schaarste'
-  if (intent?.id === 'units_beschikbaar') return 'helder de l units zijn nu het meest concreet beschikbaar xl is uit en xxl volgt later'
-  if (intent?.id === 'prijzen_plattegronden') return 'duidelijk we sturen je zo plattegronden prijslijst en m² prijs'
-  if (intent?.id === 'kijkt_rond') return 'no stress laat me je in 30 seconden de essentie geven'
-  return 'duidelijk we zetten direct de juiste info voor je klaar'
+// Korte ack na de persona-keuze, direct gevolgd door USP-kaarten.
+function pickMicroIntro(persona) {
+  if (persona === 'belegger') return 'Helder. Voor jou tellen vooral verhuurbaarheid, schaarste en prijs per m².'
+  if (persona === 'eigen_gebruiker') return 'Helder. Dan zijn vooral bereikbaarheid, parkeren en flexibele indeling belangrijk.'
+  if (persona === 'beide') return 'Helder. Dan kijken we vanuit beide kanten: eigen gebruik én beleggingsperspectief.'
+  return 'Goed om te weten. We tonen de informatie die voor jouw situatie het meest relevant is.'
 }
 
 function userTextFromOpt(opt) {
@@ -130,19 +130,18 @@ function userTextFromOpt(opt) {
 function buildAnswerSummary(answers) {
   const parts = []
   if (answers.intent) parts.push(answers.intent.label)
-  if (answers.focus) parts.push(answers.focus.label)
   if (answers.size) parts.push(answers.size.label)
   if (answers.timeline) parts.push(answers.timeline.label)
-  return parts.join('  en  ')
+  return parts.join(', ')
 }
 
 const MORE_INFO_DEFS = {
-  location: { label: 'meer over locatie' },
-  sitePlan: { label: 'situatietekening' },
-  price: { label: 'prijslijst' },
-  process: { label: 'aankoopproces' },
-  brochure: { label: 'open brochure' },
-  investor: { label: 'belegger voordelen', personas: ['belegger', 'onbekend'] },
+  location: { label: 'Meer over locatie' },
+  sitePlan: { label: 'Situatietekening' },
+  price: { label: 'Prijslijst' },
+  process: { label: 'Aankoopproces' },
+  brochure: { label: 'Open brochure' },
+  investor: { label: 'Belegger voordelen', personas: ['belegger', 'beide', 'onbekend'] },
 }
 
 function moreInfoChips(persona, seen) {
@@ -152,7 +151,7 @@ function moreInfoChips(persona, seen) {
     if (def.personas && !def.personas.includes(persona)) continue
     opts.push({ id, label: def.label })
   }
-  opts.push({ id: '__continue', label: 'meteen verder' })
+  opts.push({ id: '__continue', label: 'Meteen verder' })
   return opts
 }
 
@@ -169,13 +168,12 @@ function buildMoreInfoMessages(id) {
     case 'brochure':
       return [{ kind: 'brochure', payload: { url: project.brochureUrl, hero: project.hero, projectName: project.displayName } }]
     case 'investor':
-      return [{ kind: 'investor', payload: { benefits: project.investorBenefits, intro: 'kort wat de hofman voor beleggers interessant maakt' } }]
+      return [{ kind: 'investor', payload: { benefits: project.investorBenefits, intro: 'Wat De Hofman voor beleggers interessant maakt.' } }]
     default:
       return []
   }
 }
 
-// strict nl mobiel
 function isValidPhoneText(text) {
   const stripped = (text || '').replace(/[\s-]/g, '')
   return /^(?:\+316\d{8}|316\d{8}|06\d{8})$/.test(stripped)
@@ -188,7 +186,6 @@ export default function App() {
     return init
   })
 
-  // sla state op bij elke verandering zodat een refresh de flow niet verliest
   useEffect(() => {
     if (state.view === 'chat') persist(state)
   }, [state])
@@ -211,45 +208,17 @@ export default function App() {
     if (!q) return
 
     if (q === 'intent') {
-      // fast track meteen contact slaat focus en flow over
-      if (opt.fastTrack) {
-        dispatch({ type: 'ANSWER', key: 'intent', value: opt, next: 'lead-name' })
-        dispatch({
-          type: 'APPEND',
-          messages: [
-            { kind: 'user-text', text: userTextFromOpt(opt) },
-            { kind: 'bot-text', text: 'top, dan brengen we je vandaag nog in contact' },
-            { kind: 'bot-text', text: 'wat is je naam?' },
-          ],
-        })
-        return
-      }
-      const personaNext = derivePersona({ intent: opt })
-      const focusKey = flow.focusVariant(personaNext)
-      const focusQ = flow.questions[focusKey]
-      dispatch({ type: 'ANSWER', key: 'intent', value: opt, next: 'focus' })
-      dispatch({
-        type: 'APPEND',
-        messages: [
-          { kind: 'user-text', text: userTextFromOpt(opt) },
-          { kind: 'bot-text', text: focusQ.label },
-        ],
-      })
-      return
-    }
-
-    if (q === 'focus') {
-      const merged = { ...state.answers, focus: opt }
-      const personaNext = derivePersona(merged)
-      const microIntro = pickMicroIntro(personaNext, state.answers.intent)
-      dispatch({ type: 'ANSWER', key: 'focus', value: opt, next: 'lead-name' })
+      const personaNext = opt.persona || 'onbekend'
+      const microIntro = pickMicroIntro(personaNext)
+      const cards = uspCardOrder(personaNext)
+      dispatch({ type: 'ANSWER', key: 'intent', value: opt, next: 'lead-name' })
       dispatch({
         type: 'APPEND',
         messages: [
           { kind: 'user-text', text: userTextFromOpt(opt) },
           { kind: 'bot-text', text: microIntro },
-          { kind: 'gallery', payload: { images: project.gallery, intro: 'een paar sfeerbeelden van de hofman' } },
-          { kind: 'bot-text', text: 'wat is je naam?' },
+          { kind: 'usp-cards', payload: { cards } },
+          { kind: 'bot-text', text: 'Wat is je naam?' },
         ],
       })
       return
@@ -261,14 +230,14 @@ export default function App() {
           type: 'APPEND',
           messages: [
             { kind: 'user-text', text: userTextFromOpt(opt) },
-            { kind: 'bot-text', text: 'top tap je 06 in' },
+            { kind: 'bot-text', text: 'Wat is je 06-nummer?' },
           ],
         })
         dispatch({ type: 'SET_QUESTION', next: 'lead-phone' })
       } else {
         finishLead(state.leadDraft, [
           { kind: 'user-text', text: userTextFromOpt(opt) },
-          { kind: 'bot-text', text: 'helemaal goed' },
+          { kind: 'bot-text', text: 'Geen probleem. Ons nummer staat ook in de mail als je later wilt schakelen.' },
         ])
       }
       return
@@ -291,20 +260,27 @@ export default function App() {
       const unit = recommendUnit(merged, project)
       const personaNext = derivePersona(merged)
       const copy = recommendCopy(personaNext)
-      dispatch({ type: 'ANSWER', key: 'size', value: opt, next: 'moreInfo' })
-      dispatch({
-        type: 'APPEND',
-        messages: [
-          { kind: 'user-text', text: userTextFromOpt(opt) },
-          {
-            kind: 'bot-text',
-            text: `op basis van je antwoorden lijkt vooral unit ${unit.primary.type.toLowerCase()} interessant`,
-          },
+      const confidence = leadConfidence(merged)
+      const messages = [
+        { kind: 'user-text', text: userTextFromOpt(opt) },
+      ]
+      if (confidence >= 2) {
+        messages.push(
+          { kind: 'bot-text', text: `Op basis van je antwoorden lijkt vooral de ${unit.primary.type}-unit interessant.` },
           { kind: 'unit-card', payload: unit },
-          { kind: 'bot-text', text: copy },
-          { kind: 'bot-text', text: 'wil je nog ergens meer over weten of meteen verder' },
-        ],
-      })
+        )
+      } else {
+        messages.push(
+          { kind: 'bot-text', text: 'Je hebt nog niet veel voorkeuren ingegeven. We sturen je eerst een overzicht van de beschikbare opties en kunnen via WhatsApp meedenken.' },
+          { kind: 'unit-card', payload: unit },
+        )
+      }
+      messages.push(
+        { kind: 'bot-text', text: copy },
+        { kind: 'bot-text', text: 'Wil je nog ergens meer over weten, of meteen verder?' },
+      )
+      dispatch({ type: 'ANSWER', key: 'size', value: opt, next: 'moreInfo' })
+      dispatch({ type: 'APPEND', messages })
       return
     }
 
@@ -354,13 +330,9 @@ export default function App() {
 
   const onChatInputSend = (text) => {
     const q = state.currentQuestion
-    if (q === 'lead-name') {
-      handleLeadNameText(text)
-    } else if (q === 'lead-email') {
-      handleLeadEmailText(text)
-    } else if (q === 'lead-phone') {
-      handleLeadPhoneText(text)
-    }
+    if (q === 'lead-name') return handleLeadNameText(text)
+    if (q === 'lead-email') return handleLeadEmailText(text)
+    if (q === 'lead-phone') return handleLeadPhoneText(text)
   }
 
   function handleLeadNameText(text) {
@@ -374,47 +346,44 @@ export default function App() {
         type: 'APPEND',
         messages: [
           userBubble,
-          { kind: 'bot-text', text: 'kreeg je naam niet helemaal mee, kun je het opnieuw typen?' },
+          { kind: 'bot-text', text: 'Kreeg je naam niet helemaal mee. Kun je het opnieuw typen?' },
         ],
       })
       return
     }
 
-    // user gaf naam plus email in 1 keer skip de email vraag
     if (draft.email && draft.firstName) {
       dispatch({ type: 'LEAD_DRAFT', draft })
       dispatch({
         type: 'APPEND',
         messages: [
           userBubble,
-          { kind: 'bot-text', text: 'dank! ik zorg dat deze zo direct naar je wordt gemaild' },
-          { kind: 'bot-text', text: 'wil je ook je 06 delen zodat ik je ook via whatsapp persoonlijk kan helpen?' },
+          { kind: 'bot-text', text: 'Dank. We zorgen dat je de brochure straks naar je toe krijgt.' },
+          { kind: 'bot-text', text: 'Wij houden bij dit soort projecten vaak kort contact via WhatsApp, bijvoorbeeld over beschikbaarheid of als je nog vragen hebt. Vind je dat prettig?' },
         ],
       })
       dispatch({ type: 'SET_QUESTION', next: 'lead-phoneAsk' })
       return
     }
 
-    // alleen email gegeven geen naam
     if (draft.email && !draft.firstName) {
       dispatch({ type: 'LEAD_DRAFT', draft })
       dispatch({
         type: 'APPEND',
         messages: [
           userBubble,
-          { kind: 'bot-text', text: 'dankje! en hoe heet je?' },
+          { kind: 'bot-text', text: 'Dank. En hoe heet je?' },
         ],
       })
       return
     }
 
-    // naam binnen vraag email apart
     dispatch({ type: 'LEAD_DRAFT', draft })
     dispatch({
       type: 'APPEND',
       messages: [
         userBubble,
-        { kind: 'bot-text', text: 'mag ik je e-mail adres, zodat ik je de brochure alvast kan mailen?' },
+        { kind: 'bot-text', text: 'Mag ik je e-mailadres, zodat we je de brochure alvast kunnen mailen?' },
       ],
     })
     dispatch({ type: 'SET_QUESTION', next: 'lead-email' })
@@ -435,22 +404,21 @@ export default function App() {
           {
             kind: 'bot-text',
             text: triedEmail
-              ? 'het mailadres lijkt niet helemaal te kloppen, kun je het opnieuw tikken?'
-              : 'kreeg er geen mailadres uit, kun je het opnieuw typen?',
+              ? 'Het mailadres lijkt niet helemaal te kloppen. Kun je het opnieuw tikken?'
+              : 'Daar zat geen mailadres in. Kun je het opnieuw typen?',
           },
         ],
       })
       return
     }
 
-    // email binnen
     dispatch({ type: 'LEAD_DRAFT', draft })
     dispatch({
       type: 'APPEND',
       messages: [
         userBubble,
-        { kind: 'bot-text', text: 'dank! ik zorg dat deze zo direct naar je wordt gemaild' },
-        { kind: 'bot-text', text: 'wil je ook je 06 delen zodat ik je ook via whatsapp persoonlijk kan helpen?' },
+        { kind: 'bot-text', text: 'Dank. We zorgen dat je de brochure straks naar je toe krijgt.' },
+        { kind: 'bot-text', text: 'Wij houden bij dit soort projecten vaak kort contact via WhatsApp, bijvoorbeeld over beschikbaarheid of als je nog vragen hebt. Vind je dat prettig?' },
       ],
     })
     dispatch({ type: 'SET_QUESTION', next: 'lead-phoneAsk' })
@@ -463,7 +431,7 @@ export default function App() {
         type: 'APPEND',
         messages: [
           { kind: 'user-text', text },
-          { kind: 'bot-text', text: 'kreeg er geen 06 nummer uit kun je het opnieuw tikken' },
+          { kind: 'bot-text', text: 'Daar zat geen geldig 06-nummer in. Kun je het opnieuw tikken?' },
         ],
       })
       return
@@ -474,43 +442,14 @@ export default function App() {
 
   function finishLead(lead, prependMessages = []) {
     dispatch({ type: 'LEAD_DRAFT', draft: lead })
-    dispatch({ type: 'ANSWER', key: 'lead', value: lead, next: null })
-
-    // fast track skip alle overige vragen ga direct naar thankyou als sales ready
-    if (state.answers.intent?.fastTrack) {
-      const tc = thankYouCopy('sales_ready', persona, lead.firstName)
-      const wa = whatsAppDeeplink(project, lead.firstName, 'direct contact aangevraagd')
-      // forceer followup waarde voor scoring en debug
-      dispatch({
-        type: 'ANSWER',
-        key: 'followup',
-        value: { id: 'wa_nu', label: 'direct contact', score: 32 },
-        next: null,
-      })
-      dispatch({
-        type: 'APPEND',
-        messages: [
-          ...prependMessages,
-          {
-            kind: 'bot-text',
-            text: `top ${lead.firstName.toLowerCase()} de brochure plattegronden en prijslijst stuur ik nu naar ${lead.email}`,
-          },
-          { kind: 'bot-text', text: tc.lead },
-          { kind: 'bot-text', text: tc.body },
-          { kind: 'cta-card', payload: { waLink: wa, summary: 'direct contact aangevraagd', brochureUrl: project.brochureUrl } },
-        ],
-      })
-      return
-    }
-
-    dispatch({ type: 'SET_QUESTION', next: 'timeline' })
+    dispatch({ type: 'ANSWER', key: 'lead', value: lead, next: 'timeline' })
     dispatch({
       type: 'APPEND',
       messages: [
         ...prependMessages,
         {
           kind: 'bot-text',
-          text: `top ${lead.firstName.toLowerCase()} de brochure plattegronden en prijslijst stuur ik nu naar ${lead.email}`,
+          text: 'Goed. Nog één vraag, zodat we weten welke plattegrond en prijsinformatie het meest relevant is.',
         },
         { kind: 'bot-text', text: flow.questions.timeline.label },
       ],
@@ -522,13 +461,12 @@ export default function App() {
       if (project.brochureUrl && project.brochureUrl !== '#') {
         window.open(project.brochureUrl, '_blank', 'noopener,noreferrer')
       } else {
-        window.alert('demo brochure download zou hier starten')
+        window.alert('Demo: brochure download zou hier starten.')
       }
     }
   }
 
-  // direct whatsapp deeplink voor de header escape
-  const headerWaLink = whatsAppDeeplink(project, state.answers.lead?.firstName || '', 'graag info over de hofman')
+  const headerWaLink = whatsAppDeeplink(project, state.answers.lead?.firstName || '', 'Graag info over De Hofman')
 
   const reset = () => {
     clearPersisted()
@@ -540,9 +478,7 @@ export default function App() {
   let chipQuestion = null
   let inputConfig = null
   if (state.currentQuestion === 'intent') chipQuestion = flow.questions.intent
-  else if (state.currentQuestion === 'focus') {
-    chipQuestion = flow.questions[flow.focusVariant(derivePersona({ intent: state.answers.intent }))]
-  } else if (state.currentQuestion === 'timeline') chipQuestion = flow.questions.timeline
+  else if (state.currentQuestion === 'timeline') chipQuestion = flow.questions.timeline
   else if (state.currentQuestion === 'size') chipQuestion = flow.questions.size
   else if (state.currentQuestion === 'followup') chipQuestion = flow.questions.followup
   else if (state.currentQuestion === 'moreInfo') {
@@ -556,21 +492,21 @@ export default function App() {
       key: 'lead-phoneAsk',
       label: 'phone ask',
       options: [
-        { id: 'yes', label: 'ja prima' },
-        { id: 'no', label: 'liever niet' },
+        { id: 'yes', label: 'Ja, WhatsApp is handig' },
+        { id: 'no', label: 'Liever alleen per mail' },
       ],
     }
   } else if (state.currentQuestion === 'lead-name') {
-    inputConfig = { placeholder: 'je naam', inputMode: undefined }
+    inputConfig = { placeholder: 'Je naam', inputMode: undefined }
   } else if (state.currentQuestion === 'lead-email') {
-    inputConfig = { placeholder: 'je e-mail adres', inputMode: 'email' }
+    inputConfig = { placeholder: 'Je e-mailadres', inputMode: 'email' }
   } else if (state.currentQuestion === 'lead-phone') {
     inputConfig = { placeholder: '06 12 34 56 78', inputMode: 'tel', validate: isValidPhoneText }
   }
 
-  const answeredCount = ['intent', 'focus', 'lead', 'timeline', 'size', 'followup']
+  const answeredCount = ['intent', 'lead', 'timeline', 'size', 'followup']
     .filter((k) => state.answers[k]).length
-  const progress = state.view === 'chat' ? { current: Math.min(6, Math.max(1, answeredCount + 1)), total: 6 } : null
+  const progress = state.view === 'chat' ? { current: Math.min(5, Math.max(1, answeredCount + 1)), total: 5 } : null
 
   return (
     <AppShell
