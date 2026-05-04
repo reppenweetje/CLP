@@ -50,6 +50,9 @@ export default function IntroScreen({ onStart }) {
           <div className="text-[11px] text-ink-mute text-center">
             Geen spam, alleen relevante info over De Hofman.
           </div>
+          <div className="text-[10px] text-ink-mute italic text-center leading-snug">
+            Sfeerimpressies. Inrichting, beplanting en materialen kunnen afwijken. Geen rechten te ontlenen.
+          </div>
         </div>
       </div>
     </div>

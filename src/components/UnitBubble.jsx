@@ -1,4 +1,5 @@
 import Avatar from './Avatar.jsx'
+import ImpressionNote from './ImpressionNote.jsx'
 
 // unit aanbeveling card als rich bot bubble
 export default function UnitBubble({ unit }) {
@@ -51,6 +52,7 @@ export default function UnitBubble({ unit }) {
                 {unit.note}
               </div>
             )}
+            <ImpressionNote className="mt-3" />
           </div>
         </div>
       </div>

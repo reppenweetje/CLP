@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Avatar from './Avatar.jsx'
+import ImpressionNote from './ImpressionNote.jsx'
 import { trackEvent } from '../lib/analytics.js'
 
 // Locatie-bubble v2. Drie perspectieven via segment-control:
@@ -32,6 +33,7 @@ export default function LocationBubble({ location, projectName }) {
             <div className="text-[12.5px] text-ink-soft leading-relaxed mt-1">
               {projectName ? `${projectName} ligt op een gevestigde bedrijvenlocatie in Haarlem, in de Metropoolregio Amsterdam.` : 'Gevestigde bedrijvenlocatie in Haarlem, in de Metropoolregio Amsterdam.'}
             </div>
+            <ImpressionNote variant="aerial" className="mt-2" />
           </div>
 
           <div className="px-4">

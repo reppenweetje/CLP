@@ -1,4 +1,5 @@
 import Avatar from './Avatar.jsx'
+import ImpressionNote from './ImpressionNote.jsx'
 
 // content card als bot bubble compact mooie kaart in de chat
 export default function ContentBubble({ tag, title, body, image }) {
@@ -20,6 +21,7 @@ export default function ContentBubble({ tag, title, body, image }) {
             )}
             <div className="text-[15px] font-semibold text-ink leading-snug mt-1.5">{title}</div>
             <div className="text-[13px] text-ink-soft leading-relaxed mt-1.5">{body}</div>
+            {image && <ImpressionNote variant="short" className="mt-3" />}
           </div>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import Avatar from './Avatar.jsx'
+import ImpressionNote from './ImpressionNote.jsx'
 
 // brochure card als bot bubble cover thumbnail plus open knop
 export default function BrochureBubble({ url, hero, projectName }) {
@@ -27,6 +28,7 @@ export default function BrochureBubble({ url, hero, projectName }) {
             >
               open brochure
             </a>
+            <ImpressionNote variant="short" className="mt-3" />
           </div>
         </div>
       </div>

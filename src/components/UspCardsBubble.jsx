@@ -1,4 +1,5 @@
 import Avatar from './Avatar.jsx'
+import ImpressionNote from './ImpressionNote.jsx'
 
 // Horizontale snap-carousel met 6 USP-kaarten, persona-aware volgorde.
 // Elke kaart is zelfstandig leesbaar: tag + titel + body + image.
@@ -36,12 +37,13 @@ export default function UspCardsBubble({ cards, intro }) {
               </article>
             ))}
           </div>
-          <div className="px-4 pb-3 flex items-center gap-1.5">
+          <div className="px-4 pb-2 flex items-center gap-1.5">
             {cards.map((_, i) => (
               <span key={i} className="h-1 w-3 rounded-full bg-mist" />
             ))}
             <span className="text-[10px] tracking-widest text-ink-mute uppercase ml-2">Veeg</span>
           </div>
+          <ImpressionNote className="px-4 pb-3" />
         </div>
       </div>
     </div>
