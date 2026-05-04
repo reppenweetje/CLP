@@ -90,8 +90,81 @@ export function thankYouCopy(stage, persona, name) {
 
 export function whatsAppDeeplink(project, name, summary) {
   const num = (project.whatsappNumber || '').replace(/[^0-9]/g, '')
-  const text = encodeURIComponent(
-    `Hoi REPP, ik ben ${name || ''} en heb interesse in ${project.displayName || project.name}.${summary ? ' ' + summary : ''}`,
-  )
+  const projectName = project.displayName || project.name
+  const opener = name
+    ? `Hoi REPP, ik ben ${name} en heb interesse in ${projectName}.`
+    : `Hoi REPP, ik heb interesse in ${projectName}.`
+  const text = encodeURIComponent(`${opener}${summary ? ' ' + summary : ''}`)
   return `https://wa.me/${num}?text=${text}`
+}
+
+// Bouwt een natuurlijk klinkende, klant-stem samenvatting van de gegeven
+// antwoorden. Bedoeld voor het prefilled WhatsApp-bericht en voor de
+// "Jouw interesse"-strook in de cta-card. Bewust geen interne taal als
+// "lead", "match", "signaal" of "flow" — de bezoeker mag zichzelf nooit
+// als lead zien. Wel persoonlijke ik-voorkeur.
+export function buildCustomerWaSummary(answers) {
+  const persona = answers?.intent?.persona
+  const sizeId = answers?.size?.id
+  const tlId = answers?.timeline?.id
+
+  const personaPhrase =
+    persona === 'belegger'
+      ? 'Ik kijk als belegger'
+      : persona === 'eigen_gebruiker'
+      ? 'Ik zoek voor mijn eigen bedrijf'
+      : persona === 'beide'
+      ? 'Ik kijk zowel voor eigen gebruik als belegging'
+      : null
+
+  const sizePhrase =
+    sizeId === 'tot_50'
+      ? 'rond 50 m²'
+      : sizeId === 'rond_100'
+      ? 'rond 100 m²'
+      : sizeId === 'meer_dan_100'
+      ? 'groter dan 100 m²'
+      : null
+
+  const tlPhrase =
+    tlId === 'zsm'
+      ? 'zo snel mogelijk'
+      : tlId === '3mnd'
+      ? 'binnen 3 maanden'
+      : tlId === '6mnd'
+      ? 'binnen 6 maanden'
+      : tlId === 'dit_jaar'
+      ? 'later dit jaar'
+      : null
+
+  const trail = [sizePhrase, tlPhrase].filter(Boolean)
+
+  if (personaPhrase && trail.length > 0) return `${personaPhrase}, ${trail.join(', ')}.`
+  if (personaPhrase) return `${personaPhrase}.`
+  if (trail.length > 0) return `Ik zoek ${trail.join(', ')}.`
+  return ''
+}
+
+// Klant-stem samenvatting voor het afhaak-pad. Geen "niet matchend"-stempel.
+export function customerAfhaakSummary(reasonId) {
+  switch (reasonId) {
+    case 'prijs':
+      return 'De prijs past niet helemaal bij wat ik zoek.'
+    case 'locatie':
+      return 'De locatie past niet bij wat ik zoek.'
+    case 'oppervlakte':
+      return 'De oppervlakte past niet bij mijn behoefte.'
+    case 'huur':
+      return 'Ik zoek eerder huur dan koop.'
+    case 'anders':
+    default:
+      return 'Mijn wensen passen denk ik niet helemaal bij dit project, maar ik denk graag mee.'
+  }
+}
+
+// Klant-stem samenvatting voor het rent-match pad. Range-label wordt
+// rechtstreeks overgenomen — die is al klant-leesbaar.
+export function customerRentSummary(rangeLabel) {
+  if (!rangeLabel) return 'Ik ben op zoek naar huur in plaats van koop.'
+  return `Ik ben op zoek naar huur, rond ${rangeLabel.toLowerCase()} per m² per jaar.`
 }

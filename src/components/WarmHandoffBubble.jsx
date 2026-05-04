@@ -105,7 +105,7 @@ export default function WarmHandoffBubble({
                     className="flex-1 border border-mist hover:border-midnite text-ink hover:text-midnite text-[12.5px] py-2.5 rounded-full transition flex items-center justify-center gap-1.5"
                   >
                     <WaIcon />
-                    <span>WhatsApp Jann</span>
+                    <span>WhatsApp REPP</span>
                   </a>
                   <a
                     href={phoneLink}

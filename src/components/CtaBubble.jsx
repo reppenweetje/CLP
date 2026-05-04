@@ -9,6 +9,7 @@ export default function CtaBubble({
   phoneDisplay,
   onBrochure,
   onReset,
+  onWhatsapp,
   summary,
   intro,
 }) {
@@ -39,6 +40,7 @@ export default function CtaBubble({
               href={waLink}
               target="_blank"
               rel="noreferrer"
+              onClick={onWhatsapp}
               className="block w-full text-center rounded-full bg-neon text-midnite font-semibold py-3.5 text-[14px] hover:brightness-95 active:scale-[0.99] transition"
             >
               Open WhatsApp met REPP

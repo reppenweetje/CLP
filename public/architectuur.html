@@ -1,0 +1,752 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>De Hofman CLP — opbouw en flow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #ffffff;
+    --canvas: #f7f6f1;
+    --canvas-2: #efeee8;
+    --mist: #d8d6d6;
+    --mist-light: #ebeae5;
+    --ink: #1d1d1f;
+    --ink-soft: #6b6a66;
+    --ink-mute: #9a9893;
+    --midnite: #0f0f70;
+    --midnite-soft: #1b1b8a;
+    --neon: #edff00;
+    --gold: #c9a45c;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
+    background: var(--canvas);
+    color: var(--ink);
+    line-height: 1.5;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 32px 20px 80px; }
+  header.page-head {
+    border-bottom: 1px solid var(--mist-light);
+    padding-bottom: 24px;
+    margin-bottom: 40px;
+  }
+  .eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--midnite);
+    font-weight: 600;
+  }
+  h1 {
+    font-size: 30px;
+    font-weight: 700;
+    margin: 8px 0 8px;
+    line-height: 1.2;
+  }
+  h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 48px 0 12px;
+    border-top: 1px solid var(--mist-light);
+    padding-top: 32px;
+  }
+  h2:first-of-type { border-top: 0; padding-top: 0; }
+  h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 24px 0 8px;
+  }
+  p { color: var(--ink-soft); font-size: 14px; max-width: 720px; }
+  p.lead { font-size: 16px; color: var(--ink); }
+  code {
+    background: var(--canvas-2);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 12.5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin: 16px 0 0;
+  }
+  .meta-card {
+    background: var(--paper);
+    border: 1px solid var(--mist-light);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .meta-card .label {
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+  }
+  .meta-card .value {
+    font-size: 18px;
+    font-weight: 600;
+    margin-top: 4px;
+  }
+
+  .flow-wrap {
+    background: var(--paper);
+    border: 1px solid var(--mist-light);
+    border-radius: 18px;
+    padding: 20px;
+    overflow-x: auto;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 12px 0 0;
+    font-size: 12px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: var(--ink-soft); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+  .bubble-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 16px;
+  }
+  .bubble-cell {
+    background: var(--paper);
+    border: 1px solid var(--mist-light);
+    border-radius: 18px;
+    padding: 18px;
+  }
+  .bubble-cell .name {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .bubble-cell .name h3 { margin: 0; }
+  .bubble-cell .tag {
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--midnite);
+    font-weight: 600;
+  }
+  .bubble-cell .descr {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 12px;
+  }
+  .bubble-cell .reach {
+    font-size: 11.5px;
+    color: var(--ink-mute);
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--mist-light);
+  }
+  .bubble-cell .reach strong { color: var(--ink); font-weight: 600; }
+
+  .preview-bubble {
+    background: var(--canvas-2);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    font-size: 12.5px;
+    color: var(--ink);
+    border: 1px solid var(--mist-light);
+  }
+  .preview-bubble.user {
+    background: var(--midnite);
+    color: var(--paper);
+    margin-left: 30%;
+    border-radius: 12px 12px 4px 12px;
+    border: none;
+  }
+  .preview-bubble.bot { border-radius: 12px 12px 12px 4px; background: var(--paper); }
+  .preview-bubble.rich {
+    padding: 0;
+    overflow: hidden;
+  }
+  .preview-bubble.rich img {
+    width: 100%;
+    aspect-ratio: 16/10;
+    object-fit: cover;
+    display: block;
+  }
+  .preview-bubble.rich .body { padding: 12px 14px; }
+  .preview-bubble.rich .badges {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  .preview-bubble.rich .badge {
+    background: var(--paper);
+    border: 1px solid var(--mist);
+    border-radius: 999px;
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    color: var(--midnite);
+    font-weight: 500;
+  }
+  .preview-bubble.rich .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .preview-bubble.rich .price-from {
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+  }
+  .preview-bubble.rich .price {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .preview-bubble.rich .pitch {
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-top: 6px;
+  }
+
+  .pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 12px 0;
+  }
+  .pill {
+    background: var(--paper);
+    border: 1px solid var(--mist);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--ink);
+  }
+  .pill.first {
+    border-color: var(--midnite);
+    color: var(--midnite);
+    font-weight: 500;
+  }
+
+  .persona-cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin-top: 12px;
+  }
+  .persona-col {
+    background: var(--paper);
+    border: 1px solid var(--mist-light);
+    border-radius: 14px;
+    padding: 14px 16px;
+  }
+  .persona-col h4 {
+    margin: 0 0 6px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .persona-col ol {
+    list-style: none;
+    counter-reset: idx;
+    padding: 0;
+    margin: 8px 0 0;
+  }
+  .persona-col ol li {
+    counter-increment: idx;
+    font-size: 12.5px;
+    padding: 4px 0;
+    color: var(--ink-soft);
+    border-bottom: 1px dashed var(--mist-light);
+  }
+  .persona-col ol li::before {
+    content: counter(idx) "  ";
+    color: var(--ink-mute);
+    font-variant-numeric: tabular-nums;
+    margin-right: 4px;
+  }
+  .persona-col ol li:last-child { border: 0; }
+
+  .gold-line {
+    height: 1px;
+    background: rgba(201, 164, 92, 0.4);
+    margin: 24px 0;
+  }
+  footer.page-foot {
+    color: var(--ink-mute);
+    font-size: 12px;
+    margin-top: 60px;
+    padding-top: 20px;
+    border-top: 1px solid var(--mist-light);
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header class="page-head">
+    <div class="eyebrow">Conversational landing page · interne documentatie</div>
+    <h1>De Hofman CLP — opbouw en flow</h1>
+    <p class="lead">Mobile-first chat-thread waar bezoekers vanuit een ad door de project-info worden geleid en gecapteerd. Persona, aankoopfase en koopsignalen worden afgeleid; een service-card neemt het over op het moment dat iemand klaar is voor persoonlijk contact.</p>
+    <div class="meta-grid">
+      <div class="meta-card"><div class="label">Project</div><div class="value">De Hofman</div></div>
+      <div class="meta-card"><div class="label">Units</div><div class="value">14</div></div>
+      <div class="meta-card"><div class="label">Locatie</div><div class="value">Haarlem Waarderpolder</div></div>
+      <div class="meta-card"><div class="label">Stack</div><div class="value">Vite · React · Tailwind</div></div>
+    </div>
+  </header>
+
+  <h2>1. De flow van begin tot eind</h2>
+  <p>Hieronder de volledige conversation: van intro-scherm tot conversie-moment. Beslis-momenten zijn ruit-vormig, content-bubbles zijn rechthoekig. Drie eindes (paars): afhaak, rent-match, of warme conversie. De service-card grijpt automatisch in op het hot-moment.</p>
+  <div class="flow-wrap">
+    <pre class="mermaid">
+flowchart TD
+  intro([Intro scherm: hero + neon CTA])
+  intent{Waarom op zoek?}
+  micro[Microintro persona-aware<br/>+ 6 USP-cards]
+  avail{Wil je beschikbaarheid zien?}
+  siteplan[Site-plan: 14 units met<br/>actuele status]
+  brochure{Brochure mailen?}
+  email[Email vraag]
+  name[Naam vraag]
+  phoneAsk{06 voor WA?}
+  phone[06 vraag]
+  size{Hoe groot?}
+  timeline{Voor wanneer?}
+  hotcheck{Buying-signal hot?}
+  rec[Unit-card recommendation<br/>+ recommendCopy]
+  service[Service-card<br/>unit + persoonlijk contactaanbod<br/>+ inline 06-input]
+  moreinfo{moreInfo chip-rij<br/>11 opties persona-geordend}
+  loc[Location bubble]
+  galler[Gallery bubble]
+  high[Highlights bubble]
+  pricec[Price bubble]
+  pricep[PriceCompare bubble]
+  plan[Planning bubble]
+  proc[Process bubble]
+  broc[Brochure bubble]
+  inv[Investor bubble<br/>belegger-only]
+  fin[Financing chip<br/>Credion-doorgeven]
+  warm[Warm-handoff bubble<br/>async tijdens moreInfo]
+  contact{Direct contact}
+  cta[Cta-card: bel + WhatsApp]
+  followup{Hoe verder?}
+  thank[Cta-card: bel + WhatsApp + brochure]
+  afhaak{Afhaak-reden}
+  rent{Huurprijs-range}
+  rentcta[Cta-card: huur-match]
+  afhaakcta[Cta-card: geen match]
+
+  intro --> intent
+  intent --> micro --> avail
+  avail -- ja --> siteplan --> brochure
+  avail -- nee --> brochure
+  brochure -- ja, lead onbekend --> email --> name --> phoneAsk
+  brochure -- ja, lead bekend --> size
+  brochure -- nee --> afhaak
+  phoneAsk -- ja --> phone --> size
+  phoneAsk -- nee --> size
+  afhaak -- huur --> rent --> rentcta
+  afhaak -- overig --> afhaakcta
+  size --> timeline --> hotcheck
+  hotcheck -- niet hot --> rec --> moreinfo
+  hotcheck -- hot --> service --> moreinfo
+  moreinfo --> loc --> moreinfo
+  moreinfo --> galler --> moreinfo
+  moreinfo --> high --> moreinfo
+  moreinfo --> pricec --> moreinfo
+  moreinfo --> pricep --> moreinfo
+  moreinfo --> plan --> moreinfo
+  moreinfo --> proc --> moreinfo
+  moreinfo --> broc --> moreinfo
+  moreinfo --> inv --> moreinfo
+  moreinfo --> fin --> moreinfo
+  moreinfo --> warm
+  moreinfo --> contact --> cta
+  moreinfo --> followup --> thank
+
+  classDef endNode fill:#f3f0ff,stroke:#0f0f70,color:#0f0f70,stroke-width:1.5px
+  classDef hotNode fill:#fff8d6,stroke:#c9a45c,color:#1d1d1f,stroke-width:1.5px
+  classDef richNode fill:#ffffff,stroke:#d8d6d6,color:#1d1d1f
+  class cta,thank,rentcta,afhaakcta endNode
+  class service,warm hotNode
+  class siteplan,rec,loc,galler,high,pricec,pricep,plan,proc,broc,inv richNode
+    </pre>
+  </div>
+  <div class="legend">
+    <div class="legend-item"><span class="legend-dot" style="background:#fff8d6;border:1px solid #c9a45c"></span>service-card / warm-handoff (hot moment)</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#f3f0ff;border:1px solid #0f0f70"></span>cta-card (eind van flow)</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#ffffff;border:1px solid #d8d6d6"></span>content-bubble</div>
+  </div>
+
+  <h2>2. Bubble-types in de chat</h2>
+  <p>Elke chat-bubble heeft een doel. De content-bubbles bouwen begrip en vertrouwen. De service- en handoff-bubbles vragen om persoonlijk contact. De cta-card sluit een flow af.</p>
+
+  <div class="bubble-grid">
+
+    <div class="bubble-cell">
+      <div class="name"><h3>service-card</h3><div class="tag">hot moment</div></div>
+      <div class="preview-bubble rich">
+        <img src="/images/unit-studio.jpg" alt="">
+        <div class="body">
+          <div class="badges"><span class="badge">aanbevolen</span><span class="badge" style="color:var(--ink)">Nog enkele beschikbaar</span></div>
+          <div class="row"><div><div style="font-weight:600">unit L</div><div style="font-size:11px;color:var(--ink-soft)">≈ 105 m² 2 laags</div></div><div style="text-align:right"><div class="price-from">vanaf</div><div class="price">€239k</div></div></div>
+          <div style="border-top:1px solid var(--mist-light);margin-top:10px;padding-top:10px">
+            <div class="tag" style="font-size:9px">Persoonlijk</div>
+            <div style="font-weight:600;font-size:12.5px;margin-top:4px">Met die timeline kijken we even gericht</div>
+            <div style="margin-top:6px;background:var(--midnite);color:var(--paper);text-align:center;border-radius:999px;padding:8px;font-size:11px;font-weight:500">📞 Laat Jann mij bellen</div>
+          </div>
+        </div>
+      </div>
+      <div class="descr">Combineert unit-aanbeveling, persoonlijk contactaanbod, uitklap-bullets en optioneel inline 06-input in één visuele eenheid.</div>
+      <div class="reach"><strong>Bereikbaar via:</strong> automatisch op het moment dat de buying-signal score hot is bij timeline-antwoord.</div>
+    </div>
+
+    <div class="bubble-cell">
+      <div class="name"><h3>warm-handoff</h3><div class="tag">async hot</div></div>
+      <div class="preview-bubble" style="padding:0;overflow:hidden">
+        <div style="background:var(--canvas-2);padding:10px 14px;border-bottom:1px solid var(--mist-light)"><div class="tag" style="font-size:9px">Persoonlijk</div><div style="font-weight:600;margin-top:4px">Fijn dat je verder kijkt</div></div>
+        <div style="padding:10px 14px;font-size:12px;color:var(--ink-soft)">Mijn collega Jann denkt graag tien minuten met je mee, zonder verplichting.</div>
+        <div style="padding:0 14px 12px"><div style="background:var(--midnite);color:var(--paper);text-align:center;border-radius:999px;padding:8px;font-size:11px;font-weight:500">Laat Jann mij terugbellen</div></div>
+      </div>
+      <div class="descr">Persoonlijke nudge zonder unit-card. Verschijnt alleen als de bezoeker tijdens moreInfo opwarmt naar hot-temperatuur.</div>
+      <div class="reach"><strong>Bereikbaar via:</strong> async useEffect die op de signaal-score watcht; alleen als service-card nog niet getoond is.</div>
+    </div>
+
+    <div class="bubble-cell">
+      <div class="name"><h3>unit-card</h3><div class="tag">recommendation</div></div>
+      <div class="preview-bubble rich">
+        <img src="/images/unit-l.jpg" alt="">
+        <div class="body">
+          <div class="badges"><span class="badge">aanbevolen</span></div>
+          <div class="row"><div><div style="font-weight:600">unit L</div><div style="font-size:11px;color:var(--ink-soft)">≈ 105 m² 2 laags</div></div><div style="text-align:right"><div class="price-from">vanaf</div><div class="price">€239k</div></div></div>
+          <div class="pitch">Praktisch, twee lagen. Geschikt voor opslag, werkplaats, showroom of studio.</div>
+        </div>
+      </div>
+      <div class="descr">Aanbeveling-card op het niet-hot pad. Alleen unit-data, geen service-strook.</div>
+      <div class="reach"><strong>Bereikbaar via:</strong> timeline antwoord wanneer buying-signal score nog warm of cold is.</div>
+    </div>
+
+    <div class="bubble-cell">
+      <div class="name"><h3>site-plan</h3><div class="tag">live status</div></div>
+      <div class="preview-bubble" style="padding:14px">
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;font-size:9px;text-align:center">
+          <div style="background:var(--mist);padding:4px;border-radius:3px;color:var(--ink-mute)">XL1</div>
+          <div style="background:#dcfce7;padding:4px;border-radius:3px;color:#166534">L2</div>
+          <div style="background:#fed7aa;padding:4px;border-radius:3px;color:#9a3412">L3</div>
+          <div style="background:var(--mist);padding:4px;border-radius:3px;color:var(--ink-mute)">L4</div>
+          <div style="background:#dcfce7;padding:4px;border-radius:3px;color:#166534">L5</div>
+          <div style="background:#dcfce7;padding:4px;border-radius:3px;color:#166534">L6</div>
+          <div style="background:var(--paper);border:1px dashed var(--mist);padding:4px;border-radius:3px;color:var(--ink-mute)">XXL7</div>
+        </div>
+        <div style="font-size:10px;color:var(--ink-soft);margin-top:8px">verkocht · beschikbaar · ov · later</div>
+      </div>
+      <div class="descr">14-units grid met actuele status (groen = beschikbaar, oranje = ov, grijs = verkocht). Tap-op-unit toont specs en optionele rendabiliteit-calc.</div>
+      <div class="reach"><strong>Bereikbaar via:</strong> directe vraag "Wil je nu zien welke units beschikbaar zijn?" én via moreInfo-chip <em>Situatietekening</em>.</div>
+    </div>
+
+    <div class="bubble-cell">
+      <div class="name"><h3>usp-cards</h3><div class="tag">na intent</div></div>
+      <div class="preview-bubble" style="padding:0;overflow:hidden">
+        <div style="display:flex;gap:6px;padding:8px;overflow-x:hidden">
+          <div style="min-width:55%;background:var(--canvas-2);border-radius:8px;padding:8px"><div class="tag" style="font-size:9px">Project</div><div style="font-weight:600;font-size:12px;margin-top:2px">14 bedrijfsunits</div></div>
+          <div style="min-width:55%;background:var(--canvas-2);border-radius:8px;padding:8px"><div class="tag" style="font-size:9px">Locatie</div><div style="font-weight:600;font-size:12px;margin-top:2px">3 minuten van A9</div></div>
+        </div>
+      </div>
+      <div class="descr">6 swipeable cards met project-USPs, persona-aware geordend.</div>
+      <div class="reach"><strong>Bereikbaar via:</strong> automatisch direct na de intent-keuze.</div>
+    </div>
+
+    <div class="bubble-cell">
+      <div class="name"><h3>location</h3><div class="tag">moreInfo</div></div>
+      <div class="preview-bubble" style="padding:14px">
+        <div style="display:flex;gap:6px;font-size:10px;margin-bottom:8px"><span class="pill first">Bereikbaarheid</span><span class="pill">Omgeving</span><span class="pill">Op kaart</span></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;font-size:10px;text-align:center">
+          <div style="background:var(--canvas-2);padding:4px;border-radius:4px"><strong>3 min</strong><br>A9</div>
+          <div style="background:var(--canvas-2);padding:4px;border-radius:4px"><strong>10 min</strong><br>Haarlem CS</div>
+          <div style="background:var(--canvas-2);padding:4px;border-radius:4px"><strong>20 min</strong><br>Schiphol</div>
+        </div>
+      </div>
+      <div class="descr">Drie tabs: bereikbaarheid (reistijden), omgeving (highlights), live Google Maps embed.</div>
+      <div class="reach"><strong>Bereikbaar via:</strong> moreInfo-chip <em>Meer over locatie</em>.</div>
+    </div>
+
+    <div class="bubble-cell">
+      <div class="name"><h3>gallery</h3><div class="tag">moreInfo</div></div>
+      <div class="preview-bubble" style="padding:0;overflow:hidden">
+        <img src="/images/showroom.jpg" alt="" style="width:100%;aspect-ratio:16/10;object-fit:cover">
+        <div style="display:flex;gap:4px;padding:6px 14px"><span style="height:3px;width:18px;border-radius:2px;background:var(--mist)"></span><span style="height:3px;width:18px;border-radius:2px;background:var(--mist)"></span><span style="height:3px;width:18px;border-radius:2px;background:var(--mist)"></span><span style="font-size:9px;color:var(--ink-mute);margin-left:6px">VEEG</span></div>
+      </div>
+      <div class="descr">6 sfeerbeelden in horizontale snap-carousel. Mix van exterieur en interieur (showroom, kantoor, werkplaats, studio).</div>
+      <div class="reach"><strong>Bereikbaar via:</strong> moreInfo-chip <em>Sfeerbeelden</em>.</div>
+    </div>
+
+    <div class="bubble-cell">
+      <div class="name"><h3>highlights</h3><div class="tag">moreInfo</div></div>
+      <div class="preview-bubble" style="padding:14px">
+        <div class="tag" style="font-size:9px">Highlights</div>
+        <div style="font-size:12px;margin-top:6px">Wat De Hofman onderscheidt.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;font-size:10.5px">
+          <div style="background:var(--canvas-2);padding:6px;border-radius:6px"><span style="color:var(--gold)">◆</span> <strong>Kleinschalig</strong><div style="color:var(--ink-soft)">14 units, menselijke schaal</div></div>
+          <div style="background:var(--canvas-2);padding:6px;border-radius:6px"><span style="color:var(--gold)">◆</span> <strong>Praktisch</strong><div style="color:var(--ink-soft)">eigen parkeerplaats</div></div>
+        </div>
+      </div>
+      <div class="descr">2-koloms grid met 6 USP's en goud-accent. Project-onderscheidende kenmerken in één blik.</div>
+      <div class="reach"><strong>Bereikbaar via:</strong> moreInfo-chip <em>Waarom De Hofman</em>.</div>
+    </div>
+
+    <div class="bubble-cell">
+      <div class="name"><h3>price</h3><div class="tag">moreInfo</div></div>
+      <div class="preview-bubble" style="padding:14px;font-size:12px">
+        <div class="tag" style="font-size:9px">Prijslijst</div>
+        <table style="width:100%;font-size:11px;margin-top:6px;border-collapse:collapse">
+          <tr><th align="left" style="font-weight:500;color:var(--ink-mute)">Type</th><th align="right" style="font-weight:500;color:var(--ink-mute)">m²</th><th align="right" style="font-weight:500;color:var(--ink-mute)">v.o.n.</th></tr>
+          <tr><td>L</td><td align="right">105</td><td align="right">€239k</td></tr>
+          <tr><td>XL</td><td align="right">175</td><td align="right">uitverkocht</td></tr>
+          <tr><td>XXL</td><td align="right">270</td><td align="right">later</td></tr>
+        </table>
+      </div>
+      <div class="descr">Tabel per unit-type met m² en v.o.n.-prijs.</div>
+      <div class="reach"><strong>Bereikbaar via:</strong> moreInfo-chip <em>Prijslijst</em>.</div>
+    </div>
+
+    <div class="bubble-cell">
+      <div class="name"><h3>price-compare</h3><div class="tag">moreInfo</div></div>
+      <div class="preview-bubble" style="padding:14px;font-size:11px">
+        <div class="tag" style="font-size:9px">Vergelijking m²-prijs</div>
+        <div style="display:flex;flex-direction:column;gap:3px;margin-top:8px">
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--midnite);font-weight:600">De Hofman L</span><span style="color:var(--midnite);font-weight:600">€2.233/m²</span></div>
+          <div style="display:flex;justify-content:space-between;color:var(--ink-soft)"><span>Wateringweg</span><span>€2.375/m²</span></div>
+          <div style="display:flex;justify-content:space-between;color:var(--ink-soft)"><span>Beijnesweg</span><span>€2.533/m²</span></div>
+        </div>
+      </div>
+      <div class="descr">Prijs per m² versus vergelijkbare bedrijfsunits in de Waarderpolder. Sterk argument voor beleggers.</div>
+      <div class="reach"><strong>Bereikbaar via:</strong> moreInfo-chip <em>Prijsvergelijking</em>.</div>
+    </div>
+
+    <div class="bubble-cell">
+      <div class="name"><h3>planning</h3><div class="tag">moreInfo</div></div>
+      <div class="preview-bubble" style="padding:14px;font-size:11.5px">
+        <div class="tag" style="font-size:9px">Indicatieve planning</div>
+        <div style="display:flex;flex-direction:column;gap:5px;margin-top:8px;border-left:1px solid var(--mist);padding-left:10px;margin-left:4px">
+          <div style="display:flex;justify-content:space-between"><span>Start verkoop</span><span style="color:var(--ink-soft)">Gestart</span></div>
+          <div style="display:flex;justify-content:space-between"><span>Bouwfase</span><span style="color:var(--ink-soft)">2025–2026</span></div>
+          <div style="display:flex;justify-content:space-between"><span>Oplevering</span><span style="color:var(--ink-soft)">Q1 2027</span></div>
+        </div>
+      </div>
+      <div class="descr">Tijdlijn van start verkoop tot oplevering. Belangrijke verwachting-management voor serieuze kopers.</div>
+      <div class="reach"><strong>Bereikbaar via:</strong> moreInfo-chip <em>Planning</em>.</div>
+    </div>
+
+    <div class="bubble-cell">
+      <div class="name"><h3>process</h3><div class="tag">moreInfo</div></div>
+      <div class="preview-bubble" style="padding:14px;font-size:11.5px">
+        <div class="tag" style="font-size:9px">Aankoopproces</div>
+        <ol style="padding-left:18px;margin:8px 0 0;color:var(--ink-soft)">
+          <li>Oriënteren</li><li>Reserveren</li><li>Koopovereenkomst</li><li>Notaris</li><li>Bouw</li><li>Oplevering</li>
+        </ol>
+      </div>
+      <div class="descr">Zes stappen van oriëntatie tot sleuteloverdracht. Transparantie over wat de koper te wachten staat.</div>
+      <div class="reach"><strong>Bereikbaar via:</strong> moreInfo-chip <em>Aankoopproces</em>.</div>
+    </div>
+
+    <div class="bubble-cell">
+      <div class="name"><h3>investor</h3><div class="tag">moreInfo · belegger</div></div>
+      <div class="preview-bubble" style="padding:14px;font-size:11.5px">
+        <div class="tag" style="font-size:9px">Belegger</div>
+        <div style="margin-top:4px;font-weight:600;font-size:13px">BAR 6,7% – 9,0%</div>
+        <div style="color:var(--ink-soft);margin-top:6px">Bij markthuur €150–€200/m²/jaar in Waarderpolder.</div>
+        <ul style="padding-left:16px;margin:6px 0 0;color:var(--ink-soft)">
+          <li>VON, geen overdrachtsbelasting</li>
+          <li>5% aanbetaling, rest in termijnen</li>
+        </ul>
+      </div>
+      <div class="descr">BAR-bandbreedte, fiscale aandachtspunten en cashflow-structuur. Alleen zichtbaar voor belegger-persona.</div>
+      <div class="reach"><strong>Bereikbaar via:</strong> moreInfo-chip <em>Belegger voordelen</em> (alleen belegger / beide / onbekend).</div>
+    </div>
+
+    <div class="bubble-cell">
+      <div class="name"><h3>brochure</h3><div class="tag">moreInfo</div></div>
+      <div class="preview-bubble" style="padding:14px;font-size:12px">
+        <div style="display:flex;gap:10px;align-items:center">
+          <div style="width:48px;height:64px;background:var(--canvas-2);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--ink-mute)">PDF</div>
+          <div><div style="font-weight:600">De Hofman brochure</div><div style="color:var(--ink-soft);font-size:11px">Volledige projectinfo, prijzen en plattegronden</div></div>
+        </div>
+      </div>
+      <div class="descr">PDF-download met alle projectinformatie. Direct te openen vanuit chat of bewaarbaar.</div>
+      <div class="reach"><strong>Bereikbaar via:</strong> moreInfo-chip <em>Open brochure</em>.</div>
+    </div>
+
+    <div class="bubble-cell">
+      <div class="name"><h3>financing chip</h3><div class="tag">moreInfo · sub-flow</div></div>
+      <div class="preview-bubble" style="padding:14px;font-size:11.5px">
+        <div style="color:var(--ink)">Onze partner Credion kan vrijblijvend met je meedenken over financiering.</div>
+        <div style="display:flex;gap:6px;margin-top:10px"><span class="pill first">Ja, graag</span><span class="pill">Liever niet</span></div>
+      </div>
+      <div class="descr">Bij ja: lead-data wordt naar Credion (Zapier-webhook) gestuurd. Geen rich bubble, maar een sub-vraag.</div>
+      <div class="reach"><strong>Bereikbaar via:</strong> moreInfo-chip <em>Financiering</em>.</div>
+    </div>
+
+    <div class="bubble-cell">
+      <div class="name"><h3>cta-card</h3><div class="tag">eind-bubble</div></div>
+      <div class="preview-bubble" style="padding:14px">
+        <div style="background:var(--canvas-2);border-radius:8px;padding:10px;font-size:11px"><div class="tag" style="font-size:9px">Jouw interesse</div><div style="margin-top:4px;color:var(--ink)">Ik kijk als belegger, rond 100 m², binnen 3 maanden.</div></div>
+        <div style="background:var(--midnite);color:var(--paper);text-align:center;border-radius:999px;padding:8px;font-size:11px;font-weight:600;margin-top:8px">Bel direct 020-2610080</div>
+        <div style="background:var(--neon);color:var(--midnite);text-align:center;border-radius:999px;padding:8px;font-size:11px;font-weight:600;margin-top:6px">Open WhatsApp met REPP</div>
+      </div>
+      <div class="descr">Afsluitende card met klant-stem samenvatting plus directe acties: bellen, WhatsApp, optioneel brochure.</div>
+      <div class="reach"><strong>Bereikbaar via:</strong> followup-keuze, direct contact, afhaak en rent-match. Vier eind-paden, één component.</div>
+    </div>
+
+  </div>
+
+  <h2>3. moreInfo-chips per persona</h2>
+  <p>De chip-rij na de unit-aanbeveling toont alle 11 moreInfo-opties, maar de volgorde verschilt per persona zodat de meest relevante content vooraan staat. Hot-bezoekers krijgen <em>Laat Jann mij bellen</em> als eerste chip; warme bezoekers <em>Direct contact</em>.</p>
+  <div class="persona-cols">
+    <div class="persona-col">
+      <h4>Belegger</h4>
+      <p style="font-size:11.5px;margin:0">Cijfers eerst.</p>
+      <ol>
+        <li>Prijsvergelijking</li>
+        <li>Belegger voordelen</li>
+        <li>Planning</li>
+        <li>Financiering</li>
+        <li>Meer over locatie</li>
+        <li>Waarom De Hofman</li>
+        <li>Situatietekening</li>
+        <li>Prijslijst</li>
+        <li>Sfeerbeelden</li>
+        <li>Aankoopproces</li>
+        <li>Open brochure</li>
+      </ol>
+    </div>
+    <div class="persona-col">
+      <h4>Eigen gebruiker</h4>
+      <p style="font-size:11.5px;margin:0">Locatie en gevoel eerst.</p>
+      <ol>
+        <li>Meer over locatie</li>
+        <li>Situatietekening</li>
+        <li>Sfeerbeelden</li>
+        <li>Waarom De Hofman</li>
+        <li>Prijslijst</li>
+        <li>Planning</li>
+        <li>Financiering</li>
+        <li>Aankoopproces</li>
+        <li>Open brochure</li>
+        <li>Prijsvergelijking</li>
+      </ol>
+    </div>
+    <div class="persona-col">
+      <h4>Beide</h4>
+      <p style="font-size:11.5px;margin:0">Mix van locatie en cijfers.</p>
+      <ol>
+        <li>Meer over locatie</li>
+        <li>Prijsvergelijking</li>
+        <li>Belegger voordelen</li>
+        <li>Situatietekening</li>
+        <li>Waarom De Hofman</li>
+        <li>Sfeerbeelden</li>
+        <li>Prijslijst</li>
+        <li>Planning</li>
+        <li>Financiering</li>
+        <li>Aankoopproces</li>
+        <li>Open brochure</li>
+      </ol>
+    </div>
+    <div class="persona-col">
+      <h4>Onbekend</h4>
+      <p style="font-size:11.5px;margin:0">Vertrouwen eerst.</p>
+      <ol>
+        <li>Waarom De Hofman</li>
+        <li>Meer over locatie</li>
+        <li>Situatietekening</li>
+        <li>Sfeerbeelden</li>
+        <li>Prijslijst</li>
+        <li>Planning</li>
+        <li>Aankoopproces</li>
+        <li>Open brochure</li>
+        <li>Prijsvergelijking</li>
+        <li>Financiering</li>
+      </ol>
+    </div>
+  </div>
+
+  <h2>4. Hoe wordt iemand &ldquo;hot&rdquo;?</h2>
+  <p>De service-card en warm-handoff worden niet handmatig getriggerd. Een buying-signal engine kijkt mee en bepaalt op basis van gedrag plus stated intent of de bezoeker hot is. Drempel voor hot: score ≥ 50.</p>
+  <div class="bubble-grid" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr))">
+    <div class="bubble-cell"><h3 style="margin:0">+30</h3><div class="descr" style="margin:4px 0 0">BAR-calc gebruikt (belegger-onthullend)</div></div>
+    <div class="bubble-cell"><h3 style="margin:0">+30</h3><div class="descr" style="margin:4px 0 0">Maandlast-calc gebruikt (eigen gebruik)</div></div>
+    <div class="bubble-cell"><h3 style="margin:0">+28</h3><div class="descr" style="margin:4px 0 0">Timeline &ldquo;zo snel mogelijk&rdquo;</div></div>
+    <div class="bubble-cell"><h3 style="margin:0">+25</h3><div class="descr" style="margin:4px 0 0">2 of meer units bekeken</div></div>
+    <div class="bubble-cell"><h3 style="margin:0">+18</h3><div class="descr" style="margin:4px 0 0">Timeline &ldquo;binnen 3 maanden&rdquo;</div></div>
+    <div class="bubble-cell"><h3 style="margin:0">+15</h3><div class="descr" style="margin:4px 0 0">06-nummer gedeeld</div></div>
+    <div class="bubble-cell"><h3 style="margin:0">−10</h3><div class="descr" style="margin:4px 0 0">06-nummer afgewezen</div></div>
+    <div class="bubble-cell"><h3 style="margin:0">−25</h3><div class="descr" style="margin:4px 0 0">Afhaak-reden gegeven</div></div>
+  </div>
+
+  <h2>5. WhatsApp-naam-vraag</h2>
+  <p>Bij elke WhatsApp-knop checkt de tool eerst of we de voornaam al hebben. Zo niet, dan onderbreekt de tool kort met een naam-vraag in de chat. Pas daarna opent WhatsApp met een persoonlijk bericht. Op die manier kunnen we naam plus 06-nummer (uit de WA-reply) als koppel opslaan en klinkt het bericht nooit als &ldquo;hi, ik ben een lead&rdquo;.</p>
+  <div style="background:var(--paper);border:1px solid var(--mist-light);border-radius:14px;padding:18px;margin-top:12px;max-width:520px">
+    <div class="preview-bubble bot">Even nog kort: hoe heet je? Dan zorgen we dat het WhatsApp-bericht klopt.</div>
+    <div class="preview-bubble user">Flip</div>
+    <div class="preview-bubble bot">Top, Flip. We openen WhatsApp voor je.</div>
+    <div style="background:var(--canvas-2);border-radius:8px;padding:10px;font-size:11.5px;margin-top:8px;font-family:ui-monospace,monospace;color:var(--ink-soft)"><strong style="color:var(--ink);font-family:Montserrat,sans-serif">WhatsApp prefilled:</strong><br>Hoi REPP, ik ben Flip en heb interesse in De Hofman. Ik kijk als belegger, rond 100 m², binnen 3 maanden.</div>
+  </div>
+
+  <h2>6. De drie eindes</h2>
+  <p>Iedere flow eindigt op een cta-card, maar de toon en de prefilled WhatsApp-tekst zijn per pad anders. Geen interne taal als &ldquo;match&rdquo; of &ldquo;signaal&rdquo; — altijd klant-stem.</p>
+  <div class="bubble-grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
+    <div class="bubble-cell">
+      <h3>Klaar met info → followup</h3>
+      <div class="descr">Bezoeker kiest expliciet hoe verder: alleen mail, mail+WA, plan een afspraak, bel mij, of WhatsApp nu. Cta-card sluit af met klant-samenvatting.</div>
+      <code>"Ik kijk als belegger, rond 100 m², binnen 3 maanden."</code>
+    </div>
+    <div class="bubble-cell">
+      <h3>Iets anders dan koop → afhaak</h3>
+      <div class="descr">Bezoeker geeft aan dat het niet past. Als het huur betreft komt rentRange erbij; anders direct cta-card met empathische copy.</div>
+      <code>"De prijs past niet helemaal bij wat ik zoek."</code>
+    </div>
+    <div class="bubble-cell">
+      <h3>Direct contact → moreInfo __contact</h3>
+      <div class="descr">Bezoeker kiest in moreInfo voor direct contact. Eind-cta-card met bel + WhatsApp en samenvatting.</div>
+      <code>"Ik kijk vanuit zowel eigen gebruik als belegging."</code>
+    </div>
+  </div>
+
+  <footer class="page-foot">
+    <div>Bron: <code>repository: reppenweetje/CLP</code> · live demo op <code>clp-xi-tan.vercel.app</code> · stand: zelfde build als deze pagina</div>
+    <div style="margin-top:6px">Vragen? Spreek Jann aan.</div>
+  </footer>
+
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {
+      primaryColor: '#ffffff',
+      primaryTextColor: '#1d1d1f',
+      primaryBorderColor: '#d8d6d6',
+      lineColor: '#9a9893',
+      secondaryColor: '#efeee8',
+      tertiaryColor: '#f7f6f1',
+      fontFamily: 'Montserrat, system-ui, sans-serif',
+      fontSize: '13px'
+    },
+    flowchart: { curve: 'basis', padding: 12 }
+  });
+</script>
+</body>
+</html>

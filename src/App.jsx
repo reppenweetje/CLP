@@ -12,6 +12,9 @@ import {
   recommendCopy,
   thankYouCopy,
   whatsAppDeeplink,
+  buildCustomerWaSummary,
+  customerAfhaakSummary,
+  customerRentSummary,
   leadConfidence,
 } from './lib/recommendation.js'
 import { parseLeadInput, mergeLead } from './lib/parseLead.js'
@@ -237,20 +240,38 @@ function buildAnswerSummary(answers) {
   return parts.join(', ')
 }
 
+// Volgorde-hint bij definitie wordt door moreInfoChips() per persona herschikt.
+// Personas-filter beperkt tot relevante doelgroep wanneer aanwezig.
 const MORE_INFO_DEFS = {
   location: { label: 'Meer over locatie' },
   sitePlan: { label: 'Situatietekening' },
+  gallery: { label: 'Sfeerbeelden' },
+  highlights: { label: 'Waarom De Hofman' },
   price: { label: 'Prijslijst' },
   priceCompare: { label: 'Prijsvergelijking' },
+  planning: { label: 'Planning' },
   process: { label: 'Aankoopproces' },
   brochure: { label: 'Open brochure' },
   investor: { label: 'Belegger voordelen', personas: ['belegger', 'beide', 'onbekend'] },
   financing: { label: 'Financiering' },
 }
 
+// Per persona welke moreInfo-content het meest relevant is. Eerste in de lijst
+// verschijnt het eerst in de chip-rij, zodat bezoekers de inhoud zien die voor
+// hun situatie ertoe doet zonder dat ze door 11 chips hoeven te scrollen.
+const MORE_INFO_PERSONA_ORDER = {
+  belegger: ['priceCompare', 'investor', 'planning', 'financing', 'location', 'highlights', 'sitePlan', 'price', 'gallery', 'process', 'brochure'],
+  eigen_gebruiker: ['location', 'sitePlan', 'gallery', 'highlights', 'price', 'planning', 'financing', 'process', 'brochure', 'priceCompare'],
+  beide: ['location', 'priceCompare', 'investor', 'sitePlan', 'highlights', 'gallery', 'price', 'planning', 'financing', 'process', 'brochure'],
+  onbekend: ['highlights', 'location', 'sitePlan', 'gallery', 'price', 'planning', 'process', 'brochure', 'priceCompare', 'financing'],
+}
+
 function moreInfoChips(persona, seen, temperature) {
+  const order = MORE_INFO_PERSONA_ORDER[persona] || MORE_INFO_PERSONA_ORDER.onbekend
   const opts = []
-  for (const [id, def] of Object.entries(MORE_INFO_DEFS)) {
+  for (const id of order) {
+    const def = MORE_INFO_DEFS[id]
+    if (!def) continue
     if (seen.includes(id)) continue
     if (def.personas && !def.personas.includes(persona)) continue
     opts.push({ id, label: def.label })
@@ -271,10 +292,28 @@ function buildMoreInfoMessages(id, persona) {
       return [{ kind: 'location', payload: { location: project.location, projectName: project.displayName } }]
     case 'sitePlan':
       return [{ kind: 'site-plan', payload: { sitePlan: project.sitePlan, units: project.units, persona } }]
+    case 'gallery':
+      return [{
+        kind: 'gallery',
+        payload: {
+          images: project.gallery,
+          intro: 'Sfeerbeelden van de buitenkant en mogelijke inrichtingen.',
+        },
+      }]
+    case 'highlights':
+      return [{
+        kind: 'highlights',
+        payload: {
+          highlights: project.highlights,
+          intro: 'Wat De Hofman onderscheidt.',
+        },
+      }]
     case 'price':
       return [{ kind: 'price', payload: { units: project.units } }]
     case 'priceCompare':
       return [{ kind: 'price-compare', payload: { priceComparison: project.priceComparison } }]
+    case 'planning':
+      return [{ kind: 'planning', payload: { planning: project.planning } }]
     case 'process':
       return [{ kind: 'process', payload: { steps: project.process } }]
     case 'brochure':
@@ -334,8 +373,9 @@ function computeReleaseDelay(message) {
     const len = message.text?.length || 30
     return Math.max(450, Math.min(900, 350 + len * 9))
   }
-  // Rich cards en interactieve bubbles vragen iets meer aandacht.
-  if (['site-plan', 'usp-cards', 'unit-card', 'gallery', 'investor', 'price', 'price-compare', 'location', 'cta-card', 'warm-handoff', 'brochure', 'highlights', 'process', 'planning'].includes(message.kind)) {
+  // Rich cards en interactieve bubbles vragen iets meer aandacht. Lijst is
+  // synchroon met ChatThread renderkinds; nieuwe rich bubbles hier toevoegen.
+  if (['site-plan', 'usp-cards', 'unit-card', 'gallery', 'investor', 'price', 'price-compare', 'location', 'cta-card', 'warm-handoff', 'service-card', 'brochure', 'highlights', 'process', 'planning', 'content-card'].includes(message.kind)) {
     return 700
   }
   return 500
@@ -369,6 +409,10 @@ function Demo() {
   // Bewaart de currentQuestion van vóór een lead-edit zodat we na het
   // bijwerken van email/naam/06 terug kunnen naar waar de bezoeker was.
   const [editReturnQuestion, setEditReturnQuestion] = useState(null)
+  // Bewaart de WhatsApp-summary en de plek waar de bezoeker was, wanneer
+  // we een WA-klik onderbreken om eerst de naam op te halen. Na de naam
+  // bouwen we de WA-link met de juiste naam en openen 'm alsnog.
+  const [pendingWa, setPendingWa] = useState(null)
 
   useEffect(() => {
     if (state.view === 'chat') persist(state)
@@ -406,8 +450,10 @@ function Demo() {
 
   // De handoff bubble is "actief" zodra hij getoond is en de bezoeker nog
   // niets heeft gekozen. Tijdens deze fase verbergen we chip-bar, input en
-  // header-shortcuts zodat de bubble zelf de enige interactie is.
+  // header-shortcuts zodat de bubble zelf de enige interactie is. Geldt voor
+  // zowel de losse warm-handoff bubble als de gecombineerde service-card.
   const warmHandoffActive = !!state.behaviors?.warmHandoffShown && !state.behaviors?.warmHandoffOutcome
+  const serviceCardActive = state.messages.some((m) => m.kind === 'service-card' && !m.payload?.outcome)
 
   useEffect(() => {
     if (state.view !== 'chat') return
@@ -424,7 +470,7 @@ function Demo() {
     const lead = state.answers.lead || {}
     const phoneDeclined = !lead.phone && state.behaviors?.phoneAskedDeclined === true
 
-    const summary = `Hot signaal vanuit ${personaForCopy === 'belegger' ? 'belegger-flow' : personaForCopy === 'eigen_gebruiker' ? 'eigen-gebruiker-flow' : 'gemengde flow'}`
+    const summary = buildCustomerWaSummary(state.answers)
     const wa = whatsAppDeeplink(project, lead.firstName || '', summary)
     const phoneLink = buildPhoneLink(project.phoneNumber)
 
@@ -452,6 +498,7 @@ function Demo() {
             hasPhone: !!lead.phone,
             phoneDeclined,
             waLink: wa,
+            waSummary: summary,
             phoneLink,
             phoneDisplay: project.phoneNumber,
             outcome: null,
@@ -581,7 +628,8 @@ function Demo() {
       }
 
       trackEvent('flow:complete', { stage: 'afhaak', persona })
-      const wa = whatsAppDeeplink(project, state.answers.lead?.firstName || '', `Geen match: ${opt.label.toLowerCase()}`)
+      const customerSummary = customerAfhaakSummary(opt.id)
+      const wa = whatsAppDeeplink(project, state.answers.lead?.firstName || '', customerSummary)
       dispatch({ type: 'ANSWER', key: 'afhaakReason', value: answerValue(opt), next: null })
       sendSequence(userTextFromOpt(opt), [
         { kind: 'bot-text', text: 'Dank voor je eerlijkheid.' },
@@ -590,7 +638,7 @@ function Demo() {
           kind: 'cta-card',
           payload: {
             waLink: wa,
-            summary: `Niet matchend: ${opt.label}`,
+            summary: customerSummary,
             hideBrochure: true,
           },
         },
@@ -603,11 +651,8 @@ function Demo() {
     if (q === 'rentRange') {
       trackEvent('rent-match:registered', { id: opt.id, label: opt.label })
       trackEvent('flow:complete', { stage: 'rent-match', persona })
-      const wa = whatsAppDeeplink(
-        project,
-        state.answers.lead?.firstName || '',
-        `Huur-interesse, range ${opt.label}`,
-      )
+      const customerSummary = customerRentSummary(opt.label)
+      const wa = whatsAppDeeplink(project, state.answers.lead?.firstName || '', customerSummary)
       dispatch({ type: 'ANSWER', key: 'rentRange', value: answerValue(opt), next: null })
       sendSequence(userTextFromOpt(opt), [
         { kind: 'bot-text', text: 'Genoteerd. We bewaren je voorkeur en nemen contact op zodra er een match is.' },
@@ -616,7 +661,7 @@ function Demo() {
           kind: 'cta-card',
           payload: {
             waLink: wa,
-            summary: `Huur-interesse, ${opt.label}`,
+            summary: customerSummary,
             hideBrochure: true,
           },
         },
@@ -657,6 +702,75 @@ function Demo() {
       const copy = recommendCopy(personaNext)
       const confidence = leadConfidence(merged)
       trackEvent('timeline:answered', { id: opt.id, label: opt.label, recommendedUnit: unit.primary?.type })
+
+      // Bereken buying-signals NA timeline zodat we het hot-moment in deze flow
+      // direct kunnen detecteren ipv via de losse useEffect (die zou een aparte
+      // bubble lanceren bovenop de unit-card en juist de flood produceren).
+      const buyingNext = computeBuyingSignals(merged, state.behaviors)
+      const isHot = buyingNext.temperature === 'hot'
+
+      if (isHot) {
+        // Service-card-pad: 1 personal lead-in bubble + 1 gecombineerde card
+        // die unit-aanbeveling en handoff in 1 visueel object presenteert.
+        // Geen recommendCopy (duplicaat van microIntro) en geen "wil je meer
+        // info" bot-text — die rol neemt de card zelf over.
+        const personaForCard =
+          buyingNext.inferredPersona !== 'onbekend' ? buyingNext.inferredPersona : personaNext
+        const lead = state.answers.lead || {}
+        const phoneDeclined = !lead.phone && state.behaviors?.phoneAskedDeclined === true
+        const summary = buildCustomerWaSummary(merged)
+        const wa = whatsAppDeeplink(project, lead.firstName || '', summary)
+        const phoneLink = buildPhoneLink(project.phoneNumber)
+
+        trackEvent('service-card:shown', {
+          persona: personaForCard,
+          declaredPersona: buyingNext.declaredPersona,
+          temperature: buyingNext.temperature,
+          score: buyingNext.score,
+          signalCount: buyingNext.signals.length,
+          signalIds: buyingNext.signals.map((s) => s.id),
+          recommendedUnit: unit.primary?.type,
+          confidence,
+        })
+
+        // Markeer warmHandoff als getoond zodat de aparte useEffect deze
+        // bezoeker niet later alsnog een tweede handoff-bubble injecteert.
+        dispatch({ type: 'WARM_HANDOFF_SHOWN' })
+        dispatch({ type: 'ANSWER', key: 'timeline', value: answerValue(opt), next: 'moreInfo' })
+
+        const leadIn =
+          confidence >= 2
+            ? lead.firstName
+              ? `Helder, ${lead.firstName}. Met die timeline kijken we even gericht.`
+              : 'Helder. Met die timeline kijken we even gericht.'
+            : lead.firstName
+            ? `Dank, ${lead.firstName}. We zetten de meest concrete optie even op een rij.`
+            : 'Dank. We zetten de meest concrete optie even op een rij.'
+
+        sendSequence(userTextFromOpt(opt), [
+          { kind: 'bot-text', text: leadIn },
+          {
+            kind: 'service-card',
+            payload: {
+              unit,
+              persona: personaForCard,
+              signals: buyingNext.signals,
+              name: lead.firstName || '',
+              hasPhone: !!lead.phone,
+              phoneDisplay: lead.phone || '',
+              phoneDeclined,
+              waLink: wa,
+              waSummary: summary,
+              phoneLink,
+              phoneTextDisplay: project.phoneNumber,
+              outcome: null,
+            },
+          },
+        ])
+        return
+      }
+
+      // Niet-hot: huidige flow blijft ongewijzigd in deze ronde.
       const botMessages = []
       if (confidence >= 2) {
         botMessages.push(
@@ -700,8 +814,8 @@ function Demo() {
         // Direct contact: einde van de flow met cta-card (bellen + WhatsApp).
         const merged = state.answers
         const personaNext = derivePersona(merged)
-        const sum = buildAnswerSummary(merged)
-        const wa = whatsAppDeeplink(project, state.answers.lead?.firstName, sum || 'Direct contact')
+        const customerSummary = buildCustomerWaSummary(merged)
+        const wa = whatsAppDeeplink(project, state.answers.lead?.firstName, customerSummary)
         const phoneLink = buildPhoneLink(project.phoneNumber)
         trackEvent('direct-contact:requested', { from: 'moreInfo' })
         trackEvent('flow:complete', { stage: 'sales_ready', persona: personaNext })
@@ -719,7 +833,7 @@ function Demo() {
               waLink: wa,
               phoneLink,
               phoneDisplay: project.phoneNumber,
-              summary: sum,
+              summary: customerSummary,
             },
           },
         ])
@@ -768,15 +882,15 @@ function Demo() {
       const personaNext = derivePersona(merged)
       const stageNext = deriveStage(merged)
       const tc = thankYouCopy(stageNext, personaNext, state.answers.lead?.firstName)
-      const sum = buildAnswerSummary(merged)
-      const wa = whatsAppDeeplink(project, state.answers.lead?.firstName, sum)
+      const customerSummary = buildCustomerWaSummary(merged)
+      const wa = whatsAppDeeplink(project, state.answers.lead?.firstName, customerSummary)
       trackEvent('followup:answered', { id: opt.id, label: opt.label })
       trackEvent('flow:complete', { stage: stageNext, persona: personaNext })
       dispatch({ type: 'ANSWER', key: 'followup', value: answerValue(opt), next: null })
       sendSequence(userTextFromOpt(opt), [
         { kind: 'bot-text', text: tc.lead },
         { kind: 'bot-text', text: tc.body },
-        { kind: 'cta-card', payload: { waLink: wa, summary: sum } },
+        { kind: 'cta-card', payload: { waLink: wa, summary: customerSummary } },
       ])
       return
     }
@@ -787,9 +901,57 @@ function Demo() {
     if (q === 'lead-email') return handleLeadEmailText(text)
     if (q === 'lead-name') return handleLeadNameText(text)
     if (q === 'lead-phone') return handleLeadPhoneText(text)
+    if (q === 'lead-name-pre-wa') return handleLeadNamePreWaText(text)
     if (q === 'lead-edit-email') return handleLeadEditField('email', text)
     if (q === 'lead-edit-name') return handleLeadEditField('name', text)
     if (q === 'lead-edit-phone') return handleLeadEditField('phone', text)
+  }
+
+  // Naam invoer specifiek vóór een WhatsApp-klik. Slaat de naam op,
+  // bouwt de WhatsApp-link opnieuw met de zojuist gegeven naam, opent
+  // de link in een nieuw venster en herstelt de currentQuestion.
+  function handleLeadNamePreWaText(text) {
+    const parsed = parseLeadInput(text)
+    const fallbackFirst = text.trim().split(/\s+/)[0]
+    const firstName = parsed.firstName || (fallbackFirst ? capitalize(fallbackFirst) : null)
+    if (!firstName) {
+      sendSequence(text, [
+        { kind: 'bot-text', text: 'Kreeg je naam niet helemaal mee. Kun je het opnieuw typen?' },
+      ])
+      return
+    }
+
+    const newDraft = {
+      ...state.leadDraft,
+      firstName,
+      email: parsed.email || state.leadDraft.email,
+      phone: parsed.phone || state.leadDraft.phone,
+    }
+    const newLead = { ...(state.answers.lead || {}), firstName }
+    if (parsed.email && !state.answers.lead?.email) newLead.email = parsed.email
+    if (parsed.phone && !state.answers.lead?.phone) newLead.phone = parsed.phone
+
+    trackNewLeadFields(state.leadDraft, newDraft)
+    dispatch({ type: 'LEAD_DRAFT', draft: newDraft })
+    dispatch({
+      type: 'ANSWER',
+      key: 'lead',
+      value: newLead,
+      next: pendingWa?.returnQuestion ?? null,
+    })
+
+    sendSequence(text, [
+      { kind: 'bot-text', text: `Top, ${firstName}. We openen WhatsApp voor je.` },
+    ])
+
+    if (pendingWa && typeof window !== 'undefined') {
+      const wa = whatsAppDeeplink(project, firstName, pendingWa.summary)
+      // window.open in een keypress/click handler is een directe gebruiker-
+      // gesture op alle moderne browsers; geen popup-block.
+      window.open(wa, '_blank', 'noopener,noreferrer')
+      trackEvent('whatsapp-name-prompt:resolved', { source: pendingWa.source })
+    }
+    setPendingWa(null)
   }
 
   // Eén handler voor alle drie de lead-edit-stappen. Valideert het veld,
@@ -920,7 +1082,22 @@ function Demo() {
 
   function finishLead(lead, prependMessages = []) {
     dispatch({ type: 'LEAD_DRAFT', draft: lead })
-    dispatch({ type: 'ANSWER', key: 'lead', value: lead, next: 'size' })
+
+    // Volgende stap hangt af van waar de bezoeker in de flow zit. Wanneer
+    // size en timeline al beantwoord zijn (bijv. via warm-handoff callback
+    // na timeline), niet terugsturen naar size — dan blijft de bezoeker op
+    // moreInfo waar hij zat. Anders: door naar de eerste nog-niet-beantwoorde
+    // stap.
+    const sizeDone = !!state.answers.size
+    const timelineDone = !!state.answers.timeline
+    const followupDone = !!state.answers.followup
+    let next = 'size'
+    if (sizeDone && timelineDone && !followupDone) next = 'moreInfo'
+    else if (sizeDone && !timelineDone) next = 'timeline'
+    else if (sizeDone && timelineDone && followupDone) next = null
+
+    dispatch({ type: 'ANSWER', key: 'lead', value: lead, next })
+
     // prependMessages bevat user-text + eventueel een bot-bevestiging.
     // Splits: user-text direct, bot-bubbles in de queue.
     const userMsgs = prependMessages.filter((m) => m.kind === 'user-text')
@@ -928,13 +1105,19 @@ function Demo() {
     if (userMsgs.length > 0) {
       dispatch({ type: 'APPEND', messages: userMsgs })
     }
+
+    // Bevestigings-bubbel + size-vraag horen alleen bij het pad waarin size
+    // nog moet komen. Als size al beantwoord is, alleen botPrepend tonen.
+    const tail = sizeDone
+      ? []
+      : [
+          { kind: 'bot-text', text: 'Goed. Nog even, zodat we de juiste prijslijst en plattegronden meesturen.' },
+          { kind: 'bot-text', text: flow.questions.size.label },
+        ]
+
     dispatch({
       type: 'ENQUEUE',
-      messages: [
-        ...botPrepend,
-        { kind: 'bot-text', text: 'Goed. Nog even, zodat we de juiste prijslijst en plattegronden meesturen.' },
-        { kind: 'bot-text', text: flow.questions.size.label },
-      ],
+      messages: [...botPrepend, ...tail],
     })
   }
 
@@ -946,8 +1129,34 @@ function Demo() {
     }
   }
 
-  const onWaClick = () => {
-    trackEvent('cta:whatsapp-clicked', { location: 'header' })
+  // Centrale WA-handler. Onderbreekt de klik wanneer we nog geen voornaam
+  // hebben en vraagt 'm eerst, zodat het prefilled WhatsApp-bericht
+  // persoonlijk klinkt en wij naam + 06 als koppel kunnen opslaan zodra
+  // de bezoeker terug-appt. Source is een korte string voor analytics.
+  // Summary wordt bewaard zodat we de WA-link na naam-capture opnieuw
+  // kunnen opbouwen met de zojuist gegeven naam.
+  const requestWhatsAppOpen = (e, summary, source) => {
+    trackEvent('cta:whatsapp-clicked', { location: source })
+    if (state.answers.lead?.firstName) {
+      // Naam bekend; laat de anchor zijn werk doen. Geen preventDefault.
+      return
+    }
+    if (e && e.preventDefault) e.preventDefault()
+    setPendingWa({ summary: summary || '', source, returnQuestion: state.currentQuestion })
+    dispatch({ type: 'SET_QUESTION', next: 'lead-name-pre-wa' })
+    dispatch({
+      type: 'ENQUEUE',
+      messages: [
+        { kind: 'bot-text', text: 'Even nog kort: hoe heet je? Dan zorgen we dat het WhatsApp-bericht klopt.' },
+      ],
+    })
+    trackEvent('whatsapp-name-prompt:shown', { source })
+  }
+
+  const onWaClick = (e) => {
+    // Header WhatsApp-icoon: gebruikt een generieke summary. Door dezelfde
+    // requestWhatsAppOpen heen zodat ook hier de naam-vraag werkt.
+    requestWhatsAppOpen(e, '', 'header')
   }
 
   // Behavior callbacks vanuit de site-plan en calc-componenten.
@@ -958,6 +1167,67 @@ function Demo() {
   const onCalcInteract = (calcType) => {
     trackEvent(calcType === 'rentability' ? 'calc:rentability-interaction' : 'calc:mortgage-interaction', {})
     dispatch({ type: 'BEHAVIOR_CALC_INTERACTED', calcType })
+  }
+
+  // Wat de bezoeker met de service-card doet. Net als bij de losse
+  // warm-handoff muteren we het bestaande bericht met de outcome zodat de
+  // groene confirmatie-strook in de card verschijnt zonder extra bubble.
+  // De 'moreinfo' uitkomst is uniek voor de service-card: de bezoeker
+  // kiest expliciet om eerst zelf rond te kijken, dan releasen we de
+  // moreInfo-chips zonder verdere bot-bubble.
+  const onServiceCardAction = (msgId, outcome) => {
+    trackEvent(`service-card:${outcome}`, {
+      persona: buying.inferredPersona,
+      temperature: buying.temperature,
+      score: buying.score,
+    })
+    if (outcome !== 'moreinfo') {
+      dispatch({ type: 'WARM_HANDOFF_OUTCOME', outcome })
+    }
+    if (outcome !== 'moreinfo') {
+      const newMessages = state.messages.map((m) => {
+        if (m.id !== msgId) return m
+        return { ...m, payload: { ...m.payload, outcome } }
+      })
+      dispatch({ type: 'SET_MESSAGES', messages: newMessages })
+    } else {
+      // Bezoeker wil eerst zelf info zoeken — verberg de CTAs in de card door
+      // 'm op outcome=dismissed te zetten en zorg dat moreInfo-chips
+      // verschijnen onder de chat. currentQuestion is al 'moreInfo'.
+      dispatch({ type: 'WARM_HANDOFF_OUTCOME', outcome: 'dismissed' })
+      const newMessages = state.messages.map((m) => {
+        if (m.id !== msgId) return m
+        return { ...m, payload: { ...m.payload, outcome: 'dismissed' } }
+      })
+      dispatch({ type: 'SET_MESSAGES', messages: newMessages })
+    }
+  }
+
+  // Inline 06-input vanuit de service-card. Geen chat-input flow nodig;
+  // we werken direct lead.phone bij en zetten de outcome op callback.
+  const onServiceCardSubmitPhone = (msgId, text) => {
+    const parsed = parseLeadInput(text)
+    if (!parsed.phone) return
+    const newDraft = { ...state.leadDraft, phone: parsed.phone }
+    const newLead = { ...(state.answers.lead || {}), phone: parsed.phone }
+    trackNewLeadFields(state.leadDraft, newDraft)
+    dispatch({ type: 'LEAD_DRAFT', draft: newDraft })
+    dispatch({ type: 'ANSWER', key: 'lead', value: newLead, next: state.currentQuestion })
+    dispatch({ type: 'WARM_HANDOFF_OUTCOME', outcome: 'callback' })
+    trackEvent('service-card:callback', {
+      persona: buying.inferredPersona,
+      temperature: buying.temperature,
+      score: buying.score,
+      via: 'inline-phone-submit',
+    })
+    const newMessages = state.messages.map((m) => {
+      if (m.id !== msgId) return m
+      return {
+        ...m,
+        payload: { ...m.payload, outcome: 'callback', hasPhone: true, phoneDisplay: parsed.phone },
+      }
+    })
+    dispatch({ type: 'SET_MESSAGES', messages: newMessages })
   }
 
   // Wat de bezoeker met de warm-handoff bubble doet. We muteren het bestaande
@@ -1082,7 +1352,7 @@ function Demo() {
     }
   } else if (state.currentQuestion === 'lead-email' || state.currentQuestion === 'lead-edit-email') {
     inputConfig = { placeholder: 'Je e-mailadres', inputMode: 'email' }
-  } else if (state.currentQuestion === 'lead-name' || state.currentQuestion === 'lead-edit-name') {
+  } else if (state.currentQuestion === 'lead-name' || state.currentQuestion === 'lead-edit-name' || state.currentQuestion === 'lead-name-pre-wa') {
     inputConfig = { placeholder: 'Je naam', inputMode: undefined }
   } else if (state.currentQuestion === 'lead-phone' || state.currentQuestion === 'lead-edit-phone') {
     inputConfig = { placeholder: '06 12 34 56 78', inputMode: 'tel', validate: isValidPhoneText }
@@ -1099,9 +1369,9 @@ function Demo() {
     <AppShell
       progress={progress}
       hideHeader={state.view === 'intro'}
-      waLink={warmHandoffActive ? null : headerWaLink}
+      waLink={warmHandoffActive || serviceCardActive ? null : headerWaLink}
       onWaClick={onWaClick}
-      phoneLink={warmHandoffActive ? null : headerPhoneLink}
+      phoneLink={warmHandoffActive || serviceCardActive ? null : headerPhoneLink}
       onPhoneClick={onPhoneClick}
       showAnswersButton={showAnswersButton}
       onAnswersOpen={() => setAnswersOpen(true)}
@@ -1117,16 +1387,19 @@ function Demo() {
             onUnitView={onUnitView}
             onCalcInteract={onCalcInteract}
             onHandoffAction={onHandoffAction}
+            onServiceCardAction={onServiceCardAction}
+            onServiceCardSubmitPhone={onServiceCardSubmitPhone}
+            onWaRequest={requestWhatsAppOpen}
             onReset={() => {
               clearPersisted()
               _id = 0
               dispatch({ type: 'RESET' })
             }}
           />
-          {chipQuestion && (state.messageQueue?.length || 0) === 0 && !warmHandoffActive && (
+          {chipQuestion && (state.messageQueue?.length || 0) === 0 && !warmHandoffActive && !serviceCardActive && (
             <SuggestedChips options={chipQuestion.options} onPick={onChipPick} />
           )}
-          {inputConfig && (state.messageQueue?.length || 0) === 0 && !warmHandoffActive && (
+          {inputConfig && (state.messageQueue?.length || 0) === 0 && !warmHandoffActive && !serviceCardActive && (
             <ChatInput
               placeholder={inputConfig.placeholder}
               inputMode={inputConfig.inputMode}
