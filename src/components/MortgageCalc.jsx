@@ -1,8 +1,9 @@
 import { useState, useRef } from 'react'
 
 // Maandlast-indicator met sliders voor eigen vermogen en rente.
-// 20 jaar annuïtair, indicatief — geen advies. Bij eigen vermogen tonen we
-// subtiel het bijbehorende €-bedrag zodat het concreet voelt.
+// 20 jaar annuïtair, indicatief — geen advies. Range eigen vermogen 25 tot 100
+// procent, zodat lenen tot 75 procent past en de bezoeker ook kan kiezen voor
+// "geen financiering" door alles uit eigen vermogen te halen.
 function calcMonthly(price, downPaymentPct, ratePct, years = 20) {
   const loan = price * (1 - downPaymentPct / 100)
   const monthlyRate = ratePct / 100 / 12
@@ -17,8 +18,9 @@ function formatEuro(n) {
 
 export default function MortgageCalc({ price, indicative = false, onInteract }) {
   const [downPayment, setDownPayment] = useState(30)
-  const [rate, setRate] = useState(5.0)
+  const [rate, setRate] = useState(4.5)
   const interactedRef = useRef(false)
+  const noFinancing = downPayment >= 100
   const monthly = calcMonthly(price, downPayment, rate)
   const loan = price * (1 - downPayment / 100)
   const equity = price * (downPayment / 100)
@@ -33,29 +35,44 @@ export default function MortgageCalc({ price, indicative = false, onInteract }) 
     <div className="rounded-2xl bg-paper border border-mist-light p-3.5">
       <div className="flex items-baseline justify-between gap-3 mb-3">
         <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium">Maandlast indicatie</div>
-        <div className="text-[10px] text-ink-mute uppercase tracking-wider">20 jaar annuïtair</div>
+        <div className="text-[10px] text-ink-mute uppercase tracking-wider">
+          {noFinancing ? 'Zonder financiering' : '20 jaar annuïtair'}
+        </div>
       </div>
 
-      <div className="flex items-baseline gap-2 mb-1">
-        <div className="text-[28px] font-semibold text-ink leading-none tabular-nums">
-          €{formatEuro(monthly)}
-        </div>
-        <div className="text-[12px] text-ink-soft">per maand</div>
-      </div>
-      <div className="text-[11px] text-ink-mute leading-snug">
-        Lening €{formatEuro(loan)} bij prijs €{formatEuro(price)}{indicative ? ' indicatief' : ''}
-      </div>
+      {noFinancing ? (
+        <>
+          <div className="flex items-baseline gap-2 mb-1">
+            <div className="text-[20px] font-semibold text-ink leading-tight">Geen financiering nodig</div>
+          </div>
+          <div className="text-[11px] text-ink-mute leading-snug">
+            Volledige aankoop uit eigen vermogen, prijs €{formatEuro(price)}{indicative ? ' indicatief' : ''}
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="flex items-baseline gap-2 mb-1">
+            <div className="text-[28px] font-semibold text-ink leading-none tabular-nums">
+              €{formatEuro(monthly)}
+            </div>
+            <div className="text-[12px] text-ink-soft">per maand</div>
+          </div>
+          <div className="text-[11px] text-ink-mute leading-snug">
+            Lening €{formatEuro(loan)} bij prijs €{formatEuro(price)}{indicative ? ' indicatief' : ''}
+          </div>
+        </>
+      )}
 
       <div className="mt-4 space-y-3">
         <SliderRow
           label="Eigen vermogen"
-          mainValue={`${downPayment}%`}
-          subValue={`€${formatEuro(equity)}`}
+          mainValue={noFinancing ? '100%' : `${downPayment}%`}
+          subValue={noFinancing ? 'Geen lening' : `€${formatEuro(equity)}`}
           input={
             <input
               type="range"
-              min={10}
-              max={70}
+              min={25}
+              max={100}
               step={5}
               value={downPayment}
               onChange={(e) => { setDownPayment(Number(e.target.value)); trackOnce() }}
@@ -64,26 +81,30 @@ export default function MortgageCalc({ price, indicative = false, onInteract }) 
             />
           }
         />
-        <SliderRow
-          label="Rente"
-          mainValue={`${rate.toFixed(1)}%`}
-          input={
-            <input
-              type="range"
-              min={3.0}
-              max={7.0}
-              step={0.1}
-              value={rate}
-              onChange={(e) => { setRate(Number(e.target.value)); trackOnce() }}
-              className="repp-range"
-              aria-label="rente"
-            />
-          }
-        />
+        {!noFinancing && (
+          <SliderRow
+            label="Rente"
+            mainValue={`${rate.toFixed(1)}%`}
+            input={
+              <input
+                type="range"
+                min={3.0}
+                max={7.0}
+                step={0.1}
+                value={rate}
+                onChange={(e) => { setRate(Number(e.target.value)); trackOnce() }}
+                className="repp-range"
+                aria-label="rente"
+              />
+            }
+          />
+        )}
       </div>
 
       <div className="text-[11px] text-ink-mute leading-snug mt-3 pt-3 border-t border-mist-light">
-        Indicatie, geen advies. Vraag een vrijblijvende financieringsscan via Credion.
+        {noFinancing
+          ? 'Geen financiering, geen maandlast. Wel houden we rekening met onderhoud, VvE-lasten en fiscale invloed.'
+          : 'Indicatie, geen advies. Lening tot 75 procent van de koopsom is gangbaar voor bedrijfsunits. Vraag een vrijblijvende financieringsscan via Credion.'}
       </div>
     </div>
   )
