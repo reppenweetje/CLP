@@ -1,7 +1,7 @@
 import ProgressIndicator from './ProgressIndicator.jsx'
 
 // header met repp logomark dunne goud divider whatsapp escape en demo toggle
-export default function AppShell({ children, progress, onBack, onDebugToggle, debugOpen, hideHeader, waLink }) {
+export default function AppShell({ children, progress, onBack, onDebugToggle, debugOpen, hideHeader, waLink, onWaClick }) {
   return (
     <div className="h-[100dvh] flex flex-col bg-canvas text-ink overflow-hidden">
       {!hideHeader && (
@@ -36,6 +36,7 @@ export default function AppShell({ children, progress, onBack, onDebugToggle, de
                   href={waLink}
                   target="_blank"
                   rel="noreferrer"
+                  onClick={onWaClick}
                   className="w-9 h-9 rounded-full bg-emerald-50 hover:bg-emerald-100 active:scale-95 flex items-center justify-center text-emerald-700 transition"
                   aria-label="direct whatsapp"
                   title="direct whatsapp"

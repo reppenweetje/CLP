@@ -15,6 +15,7 @@ import {
   leadConfidence,
 } from './lib/recommendation.js'
 import { parseLeadInput, mergeLead } from './lib/parseLead.js'
+import { startNewSession, trackEvent } from './lib/analytics.js'
 
 import AppShell from './components/AppShell.jsx'
 import IntroScreen from './components/IntroScreen.jsx'
@@ -22,6 +23,7 @@ import ChatThread from './components/ChatThread.jsx'
 import SuggestedChips from './components/SuggestedChips.jsx'
 import ChatInput from './components/ChatInput.jsx'
 import DebugPanel from './components/DebugPanel.jsx'
+import AdminScreen from './screens/AdminScreen.jsx'
 
 let _id = 0
 const nextId = () => ++_id
@@ -183,7 +185,18 @@ function capitalize(s) {
   return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
 }
 
+function isAdminRoute() {
+  if (typeof window === 'undefined') return false
+  return window.location.pathname.startsWith('/admin')
+}
+
 export default function App() {
+  // Routing zonder router-library: /admin opent het analytics dashboard.
+  if (isAdminRoute()) return <AdminScreen />
+  return <Demo />
+}
+
+function Demo() {
   const [state, dispatch] = useReducer(reducer, initial, (init) => {
     const loaded = loadPersisted()
     if (loaded) return { ...init, ...loaded, debugOpen: false }
@@ -205,17 +218,22 @@ export default function App() {
   const stage = deriveStage(state.answers)
   const temperature = deriveTemperature(stage)
 
-  const start = () => dispatch({ type: 'START_CHAT' })
+  const start = (variant) => {
+    startNewSession()
+    trackEvent('session:start', { variant })
+    trackEvent('intro:cta-clicked', { variant })
+    dispatch({ type: 'START_CHAT' })
+  }
 
   const onChipPick = (opt) => {
     const q = state.currentQuestion
     if (!q) return
 
-    // Persona-select. Daarna USP-cards en brochure-gate.
     if (q === 'intent') {
       const personaNext = opt.persona || 'onbekend'
       const microIntro = pickMicroIntro(personaNext)
       const cards = uspCardOrder(personaNext)
+      trackEvent('intent:answered', { id: opt.id, label: opt.label, persona: personaNext })
       dispatch({ type: 'ANSWER', key: 'intent', value: opt, next: 'brochureTrigger' })
       dispatch({
         type: 'APPEND',
@@ -229,8 +247,8 @@ export default function App() {
       return
     }
 
-    // Brochure-gate. Ja → email-flow. Nee → afhaakReasons.
     if (q === 'brochureTrigger') {
+      trackEvent('brochure-trigger:answered', { id: opt.id, label: opt.label, isAfhaak: !!opt.afhaak })
       if (opt.afhaak) {
         dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: opt, next: 'afhaakReasons' })
         dispatch({
@@ -254,8 +272,9 @@ export default function App() {
       return
     }
 
-    // Afhaak-pad: registreer reden en sluit af met cta-card zonder brochure.
     if (q === 'afhaakReasons') {
+      trackEvent('afhaak-reason:answered', { id: opt.id, label: opt.label })
+      trackEvent('flow:complete', { stage: 'afhaak', persona })
       const wa = whatsAppDeeplink(project, '', `Geen match: ${opt.label.toLowerCase()}`)
       dispatch({ type: 'ANSWER', key: 'afhaakReason', value: opt, next: null })
       dispatch({
@@ -277,8 +296,8 @@ export default function App() {
       return
     }
 
-    // Lead phone-ask. Ja → 06 input, Nee → afsluiten zonder 06.
     if (q === 'lead-phoneAsk') {
+      trackEvent('lead-phone-ask:answered', { id: opt.id, label: opt.label })
       if (opt.id === 'yes') {
         dispatch({
           type: 'APPEND',
@@ -297,8 +316,8 @@ export default function App() {
       return
     }
 
-    // Size eerst, dan timeline. Beide vragen bevatten een expliciete reden in de bot-copy.
     if (q === 'size') {
+      trackEvent('size:answered', { id: opt.id, label: opt.label })
       dispatch({ type: 'ANSWER', key: 'size', value: opt, next: 'timeline' })
       dispatch({
         type: 'APPEND',
@@ -316,6 +335,7 @@ export default function App() {
       const personaNext = derivePersona(merged)
       const copy = recommendCopy(personaNext)
       const confidence = leadConfidence(merged)
+      trackEvent('timeline:answered', { id: opt.id, label: opt.label, recommendedUnit: unit.primary?.type })
       const messages = [{ kind: 'user-text', text: userTextFromOpt(opt) }]
       if (confidence >= 2) {
         messages.push(
@@ -339,6 +359,7 @@ export default function App() {
 
     if (q === 'moreInfo') {
       if (opt.id === '__continue') {
+        trackEvent('more-info:continue', {})
         dispatch({ type: 'SET_QUESTION', next: 'followup' })
         dispatch({
           type: 'APPEND',
@@ -348,6 +369,7 @@ export default function App() {
           ],
         })
       } else {
+        trackEvent('more-info:viewed', { id: opt.id, label: opt.label })
         dispatch({ type: 'MORE_INFO_SEEN', id: opt.id })
         dispatch({
           type: 'APPEND',
@@ -367,6 +389,8 @@ export default function App() {
       const tc = thankYouCopy(stageNext, personaNext, state.answers.lead?.firstName)
       const sum = buildAnswerSummary(merged)
       const wa = whatsAppDeeplink(project, state.answers.lead?.firstName, sum)
+      trackEvent('followup:answered', { id: opt.id, label: opt.label })
+      trackEvent('flow:complete', { stage: stageNext, persona: personaNext })
       dispatch({ type: 'ANSWER', key: 'followup', value: opt, next: null })
       dispatch({
         type: 'APPEND',
@@ -388,7 +412,6 @@ export default function App() {
     if (q === 'lead-phone') return handleLeadPhoneText(text)
   }
 
-  // Email is de eerste vraag in de lead capture. Daarna naam dan WA-vraag.
   function handleLeadEmailText(text) {
     const parsed = parseLeadInput(text)
     const draft = mergeLead(state.leadDraft, parsed)
@@ -412,7 +435,8 @@ export default function App() {
       return
     }
 
-    // Email binnen. Als naam toevallig ook in dezelfde tekst zat, slaan we de naam-vraag over.
+    trackEvent('lead-email:submitted', { email: draft.email })
+
     if (draft.firstName) {
       dispatch({ type: 'LEAD_DRAFT', draft })
       dispatch({
@@ -457,6 +481,7 @@ export default function App() {
       return
     }
 
+    trackEvent('lead-name:submitted', { firstName })
     const draft = { ...state.leadDraft, firstName, email: parsed.email || state.leadDraft.email }
     dispatch({ type: 'LEAD_DRAFT', draft })
     dispatch({
@@ -482,6 +507,7 @@ export default function App() {
       })
       return
     }
+    trackEvent('lead-phone:submitted', { phone: parsed.phone })
     const lead = { ...state.leadDraft, phone: parsed.phone }
     finishLead(lead, [{ kind: 'user-text', text }])
   }
@@ -500,6 +526,7 @@ export default function App() {
   }
 
   const onBrochure = () => {
+    trackEvent('cta:brochure-clicked', { location: state.currentQuestion || 'thankyou' })
     if (typeof window !== 'undefined') {
       if (project.brochureUrl && project.brochureUrl !== '#') {
         window.open(project.brochureUrl, '_blank', 'noopener,noreferrer')
@@ -507,6 +534,10 @@ export default function App() {
         window.alert('Demo: brochure download zou hier starten.')
       }
     }
+  }
+
+  const onWaClick = () => {
+    trackEvent('cta:whatsapp-clicked', { location: 'header' })
   }
 
   const headerWaLink = whatsAppDeeplink(project, state.answers.lead?.firstName || '', 'Graag info over De Hofman')
@@ -549,7 +580,6 @@ export default function App() {
     inputConfig = { placeholder: '06 12 34 56 78', inputMode: 'tel', validate: isValidPhoneText }
   }
 
-  // Progress: 6 telbare stappen in normale flow.
   const answeredCount = ['intent', 'brochureTrigger', 'lead', 'size', 'timeline', 'followup']
     .filter((k) => state.answers[k]).length
   const progress = state.view === 'chat' ? { current: Math.min(6, Math.max(1, answeredCount + 1)), total: 6 } : null
@@ -561,6 +591,7 @@ export default function App() {
       debugOpen={state.debugOpen}
       hideHeader={state.view === 'intro'}
       waLink={headerWaLink}
+      onWaClick={onWaClick}
     >
       {state.view === 'intro' && <IntroScreen onStart={start} />}
 

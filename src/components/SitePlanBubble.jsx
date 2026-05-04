@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Avatar from './Avatar.jsx'
 import MortgageCalc from './MortgageCalc.jsx'
+import { trackEvent } from '../lib/analytics.js'
 
 // 14 units 2 rijen volgens werkelijke situatietekening
 // status kleuren matchen de officiele kopen repp nl plattegrond
@@ -48,7 +49,13 @@ export default function SitePlanBubble({ sitePlan, units }) {
                       return (
                         <button
                           key={u.number}
-                          onClick={() => setSelectedNumber(isSel ? null : u.number)}
+                          onClick={() => {
+                            const next = isSel ? null : u.number
+                            setSelectedNumber(next)
+                            if (next !== null) {
+                              trackEvent('unit:detail-opened', { number: u.number, type: u.type, state: u.state })
+                            }
+                          }}
                           className={`relative aspect-[3/4] rounded-md border transition active:scale-95 ${stateClasses(u.state)} ${
                             isSel ? 'ring-2 ring-midnite ring-offset-2 ring-offset-canvas-2' : ''
                           }`}
