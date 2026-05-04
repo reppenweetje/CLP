@@ -4,7 +4,8 @@ import { CTA_VARIANTS, pickCtaVariant } from '../lib/cta.js'
 import HeroCarousel from './HeroCarousel.jsx'
 
 // Volledig scherm intro voor de verplichte begin. Daarna gaat alles chat.
-// Hero is full-width edge-to-edge; de rest van de content blijft binnen max-w-md.
+// Hero is full-width edge-to-edge; de overlay-tekst en de content eronder
+// delen dezelfde max-w-md + px-4 zodat alles netjes op één lijn staat.
 // CTA roteert: ?cta=A|B|C|D > localStorage > random (persistent per bezoeker).
 export default function IntroScreen({ onStart }) {
   const [ctaVariant, setCtaVariant] = useState('A')
@@ -17,9 +18,11 @@ export default function IntroScreen({ onStart }) {
       <div className="relative w-full h-80 sm:h-96 bg-canvas-2 fade-up overflow-hidden">
         <HeroCarousel images={project.gallery} />
         <div className="absolute inset-0 bg-gradient-to-t from-paper/95 via-paper/20 to-transparent" />
-        <div className="absolute bottom-5 left-5 right-5 mx-auto max-w-md">
-          <div className="text-[28px] font-semibold text-ink leading-tight">{project.displayName}</div>
-          <div className="text-[13px] text-ink-soft mt-0.5">{project.tagline}</div>
+        <div className="absolute bottom-0 left-0 right-0 pb-5">
+          <div className="mx-auto w-full max-w-md px-4">
+            <div className="text-[28px] font-semibold text-ink leading-tight">{project.displayName}</div>
+            <div className="text-[13px] text-ink-soft mt-0.5">{project.tagline}</div>
+          </div>
         </div>
       </div>
 

@@ -225,6 +225,21 @@ function isValidPhoneText(text) {
   return /^(?:\+316\d{8}|316\d{8}|06\d{8})$/.test(stripped)
 }
 
+// Track lead-velden zodra ze voor het eerst herkend zijn, ongeacht in welke
+// stap. Wanneer een bezoeker bv. naam en mailadres in dezelfde input geeft,
+// vuren we beide events los van elkaar.
+function trackNewLeadFields(prevDraft, newDraft) {
+  if (newDraft.email && newDraft.email !== prevDraft.email) {
+    trackEvent('lead-email:submitted', { email: newDraft.email })
+  }
+  if (newDraft.firstName && newDraft.firstName !== prevDraft.firstName) {
+    trackEvent('lead-name:submitted', { firstName: newDraft.firstName })
+  }
+  if (newDraft.phone && newDraft.phone !== prevDraft.phone) {
+    trackEvent('lead-phone:submitted', { phone: newDraft.phone })
+  }
+}
+
 function capitalize(s) {
   if (!s) return s
   return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
@@ -569,6 +584,8 @@ function Demo() {
 
     if (!draft.email) {
       dispatch({ type: 'LEAD_DRAFT', draft })
+      // Naam of telefoon kan toch al binnen zijn ondanks geen geldig mailadres
+      trackNewLeadFields(state.leadDraft, draft)
       dispatch({
         type: 'APPEND',
         messages: [
@@ -584,7 +601,7 @@ function Demo() {
       return
     }
 
-    trackEvent('lead-email:submitted', { email: draft.email })
+    trackNewLeadFields(state.leadDraft, draft)
 
     if (draft.firstName) {
       dispatch({ type: 'LEAD_DRAFT', draft })
@@ -630,8 +647,13 @@ function Demo() {
       return
     }
 
-    trackEvent('lead-name:submitted', { firstName })
-    const draft = { ...state.leadDraft, firstName, email: parsed.email || state.leadDraft.email }
+    const draft = {
+      ...state.leadDraft,
+      firstName,
+      email: parsed.email || state.leadDraft.email,
+      phone: parsed.phone || state.leadDraft.phone,
+    }
+    trackNewLeadFields(state.leadDraft, draft)
     dispatch({ type: 'LEAD_DRAFT', draft })
     dispatch({
       type: 'APPEND',
@@ -656,8 +678,8 @@ function Demo() {
       })
       return
     }
-    trackEvent('lead-phone:submitted', { phone: parsed.phone })
     const lead = { ...state.leadDraft, phone: parsed.phone }
+    trackNewLeadFields(state.leadDraft, lead)
     finishLead(lead, [{ kind: 'user-text', text }])
   }
 
