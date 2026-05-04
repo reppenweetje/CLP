@@ -170,6 +170,7 @@ const MORE_INFO_DEFS = {
   location: { label: 'Meer over locatie' },
   sitePlan: { label: 'Situatietekening' },
   price: { label: 'Prijslijst' },
+  priceCompare: { label: 'Prijsvergelijking' },
   process: { label: 'Aankoopproces' },
   brochure: { label: 'Open brochure' },
   investor: { label: 'Belegger voordelen', personas: ['belegger', 'beide', 'onbekend'] },
@@ -187,14 +188,16 @@ function moreInfoChips(persona, seen) {
   return opts
 }
 
-function buildMoreInfoMessages(id) {
+function buildMoreInfoMessages(id, persona) {
   switch (id) {
     case 'location':
       return [{ kind: 'location', payload: { location: project.location, projectName: project.displayName } }]
     case 'sitePlan':
-      return [{ kind: 'site-plan', payload: { sitePlan: project.sitePlan, units: project.units } }]
+      return [{ kind: 'site-plan', payload: { sitePlan: project.sitePlan, units: project.units, persona } }]
     case 'price':
       return [{ kind: 'price', payload: { units: project.units } }]
+    case 'priceCompare':
+      return [{ kind: 'price-compare', payload: { priceComparison: project.priceComparison } }]
     case 'process':
       return [{ kind: 'process', payload: { steps: project.process } }]
     case 'brochure':
@@ -322,7 +325,7 @@ function Demo() {
       if (opt.id === 'ja') {
         messages.push(
           { kind: 'bot-text', text: 'Hier zijn de 14 units met de actuele status. Tik op een unit voor de specs.' },
-          { kind: 'site-plan', payload: { sitePlan: project.sitePlan, units: project.units } },
+          { kind: 'site-plan', payload: { sitePlan: project.sitePlan, units: project.units, persona } },
         )
       }
       messages.push({ kind: 'bot-text', text: flow.questions.brochureTrigger.label })
@@ -512,7 +515,7 @@ function Demo() {
         type: 'APPEND',
         messages: [
           { kind: 'user-text', text: userTextFromOpt(opt) },
-          ...buildMoreInfoMessages(opt.id),
+          ...buildMoreInfoMessages(opt.id, persona),
         ],
       })
       return
@@ -822,6 +825,11 @@ function Demo() {
         onClose={() => setAnswersOpen(false)}
         onEdit={onEditAnswer}
         onForgetLead={onForgetLead}
+        onReset={() => {
+          clearPersisted()
+          _id = 0
+          dispatch({ type: 'RESET' })
+        }}
       />
 
       <DebugPanel

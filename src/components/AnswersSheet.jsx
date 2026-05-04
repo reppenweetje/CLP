@@ -6,7 +6,7 @@ import { useEffect } from 'react'
 //
 // Lead-data tonen we alleen als "we hebben dit al" met een aparte
 // vergeet-actie zodat de bezoeker er niet onnodig opnieuw door hoeft.
-export default function AnswersSheet({ open, answers, onClose, onEdit, onForgetLead }) {
+export default function AnswersSheet({ open, answers, onClose, onEdit, onForgetLead, onReset }) {
   useEffect(() => {
     if (!open) return
     const onKey = (e) => e.key === 'Escape' && onClose()
@@ -106,6 +106,21 @@ export default function AnswersSheet({ open, answers, onClose, onEdit, onForgetL
         >
           Terug
         </button>
+
+        {onReset && (
+          <button
+            onClick={() => {
+              if (typeof window !== 'undefined' && !window.confirm('Wil je opnieuw beginnen? Je antwoorden en gegevens worden gewist.')) {
+                return
+              }
+              onReset()
+              onClose()
+            }}
+            className="mt-2 w-full text-[12px] text-ink-mute hover:text-rose-700 py-2 text-center transition"
+          >
+            Opnieuw beginnen
+          </button>
+        )}
       </div>
     </div>
   )

@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import Avatar from './Avatar.jsx'
 import MortgageCalc from './MortgageCalc.jsx'
+import RentabilityCalc from './RentabilityCalc.jsx'
 import { trackEvent } from '../lib/analytics.js'
 
 // 14 units 2 rijen volgens werkelijke situatietekening
 // status kleuren matchen de officiele kopen repp nl plattegrond
 // klik op een unit voor m² prijs en status detail
-export default function SitePlanBubble({ sitePlan, units }) {
+export default function SitePlanBubble({ sitePlan, units, persona }) {
   const [selectedNumber, setSelectedNumber] = useState(null)
   const allUnits = sitePlan.rows.flatMap((r) => r.units)
   const selected = allUnits.find((u) => u.number === selectedNumber)
@@ -86,7 +87,7 @@ export default function SitePlanBubble({ sitePlan, units }) {
             </div>
 
             {selected && selectedTypeData && (
-              <UnitDetail unit={selected} typeData={selectedTypeData} />
+              <UnitDetail unit={selected} typeData={selectedTypeData} persona={persona} />
             )}
           </div>
         </div>
@@ -95,7 +96,10 @@ export default function SitePlanBubble({ sitePlan, units }) {
   )
 }
 
-function UnitDetail({ unit, typeData }) {
+function UnitDetail({ unit, typeData, persona }) {
+  // Beleggers en mensen die als beide kijken zien een rendement-indicator.
+  // Eigen gebruikers en onbekend zien een maandlast-calculator.
+  const showRentability = persona === 'belegger' || persona === 'beide'
   return (
     <div className="mt-4 rounded-2xl bg-canvas-2 border border-mist-light overflow-hidden fade-up">
       <div className="px-4 py-3 flex items-baseline justify-between gap-3 border-b border-mist-light">
@@ -129,7 +133,18 @@ function UnitDetail({ unit, typeData }) {
       )}
       {typeData.priceFrom && unit.state !== 'sold' && (
         <div className="px-4 pb-4">
-          <MortgageCalc price={typeData.priceFrom} indicative={unit.state === 'coming_soon'} />
+          {showRentability ? (
+            <RentabilityCalc
+              price={typeData.priceFrom}
+              size={typeData.size}
+              indicative={unit.state === 'coming_soon'}
+            />
+          ) : (
+            <MortgageCalc
+              price={typeData.priceFrom}
+              indicative={unit.state === 'coming_soon'}
+            />
+          )}
         </div>
       )}
     </div>

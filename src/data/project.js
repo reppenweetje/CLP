@@ -260,6 +260,20 @@ export const project = {
     { phase: 'Oplevering', date: 'Q1 2027 indicatief' },
   ],
 
+  // m²-prijs vergelijking met andere bedrijfsunits in de Waarderpolder.
+  // Bron: openbare verkoopdata, gepubliceerd op repp.nl/dehofman/prijs.
+  priceComparison: {
+    peildatum: '26 maart 2026',
+    rows: [
+      { name: 'De Hofman L', tag: 'Early Bird', price: 2233, isOurs: true },
+      { name: 'De Hofman L', tag: 'Regulier', price: 2281, isOurs: true },
+      { name: 'Wateringweg', tag: 'Bestaand 2022', price: 2375 },
+      { name: 'Nijverheidsweg', tag: 'Nieuwbouw', price: 2500 },
+      { name: 'Beijnesweg', tag: 'Nieuwbouw', price: 2533 },
+      { name: 'Enschedéweg', tag: 'Bestaand 2022', price: 2539 },
+    ],
+  },
+
   // Beleggers-data uit het projectinformatie-document (BAR 6,7-9% bij €150-200 markthuur).
   investor: {
     barRange: '6,7% tot 9,0%',
@@ -360,10 +374,8 @@ export const project = {
   // Outbound bel-nummer voor de header- en thankyou-CTA.
   phoneNumber: '020-2610080',
   brochureUrl: '/brochure.pdf',
-  // Webhook voor financiering-doorgeven aan Credion.
-  // Vervang door productie-URL (Zapier, n8n, eigen serverless function).
-  // Zolang URL het woord REPLACE bevat draait er een no-op met console.log.
-  credionWebhookUrl: 'https://hooks.zapier.com/hooks/catch/REPLACE_ME',
+  // Webhook voor financiering-doorgeven aan Credion (Zapier-trigger).
+  credionWebhookUrl: 'https://hooks.zapier.com/hooks/catch/2082653/ua9zc1l/',
 }
 
 // Volgorde van USP-cards aangepast aan persona.

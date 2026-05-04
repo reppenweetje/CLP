@@ -14,6 +14,7 @@ import ProcessBubble from './ProcessBubble.jsx'
 import PlanningBubble from './PlanningBubble.jsx'
 import InvestorBubble from './InvestorBubble.jsx'
 import PriceBubble from './PriceBubble.jsx'
+import PriceCompareBubble from './PriceCompareBubble.jsx'
 import BrochureBubble from './BrochureBubble.jsx'
 
 // Scrollable chat thread. Bij nieuwe messages scrollen we zo dat
@@ -91,7 +92,7 @@ function renderMessage(m, { onBrochure }) {
     case 'location':
       return <LocationBubble location={m.payload.location} projectName={m.payload.projectName} />
     case 'site-plan':
-      return <SitePlanBubble sitePlan={m.payload.sitePlan} units={m.payload.units} />
+      return <SitePlanBubble sitePlan={m.payload.sitePlan} units={m.payload.units} persona={m.payload.persona} />
     case 'highlights':
       return <HighlightsBubble highlights={m.payload.highlights} intro={m.payload.intro} />
     case 'process':
@@ -102,6 +103,8 @@ function renderMessage(m, { onBrochure }) {
       return <InvestorBubble benefits={m.payload.benefits} investor={m.payload.investor} intro={m.payload.intro} />
     case 'price':
       return <PriceBubble units={m.payload.units} />
+    case 'price-compare':
+      return <PriceCompareBubble priceComparison={m.payload.priceComparison} />
     case 'brochure':
       return <BrochureBubble url={m.payload.url} hero={m.payload.hero} projectName={m.payload.projectName} />
     case 'cta-card':
