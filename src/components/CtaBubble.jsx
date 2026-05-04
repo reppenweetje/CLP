@@ -1,7 +1,16 @@
 import Avatar from './Avatar.jsx'
 
-// laatste cta in thread whatsapp deeplink en brochure
-export default function CtaBubble({ waLink, onBrochure, summary }) {
+// Laatste cta in de thread. Bel- en WhatsApp-knop voor directe actie,
+// optioneel ook een brochure-link. De brochure wordt verborgen bij het
+// afhaak-pad omdat de bezoeker geen match aangaf.
+export default function CtaBubble({
+  waLink,
+  phoneLink,
+  phoneDisplay,
+  onBrochure,
+  summary,
+  intro,
+}) {
   return (
     <div className="flex gap-2.5 items-start fade-up">
       <Avatar />
@@ -13,14 +22,27 @@ export default function CtaBubble({ waLink, onBrochure, summary }) {
               <div className="text-[13px] text-ink leading-relaxed mt-1.5">{summary}</div>
             </div>
           )}
-          <a
-            href={waLink}
-            target="_blank"
-            rel="noreferrer"
-            className="block w-full text-center rounded-full bg-neon text-midnite font-semibold py-3.5 text-[14px] hover:brightness-95 active:scale-[0.99] transition"
-          >
-            Open WhatsApp met REPP
-          </a>
+          {intro && (
+            <div className="text-[13px] text-ink-soft leading-relaxed">{intro}</div>
+          )}
+          {phoneLink && (
+            <a
+              href={phoneLink}
+              className="block w-full text-center rounded-full bg-midnite text-paper font-semibold py-3.5 text-[14px] hover:bg-midnite-soft active:scale-[0.99] transition"
+            >
+              Bel direct{phoneDisplay ? ` ${phoneDisplay}` : ''}
+            </a>
+          )}
+          {waLink && (
+            <a
+              href={waLink}
+              target="_blank"
+              rel="noreferrer"
+              className="block w-full text-center rounded-full bg-neon text-midnite font-semibold py-3.5 text-[14px] hover:brightness-95 active:scale-[0.99] transition"
+            >
+              Open WhatsApp met REPP
+            </a>
+          )}
           {onBrochure && (
             <button
               type="button"

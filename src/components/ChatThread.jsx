@@ -99,7 +99,7 @@ function renderMessage(m, { onBrochure }) {
     case 'planning':
       return <PlanningBubble planning={m.payload.planning} />
     case 'investor':
-      return <InvestorBubble benefits={m.payload.benefits} intro={m.payload.intro} />
+      return <InvestorBubble benefits={m.payload.benefits} investor={m.payload.investor} intro={m.payload.intro} />
     case 'price':
       return <PriceBubble units={m.payload.units} />
     case 'brochure':
@@ -108,6 +108,9 @@ function renderMessage(m, { onBrochure }) {
       return (
         <CtaBubble
           waLink={m.payload.waLink}
+          phoneLink={m.payload.phoneLink}
+          phoneDisplay={m.payload.phoneDisplay}
+          intro={m.payload.intro}
           summary={m.payload.summary}
           onBrochure={m.payload.hideBrochure ? null : onBrochure}
         />

@@ -74,6 +74,28 @@ export const project = {
       body: 'Kleinschalig, nieuwbouw en op een gevestigde bedrijvenlocatie in Haarlem. Bij belaste verhuur kunnen fiscale aandachtspunten spelen. Laat je daarover goed adviseren.',
       image: '/images/exterieur.jpg',
     },
+    // Beleggers-specifieke kaarten op basis van het projectinformatie- en marktindicatie-document.
+    {
+      id: 'bar',
+      tag: 'Rendement',
+      title: 'Indicatief 6,7% tot 9,0% BAR',
+      body: 'Bruto aanvangsrendement op basis van een markthuur van €150 tot €200 per m² per jaar in de Waarderpolder. Indicatief, geen prognose.',
+      image: '/images/exterieur.jpg',
+    },
+    {
+      id: 'schaarste-pro',
+      tag: 'Schaarste',
+      title: 'Beperkt aanbod in Waarderpolder',
+      body: 'Ruim duizend bedrijven gevestigd, weinig nieuwe bouwgrond. Vergelijkbare units komen slechts beperkt beschikbaar.',
+      image: '/images/exterieur.jpg',
+    },
+    {
+      id: 'all-in',
+      tag: 'Vrij op naam',
+      title: 'Geen overdrachtsbelasting',
+      body: 'Levering vrij op naam. Geen 10,4% overdrachtsbelasting. Aansluitkosten water en elektra inbegrepen in de koopsom.',
+      image: '/images/showroom.jpg',
+    },
   ],
 
   location: {
@@ -234,9 +256,35 @@ export const project = {
   planning: [
     { phase: 'Start verkoop', date: 'Gestart' },
     { phase: 'Start bouw', date: 'December 2024' },
-    { phase: 'Ruwbouw', date: 'Voorjaar 2025' },
-    { phase: 'Oplevering', date: 'Eind 2025 indicatief' },
+    { phase: 'Bouwfase', date: '2025 tot 2026' },
+    { phase: 'Oplevering', date: 'Q1 2027 indicatief' },
   ],
+
+  // Beleggers-data uit het projectinformatie-document (BAR 6,7-9% bij €150-200 markthuur).
+  investor: {
+    barRange: '6,7% tot 9,0%',
+    markthuurRange: '€150 tot €200 per m² per jaar',
+    markthuurAanname: '€175 per m² per jaar',
+    kernfactoren: [
+      'Structurele schaarste binnen een gevestigd bedrijventerrein.',
+      'Een instapprijs onder het huidige nieuwbouwniveau.',
+      'Courante units met potentie voor stabiele verhuur.',
+    ],
+    cashflow: [
+      'Initiële aanbetaling circa 5% bij reservering.',
+      'Resterend bedrag in bouwtermijnen van 20 tot 25% per fase.',
+      'Onderhoudsarm vastgoed, geen erfpacht.',
+    ],
+    fiscaal: [
+      'Vrij op naam: geen overdrachtsbelasting van 10,4%.',
+      'All-in koopsom: aansluitkosten water en elektra inbegrepen.',
+      '21% btw bij verhuur of eigen gebruik vaak terugvorderbaar, fiscaal advies aanbevolen.',
+    ],
+    earlyBird: {
+      L: 5000,
+      XL: 7500,
+    },
+  },
 
   investorBenefits: [
     'Kleinschalig nieuwbouw, schaars aanbod.',
@@ -309,17 +357,24 @@ export const project = {
   ],
 
   whatsappNumber: '+31612345678',
+  // Outbound bel-nummer voor de header- en thankyou-CTA.
+  phoneNumber: '020-2610080',
   brochureUrl: '/brochure.pdf',
+  // Webhook voor financiering-doorgeven aan Credion.
+  // Vervang door productie-URL (Zapier, n8n, eigen serverless function).
+  // Zolang URL het woord REPLACE bevat draait er een no-op met console.log.
+  credionWebhookUrl: 'https://hooks.zapier.com/hooks/catch/REPLACE_ME',
 }
 
 // Volgorde van USP-cards aangepast aan persona.
-// Belegger ziet beleggings-info eerder; eigen gebruiker ziet praktische zaken eerder.
+// Belegger ziet beleggings-info (BAR, schaarste, all-in) eerder;
+// eigen gebruiker ziet praktische zaken eerder.
 export function uspCardOrder(persona) {
   const ids =
     persona === 'belegger'
-      ? ['project', 'location', 'availability', 'price', 'investor', 'practical']
+      ? ['project', 'bar', 'schaarste-pro', 'all-in', 'price', 'location']
       : persona === 'beide'
-      ? ['project', 'location', 'availability', 'price', 'unit-l', 'investor']
+      ? ['project', 'location', 'bar', 'price', 'unit-l', 'all-in']
       : persona === 'eigen_gebruiker'
       ? ['project', 'location', 'availability', 'price', 'unit-l', 'practical']
       : ['project', 'location', 'availability', 'price', 'unit-l', 'practical']

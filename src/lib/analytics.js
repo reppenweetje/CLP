@@ -205,7 +205,10 @@ export function humanizeEventType(type) {
     case 'followup:answered': return 'Vervolg gekozen'
     case 'flow:complete': return 'Flow voltooid'
     case 'cta:whatsapp-clicked': return 'WhatsApp aangeklikt'
+    case 'cta:phone-clicked': return 'Bel-knop aangeklikt'
     case 'cta:brochure-clicked': return 'Brochure geopend'
+    case 'direct-contact:requested': return 'Direct contact gevraagd'
+    case 'financing:credion-shared': return 'Financiering naar Credion gedeeld'
     case 'unit:detail-opened': return 'Unit-detail bekeken'
     default: return type
   }

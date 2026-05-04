@@ -16,6 +16,7 @@ import {
 } from './lib/recommendation.js'
 import { parseLeadInput, mergeLead } from './lib/parseLead.js'
 import { startNewSession, trackEvent } from './lib/analytics.js'
+import { sendCredionLead } from './lib/credion.js'
 
 import AppShell from './components/AppShell.jsx'
 import IntroScreen from './components/IntroScreen.jsx'
@@ -172,6 +173,7 @@ const MORE_INFO_DEFS = {
   process: { label: 'Aankoopproces' },
   brochure: { label: 'Open brochure' },
   investor: { label: 'Belegger voordelen', personas: ['belegger', 'beide', 'onbekend'] },
+  financing: { label: 'Financiering' },
 }
 
 function moreInfoChips(persona, seen) {
@@ -181,7 +183,7 @@ function moreInfoChips(persona, seen) {
     if (def.personas && !def.personas.includes(persona)) continue
     opts.push({ id, label: def.label })
   }
-  opts.push({ id: '__continue', label: 'Meteen verder' })
+  opts.push({ id: '__contact', label: 'Direct contact' })
   return opts
 }
 
@@ -198,10 +200,24 @@ function buildMoreInfoMessages(id) {
     case 'brochure':
       return [{ kind: 'brochure', payload: { url: project.brochureUrl, hero: project.hero, projectName: project.displayName } }]
     case 'investor':
-      return [{ kind: 'investor', payload: { benefits: project.investorBenefits, intro: 'Wat De Hofman voor beleggers interessant maakt.' } }]
+      return [{
+        kind: 'investor',
+        payload: {
+          benefits: project.investorBenefits,
+          investor: project.investor,
+          intro: 'Wat De Hofman voor beleggers interessant maakt.',
+        },
+      }]
     default:
       return []
   }
+}
+
+// tel-link voor de header en cta-card. Strip alles behalve cijfers en plus.
+function buildPhoneLink(num) {
+  if (!num) return null
+  const cleaned = String(num).replace(/[^\d+]/g, '')
+  return `tel:${cleaned}`
 }
 
 function isValidPhoneText(text) {
@@ -420,7 +436,7 @@ function Demo() {
       }
       messages.push(
         { kind: 'bot-text', text: copy },
-        { kind: 'bot-text', text: 'Wil je nog ergens meer over weten, of meteen verder?' },
+        { kind: 'bot-text', text: 'Wil je nog ergens meer over weten, of direct contact?' },
       )
       dispatch({ type: 'ANSWER', key: 'timeline', value: answerValue(opt), next: 'moreInfo' })
       dispatch({ type: 'APPEND', messages })
@@ -428,27 +444,90 @@ function Demo() {
     }
 
     if (q === 'moreInfo') {
-      if (opt.id === '__continue') {
-        trackEvent('more-info:continue', {})
-        dispatch({ type: 'SET_QUESTION', next: 'followup' })
+      if (opt.id === '__contact') {
+        // Direct contact: einde van de flow met cta-card (bellen + WhatsApp).
+        const merged = state.answers
+        const personaNext = derivePersona(merged)
+        const sum = buildAnswerSummary(merged)
+        const wa = whatsAppDeeplink(project, state.answers.lead?.firstName, sum || 'Direct contact')
+        const phoneLink = buildPhoneLink(project.phoneNumber)
+        trackEvent('direct-contact:requested', { from: 'moreInfo' })
+        trackEvent('flow:complete', { stage: 'sales_ready', persona: personaNext })
+        dispatch({
+          type: 'ANSWER',
+          key: 'followup',
+          value: { ...answerValue({ id: 'direct-contact', label: 'Direct contact', score: 32 }) },
+          next: null,
+        })
         dispatch({
           type: 'APPEND',
           messages: [
             { kind: 'user-text', text: userTextFromOpt(opt) },
-            { kind: 'bot-text', text: flow.questions.followup.label },
+            { kind: 'bot-text', text: 'Top. Bel of WhatsApp ons direct, dan zorgen we dat je vandaag nog antwoord hebt.' },
+            {
+              kind: 'cta-card',
+              payload: {
+                waLink: wa,
+                phoneLink,
+                phoneDisplay: project.phoneNumber,
+                summary: sum,
+              },
+            },
+          ],
+        })
+        return
+      }
+      if (opt.id === 'financing') {
+        trackEvent('more-info:viewed', { id: opt.id, label: opt.label })
+        dispatch({ type: 'MORE_INFO_SEEN', id: 'financing' })
+        dispatch({
+          type: 'APPEND',
+          messages: [
+            { kind: 'user-text', text: userTextFromOpt(opt) },
+            { kind: 'bot-text', text: 'Onze partner Credion kan vrijblijvend met je meedenken over de financiering.' },
+            { kind: 'bot-text', text: 'Wil je dat we je gegevens met Credion delen, zodat zij contact met je opnemen?' },
+          ],
+        })
+        dispatch({ type: 'SET_QUESTION', next: 'financingAsk' })
+        return
+      }
+      trackEvent('more-info:viewed', { id: opt.id, label: opt.label })
+      dispatch({ type: 'MORE_INFO_SEEN', id: opt.id })
+      dispatch({
+        type: 'APPEND',
+        messages: [
+          { kind: 'user-text', text: userTextFromOpt(opt) },
+          ...buildMoreInfoMessages(opt.id),
+        ],
+      })
+      return
+    }
+
+    if (q === 'financingAsk') {
+      if (opt.id === 'yes') {
+        trackEvent('financing:credion-shared', {})
+        sendCredionLead(state.answers.lead, project, {
+          intent: state.answers.intent?.label,
+          size: state.answers.size?.label,
+          timeline: state.answers.timeline?.label,
+        })
+        dispatch({
+          type: 'APPEND',
+          messages: [
+            { kind: 'user-text', text: userTextFromOpt(opt) },
+            { kind: 'bot-text', text: 'Top. We delen je gegevens met Credion. Zij nemen vrijblijvend contact met je op.' },
           ],
         })
       } else {
-        trackEvent('more-info:viewed', { id: opt.id, label: opt.label })
-        dispatch({ type: 'MORE_INFO_SEEN', id: opt.id })
         dispatch({
           type: 'APPEND',
           messages: [
             { kind: 'user-text', text: userTextFromOpt(opt) },
-            ...buildMoreInfoMessages(opt.id),
+            { kind: 'bot-text', text: 'Geen probleem.' },
           ],
         })
       }
+      dispatch({ type: 'SET_QUESTION', next: 'moreInfo' })
       return
     }
 
@@ -606,7 +685,12 @@ function Demo() {
     trackEvent('cta:whatsapp-clicked', { location: 'header' })
   }
 
+  const onPhoneClick = () => {
+    trackEvent('cta:phone-clicked', { location: 'header' })
+  }
+
   const headerWaLink = whatsAppDeeplink(project, state.answers.lead?.firstName || '', 'Graag info over De Hofman')
+  const headerPhoneLink = buildPhoneLink(project.phoneNumber)
 
   // Wijzig een eerder gegeven antwoord vanuit de antwoorden-sheet:
   // de flow rolt terug naar dat punt en de bezoeker mag opnieuw kiezen.
@@ -656,6 +740,15 @@ function Demo() {
         { id: 'no', label: 'Nee, liever niet' },
       ],
     }
+  } else if (state.currentQuestion === 'financingAsk') {
+    chipQuestion = {
+      key: 'financingAsk',
+      label: 'financing ask',
+      options: [
+        { id: 'yes', label: 'Ja, graag' },
+        { id: 'no', label: 'Liever niet' },
+      ],
+    }
   } else if (state.currentQuestion === 'lead-email') {
     inputConfig = { placeholder: 'Je e-mailadres', inputMode: 'email' }
   } else if (state.currentQuestion === 'lead-name') {
@@ -677,6 +770,8 @@ function Demo() {
       hideHeader={state.view === 'intro'}
       waLink={headerWaLink}
       onWaClick={onWaClick}
+      phoneLink={headerPhoneLink}
+      onPhoneClick={onPhoneClick}
       showAnswersButton={showAnswersButton}
       onAnswersOpen={() => setAnswersOpen(true)}
     >
