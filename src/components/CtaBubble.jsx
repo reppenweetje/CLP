@@ -1,7 +1,7 @@
 import Avatar from './Avatar.jsx'
 
 // laatste cta in thread whatsapp deeplink en brochure
-export default function CtaBubble({ waLink, onBrochure, onReset, summary }) {
+export default function CtaBubble({ waLink, onBrochure, summary }) {
   return (
     <div className="flex gap-2.5 items-start fade-up">
       <Avatar />
@@ -28,15 +28,6 @@ export default function CtaBubble({ waLink, onBrochure, onReset, summary }) {
               className="block w-full text-center rounded-full border border-midnite/40 bg-paper text-midnite font-medium py-3.5 text-[14px] hover:bg-canvas-2 transition"
             >
               Bekijk brochure
-            </button>
-          )}
-          {onReset && (
-            <button
-              type="button"
-              onClick={onReset}
-              className="block w-full text-[12px] text-ink-mute hover:text-ink py-1 text-center"
-            >
-              Demo opnieuw
             </button>
           )}
         </div>

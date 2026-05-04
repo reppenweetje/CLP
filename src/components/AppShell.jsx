@@ -1,7 +1,18 @@
 import ProgressIndicator from './ProgressIndicator.jsx'
 
-// header met repp logomark dunne goud divider whatsapp escape en demo toggle
-export default function AppShell({ children, progress, onBack, onDebugToggle, debugOpen, hideHeader, waLink, onWaClick }) {
+// Header met REPP logomark, dunne goud-divider, WhatsApp escape en
+// een "aanpassen"-icoon dat de antwoorden-sheet opent.
+// De DEMO-toggle is verwijderd; debug-paneel blijft beschikbaar via ?debug=1.
+export default function AppShell({
+  children,
+  progress,
+  onBack,
+  hideHeader,
+  waLink,
+  onWaClick,
+  onAnswersOpen,
+  showAnswersButton,
+}) {
   return (
     <div className="h-[100dvh] flex flex-col bg-canvas text-ink overflow-hidden">
       {!hideHeader && (
@@ -31,6 +42,21 @@ export default function AppShell({ children, progress, onBack, onDebugToggle, de
             </div>
             <div className="flex items-center gap-2">
               {progress && <ProgressIndicator current={progress.current} total={progress.total} />}
+              {showAnswersButton && (
+                <button
+                  onClick={onAnswersOpen}
+                  className="w-9 h-9 rounded-full bg-paper border border-mist hover:border-midnite text-ink-soft hover:text-ink active:scale-95 flex items-center justify-center transition"
+                  aria-label="aanpassen"
+                  title="aanpassen"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="3" y1="6" x2="13" y2="6"></line>
+                    <line x1="3" y1="12" x2="13" y2="12"></line>
+                    <line x1="3" y1="18" x2="9" y2="18"></line>
+                    <path d="M18 12l3 3-6 6h-3v-3z"></path>
+                  </svg>
+                </button>
+              )}
               {waLink && (
                 <a
                   href={waLink}
@@ -47,17 +73,6 @@ export default function AppShell({ children, progress, onBack, onDebugToggle, de
                   </svg>
                 </a>
               )}
-              <button
-                onClick={onDebugToggle}
-                className={`text-[10px] tracking-[0.18em] font-medium px-2 py-1 rounded-full border transition uppercase ${
-                  debugOpen
-                    ? 'border-midnite bg-midnite text-paper'
-                    : 'border-mist text-ink-soft hover:text-ink hover:border-midnite'
-                }`}
-                aria-label="demo"
-              >
-                {debugOpen ? 'sluit' : 'demo'}
-              </button>
             </div>
           </div>
           <div className="mx-auto max-w-md px-4">

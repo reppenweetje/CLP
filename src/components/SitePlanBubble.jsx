@@ -108,13 +108,16 @@ function UnitDetail({ unit, typeData }) {
         </div>
       </div>
       <div className="px-4 py-3 grid grid-cols-2 gap-3">
-        <DetailItem label="type" value={`unit ${unit.type.toLowerCase()}`} />
+        <DetailItem label="type" value={`Unit ${unit.type.toLowerCase()}`} />
         <DetailItem label="oppervlakte" value={`≈ ${typeData.size} m²`} />
-        <DetailItem label="lagen" value={`${typeData.levels} laags`} />
+        <DetailItem label="bouwlagen" value={`${typeData.levels} laags`} />
+        {typeData.parking !== undefined && (
+          <DetailItem label="parkeren" value={`${typeData.parking} ${typeData.parking === 1 ? 'plaats' : 'plaatsen'}`} />
+        )}
         {typeData.priceFrom && (
           <DetailItem
-            label={unit.state === 'coming_soon' ? 'prijs indicatief' : 'vanaf'}
-            value={`€${formatThousands(typeData.priceFrom)} excl btw`}
+            label={unit.state === 'coming_soon' ? 'prijs indicatief' : 'prijs excl btw'}
+            value={`€${formatThousands(typeData.priceFrom)}`}
             highlight
           />
         )}

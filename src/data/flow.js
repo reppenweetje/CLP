@@ -25,7 +25,7 @@ export const flow = {
     // Eerste vraag is direct persona-select.
     intent: {
       key: 'intent',
-      label: 'Waar kijk je vooral naar?',
+      label: 'Waarom ben je op zoek naar een bedrijfsunit?',
       options: [
         { id: 'eigen_bedrijf', label: 'Voor mijn bedrijf', score: 12, persona: 'eigen_gebruiker' },
         { id: 'belegging', label: 'Als belegging', score: 15, persona: 'belegger' },
@@ -36,9 +36,20 @@ export const flow = {
 
     // Brochure-gate na de USP cards. Twee chips: door naar lead capture,
     // of naar de afhaak-redenen vraag voor marktonderzoek.
+    // Live beschikbaarheid kan vroeg worden getoond zodat de bezoeker
+    // de situatietekening al ziet voordat hij om de brochure wordt gevraagd.
+    availabilityCheck: {
+      key: 'availabilityCheck',
+      label: 'Wil je nu zien welke units nog beschikbaar zijn?',
+      options: [
+        { id: 'ja', label: 'Ja, laat zien' },
+        { id: 'nee', label: 'Liever niet' },
+      ],
+    },
+
     brochureTrigger: {
       key: 'brochureTrigger',
-      label: 'Is dit wat voor je? Dan kan ik je de brochure mailen.',
+      label: 'Zou dit interessant voor je kunnen zijn? Dan kan ik je de brochure mailen.',
       options: [
         { id: 'ja', label: 'Ja, stuur maar', score: 20, intent: true },
         { id: 'nee', label: 'Nee, ik zoek iets anders', score: 0, afhaak: true },

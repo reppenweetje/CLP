@@ -10,12 +10,14 @@ export const project = {
   logo: '/images/logo.svg',
   exterior: '/images/exterieur.jpg',
 
+  // Gallery wisselt visueel tussen exterieur en interieur shots zodat de
+  // hero-carousel duidelijk transformeert, niet twee bijna-identieke avond-shots.
   gallery: [
     { src: '/images/hero.jpg', alt: 'De Hofman exterieur in de avond' },
-    { src: '/images/exterieur.jpg', alt: 'De Hofman vanuit de straat' },
     { src: '/images/showroom.jpg', alt: 'Unit ingericht als showroom' },
-    { src: '/images/werkplaats.jpg', alt: 'Unit ingericht als werkplaats' },
+    { src: '/images/exterieur.jpg', alt: 'De Hofman vanuit de straat' },
     { src: '/images/unit-l.jpg', alt: 'Unit ingericht als kantoor' },
+    { src: '/images/werkplaats.jpg', alt: 'Unit ingericht als werkplaats' },
     { src: '/images/unit-studio.jpg', alt: 'Unit ingericht als fotostudio' },
   ],
 
@@ -138,6 +140,7 @@ export const project = {
       type: 'L',
       size: 105,
       levels: 2,
+      parking: 1,
       levelDetail: '52,5 m² begane grond plus 52,5 m² eerste verdieping',
       priceFrom: 239500,
       pricePerM2: 2281,
@@ -158,6 +161,7 @@ export const project = {
       type: 'XL',
       size: 113,
       levels: 2,
+      parking: 1,
       priceFrom: 259500,
       pricePerM2: 2296,
       state: 'sold_out',
@@ -175,6 +179,7 @@ export const project = {
       type: 'XXL',
       size: 191,
       levels: 3,
+      parking: 2,
       priceFrom: 515500,
       pricePerM2: 2698,
       state: 'coming_soon',

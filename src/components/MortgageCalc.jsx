@@ -1,7 +1,8 @@
 import { useState } from 'react'
 
-// maandlast indicator met sliders voor eigen vermogen en rente
-// 20 jaar annuitair indicatief geen advies
+// Maandlast-indicator met sliders voor eigen vermogen en rente.
+// 20 jaar annuïtair, indicatief — geen advies. Bij eigen vermogen tonen we
+// subtiel het bijbehorende €-bedrag zodat het concreet voelt.
 function calcMonthly(price, downPaymentPct, ratePct, years = 20) {
   const loan = price * (1 - downPaymentPct / 100)
   const monthlyRate = ratePct / 100 / 12
@@ -19,11 +20,12 @@ export default function MortgageCalc({ price, indicative = false }) {
   const [rate, setRate] = useState(5.0)
   const monthly = calcMonthly(price, downPayment, rate)
   const loan = price * (1 - downPayment / 100)
+  const equity = price * (downPayment / 100)
 
   return (
     <div className="rounded-2xl bg-paper border border-mist-light p-3.5">
       <div className="flex items-baseline justify-between gap-3 mb-3">
-        <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium">maandlast indicatie</div>
+        <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium">Maandlast indicatie</div>
         <div className="text-[10px] text-ink-mute uppercase tracking-wider">20 jaar annuïtair</div>
       </div>
 
@@ -34,13 +36,14 @@ export default function MortgageCalc({ price, indicative = false }) {
         <div className="text-[12px] text-ink-soft">per maand</div>
       </div>
       <div className="text-[11px] text-ink-mute leading-snug">
-        lening €{formatEuro(loan)} bij prijs €{formatEuro(price)}{indicative ? ' indicatief' : ''}
+        Lening €{formatEuro(loan)} bij prijs €{formatEuro(price)}{indicative ? ' indicatief' : ''}
       </div>
 
       <div className="mt-4 space-y-3">
         <SliderRow
-          label="eigen vermogen"
-          value={`${downPayment} procent`}
+          label="Eigen vermogen"
+          mainValue={`${downPayment}%`}
+          subValue={`€${formatEuro(equity)}`}
           input={
             <input
               type="range"
@@ -55,8 +58,8 @@ export default function MortgageCalc({ price, indicative = false }) {
           }
         />
         <SliderRow
-          label="rente"
-          value={`${rate.toFixed(1)} procent`}
+          label="Rente"
+          mainValue={`${rate.toFixed(1)}%`}
           input={
             <input
               type="range"
@@ -73,18 +76,23 @@ export default function MortgageCalc({ price, indicative = false }) {
       </div>
 
       <div className="text-[11px] text-ink-mute leading-snug mt-3 pt-3 border-t border-mist-light">
-        indicatie geen advies vraag een vrijblijvende financieringsscan via credion
+        Indicatie, geen advies. Vraag een vrijblijvende financieringsscan via Credion.
       </div>
     </div>
   )
 }
 
-function SliderRow({ label, value, input }) {
+function SliderRow({ label, mainValue, subValue, input }) {
   return (
     <div>
-      <div className="flex items-baseline justify-between text-[12px] mb-1">
+      <div className="flex items-baseline justify-between text-[12px] mb-1 gap-2">
         <span className="text-ink-soft">{label}</span>
-        <span className="font-semibold text-ink tabular-nums">{value}</span>
+        <div className="text-right">
+          <span className="font-semibold text-ink tabular-nums">{mainValue}</span>
+          {subValue && (
+            <span className="text-ink-mute tabular-nums ml-1.5 text-[11px]">{subValue}</span>
+          )}
+        </div>
       </div>
       {input}
     </div>

@@ -1,4 +1,4 @@
-import { useEffect, useReducer } from 'react'
+import { useEffect, useReducer, useState } from 'react'
 import { project, uspCardOrder } from './data/project.js'
 import { flow } from './data/flow.js'
 import {
@@ -23,12 +23,13 @@ import ChatThread from './components/ChatThread.jsx'
 import SuggestedChips from './components/SuggestedChips.jsx'
 import ChatInput from './components/ChatInput.jsx'
 import DebugPanel from './components/DebugPanel.jsx'
+import AnswersSheet from './components/AnswersSheet.jsx'
 import AdminScreen from './screens/AdminScreen.jsx'
 
 let _id = 0
 const nextId = () => ++_id
 
-const STORAGE_KEY = 'clp-state-v4'
+const STORAGE_KEY = 'clp-state-v5'
 
 const initial = {
   view: 'intro',
@@ -76,6 +77,17 @@ function clearPersisted() {
   } catch {}
 }
 
+// Volgorde van de antwoord-keys voor downstream-clearing bij rollback.
+// Lead is bewust niet in deze lijst zodat naam/mail/06 behouden blijven
+// tenzij de bezoeker ze expliciet vergeet via de antwoorden-sheet.
+const ANSWER_ORDER = ['intent', 'availabilityCheck', 'brochureTrigger', 'afhaakReason', 'size', 'timeline', 'followup']
+
+function downstreamKeys(fromKey) {
+  const idx = ANSWER_ORDER.indexOf(fromKey)
+  if (idx === -1) return [fromKey]
+  return ANSWER_ORDER.slice(idx)
+}
+
 function reducer(state, action) {
   switch (action.type) {
     case 'START_CHAT': {
@@ -85,7 +97,7 @@ function reducer(state, action) {
         view: 'chat',
         messages: [
           { id: nextId(), kind: 'bot-text', text: 'Hoi, ik ben Jesse van REPP.' },
-          { id: nextId(), kind: 'bot-text', text: 'Ik help je snel de juiste informatie over De Hofman te vinden.' },
+          { id: nextId(), kind: 'bot-text', text: 'Om de juiste brochure en prijzen met je te delen heb ik een korte vraag.' },
           { id: nextId(), kind: 'bot-text', text: intentQ.label },
         ],
         currentQuestion: 'intent',
@@ -110,6 +122,23 @@ function reducer(state, action) {
       return { ...state, moreInfoSeen: [...state.moreInfoSeen, action.id] }
     case 'TOGGLE_DEBUG':
       return { ...state, debugOpen: !state.debugOpen }
+    case 'ROLLBACK': {
+      const target = state.answers[action.key]
+      if (!target || target._msgCountBefore === undefined) return state
+      const idx = target._msgCountBefore
+      const removeKeys = downstreamKeys(action.key)
+      const newAnswers = { ...state.answers }
+      for (const k of removeKeys) delete newAnswers[k]
+      return {
+        ...state,
+        messages: state.messages.slice(0, idx),
+        answers: newAnswers,
+        currentQuestion: action.key === 'followup' || action.key === 'timeline' || action.key === 'size' ? action.key : action.key,
+        moreInfoSeen: ['size', 'timeline', 'followup'].includes(action.key) ? [] : state.moreInfoSeen,
+      }
+    }
+    case 'FORGET_LEAD':
+      return { ...state, leadDraft: {}, answers: { ...state.answers, lead: undefined } }
     case 'RESET':
       return { ...initial, debugOpen: state.debugOpen }
     default:
@@ -191,7 +220,6 @@ function isAdminRoute() {
 }
 
 export default function App() {
-  // Routing zonder router-library: /admin opent het analytics dashboard.
   if (isAdminRoute()) return <AdminScreen />
   return <Demo />
 }
@@ -202,6 +230,7 @@ function Demo() {
     if (loaded) return { ...init, ...loaded, debugOpen: false }
     return init
   })
+  const [answersOpen, setAnswersOpen] = useState(false)
 
   useEffect(() => {
     if (state.view === 'chat') persist(state)
@@ -225,6 +254,13 @@ function Demo() {
     dispatch({ type: 'START_CHAT' })
   }
 
+  // Helper: maakt een answer-value met _msgCountBefore zodat ROLLBACK
+  // weet tot waar in de messages array geknipt moet worden.
+  const answerValue = (opt) => ({
+    ...opt,
+    _msgCountBefore: state.messages.length,
+  })
+
   const onChipPick = (opt) => {
     const q = state.currentQuestion
     if (!q) return
@@ -234,23 +270,41 @@ function Demo() {
       const microIntro = pickMicroIntro(personaNext)
       const cards = uspCardOrder(personaNext)
       trackEvent('intent:answered', { id: opt.id, label: opt.label, persona: personaNext })
-      dispatch({ type: 'ANSWER', key: 'intent', value: opt, next: 'brochureTrigger' })
+      dispatch({ type: 'ANSWER', key: 'intent', value: answerValue(opt), next: 'availabilityCheck' })
       dispatch({
         type: 'APPEND',
         messages: [
           { kind: 'user-text', text: userTextFromOpt(opt) },
           { kind: 'bot-text', text: microIntro },
           { kind: 'usp-cards', payload: { cards } },
-          { kind: 'bot-text', text: flow.questions.brochureTrigger.label },
+          { kind: 'bot-text', text: flow.questions.availabilityCheck.label },
         ],
       })
       return
     }
 
+    // Live beschikbaarheid eerder in de flow: bezoeker ziet de situatietekening
+    // voor het brochure-moment; dat geeft urgentie en concrete context.
+    if (q === 'availabilityCheck') {
+      trackEvent('availability-check:answered', { id: opt.id, label: opt.label })
+      const messages = [{ kind: 'user-text', text: userTextFromOpt(opt) }]
+      if (opt.id === 'ja') {
+        messages.push(
+          { kind: 'bot-text', text: 'Hier zijn de 14 units met de actuele status. Tik op een unit voor de specs.' },
+          { kind: 'site-plan', payload: { sitePlan: project.sitePlan, units: project.units } },
+        )
+      }
+      messages.push({ kind: 'bot-text', text: flow.questions.brochureTrigger.label })
+      dispatch({ type: 'ANSWER', key: 'availabilityCheck', value: answerValue(opt), next: 'brochureTrigger' })
+      dispatch({ type: 'APPEND', messages })
+      return
+    }
+
     if (q === 'brochureTrigger') {
       trackEvent('brochure-trigger:answered', { id: opt.id, label: opt.label, isAfhaak: !!opt.afhaak })
+
       if (opt.afhaak) {
-        dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: opt, next: 'afhaakReasons' })
+        dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: answerValue(opt), next: 'afhaakReasons' })
         dispatch({
           type: 'APPEND',
           messages: [
@@ -259,30 +313,46 @@ function Demo() {
             { kind: 'bot-text', text: flow.questions.afhaakReasons.label },
           ],
         })
-      } else {
-        dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: opt, next: 'lead-email' })
+        return
+      }
+
+      // Brochure-ja, lead al bekend? Sla lead-capture over en spring naar size.
+      if (state.answers.lead) {
+        dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: answerValue(opt), next: 'size' })
         dispatch({
           type: 'APPEND',
           messages: [
             { kind: 'user-text', text: userTextFromOpt(opt) },
-            { kind: 'bot-text', text: 'Wat is je e-mailadres?' },
+            { kind: 'bot-text', text: 'Top, we sturen je de juiste info.' },
+            { kind: 'bot-text', text: flow.questions.size.label },
           ],
         })
+        return
       }
-      return
-    }
 
-    if (q === 'afhaakReasons') {
-      trackEvent('afhaak-reason:answered', { id: opt.id, label: opt.label })
-      trackEvent('flow:complete', { stage: 'afhaak', persona })
-      const wa = whatsAppDeeplink(project, '', `Geen match: ${opt.label.toLowerCase()}`)
-      dispatch({ type: 'ANSWER', key: 'afhaakReason', value: opt, next: null })
+      dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: answerValue(opt), next: 'lead-email' })
       dispatch({
         type: 'APPEND',
         messages: [
           { kind: 'user-text', text: userTextFromOpt(opt) },
-          { kind: 'bot-text', text: 'Dank voor de eerlijkheid. Dat helpt ons om beter te matchen.' },
-          { kind: 'bot-text', text: 'Mocht je later wel willen oriënteren of een vraag hebben, je kunt ons altijd bereiken.' },
+          { kind: 'bot-text', text: 'Wat is je e-mailadres?' },
+        ],
+      })
+      return
+    }
+
+    // Afhaak-pad: registreer reden, sluit af met sterke WhatsApp-uitnodiging.
+    if (q === 'afhaakReasons') {
+      trackEvent('afhaak-reason:answered', { id: opt.id, label: opt.label })
+      trackEvent('flow:complete', { stage: 'afhaak', persona })
+      const wa = whatsAppDeeplink(project, state.answers.lead?.firstName || '', `Geen match: ${opt.label.toLowerCase()}`)
+      dispatch({ type: 'ANSWER', key: 'afhaakReason', value: answerValue(opt), next: null })
+      dispatch({
+        type: 'APPEND',
+        messages: [
+          { kind: 'user-text', text: userTextFromOpt(opt) },
+          { kind: 'bot-text', text: 'Dank voor je eerlijkheid.' },
+          { kind: 'bot-text', text: 'Misschien kunnen we via WhatsApp samen kijken naar wat wel past. Sommige projecten staan nog niet online en we denken graag mee.' },
           {
             kind: 'cta-card',
             payload: {
@@ -318,7 +388,7 @@ function Demo() {
 
     if (q === 'size') {
       trackEvent('size:answered', { id: opt.id, label: opt.label })
-      dispatch({ type: 'ANSWER', key: 'size', value: opt, next: 'timeline' })
+      dispatch({ type: 'ANSWER', key: 'size', value: answerValue(opt), next: 'timeline' })
       dispatch({
         type: 'APPEND',
         messages: [
@@ -352,7 +422,7 @@ function Demo() {
         { kind: 'bot-text', text: copy },
         { kind: 'bot-text', text: 'Wil je nog ergens meer over weten, of meteen verder?' },
       )
-      dispatch({ type: 'ANSWER', key: 'timeline', value: opt, next: 'moreInfo' })
+      dispatch({ type: 'ANSWER', key: 'timeline', value: answerValue(opt), next: 'moreInfo' })
       dispatch({ type: 'APPEND', messages })
       return
     }
@@ -391,7 +461,7 @@ function Demo() {
       const wa = whatsAppDeeplink(project, state.answers.lead?.firstName, sum)
       trackEvent('followup:answered', { id: opt.id, label: opt.label })
       trackEvent('flow:complete', { stage: stageNext, persona: personaNext })
-      dispatch({ type: 'ANSWER', key: 'followup', value: opt, next: null })
+      dispatch({ type: 'ANSWER', key: 'followup', value: answerValue(opt), next: null })
       dispatch({
         type: 'APPEND',
         messages: [
@@ -527,12 +597,8 @@ function Demo() {
 
   const onBrochure = () => {
     trackEvent('cta:brochure-clicked', { location: state.currentQuestion || 'thankyou' })
-    if (typeof window !== 'undefined') {
-      if (project.brochureUrl && project.brochureUrl !== '#') {
-        window.open(project.brochureUrl, '_blank', 'noopener,noreferrer')
-      } else {
-        window.alert('Demo: brochure download zou hier starten.')
-      }
+    if (typeof window !== 'undefined' && project.brochureUrl && project.brochureUrl !== '#') {
+      window.open(project.brochureUrl, '_blank', 'noopener,noreferrer')
     }
   }
 
@@ -542,18 +608,36 @@ function Demo() {
 
   const headerWaLink = whatsAppDeeplink(project, state.answers.lead?.firstName || '', 'Graag info over De Hofman')
 
-  const reset = () => {
-    clearPersisted()
-    _id = 0
-    dispatch({ type: 'RESET' })
+  // Wijzig een eerder gegeven antwoord vanuit de antwoorden-sheet:
+  // de flow rolt terug naar dat punt en de bezoeker mag opnieuw kiezen.
+  const onEditAnswer = (key) => {
+    trackEvent('answer:edit', { key })
+    dispatch({ type: 'ROLLBACK', key })
+    // Re-prompt de vraag onder zijn target index
+    const questionLabel = key === 'afhaakReason'
+      ? flow.questions.afhaakReasons.label
+      : flow.questions[key]?.label
+    if (questionLabel) {
+      dispatch({
+        type: 'APPEND',
+        messages: [{ kind: 'bot-text', text: questionLabel }],
+      })
+    }
   }
+
+  const onForgetLead = () => {
+    trackEvent('answer:forget-lead', {})
+    dispatch({ type: 'FORGET_LEAD' })
+  }
+
   const toggleDebug = () => dispatch({ type: 'TOGGLE_DEBUG' })
 
   let chipQuestion = null
   let inputConfig = null
   if (state.currentQuestion === 'intent') chipQuestion = flow.questions.intent
+  else if (state.currentQuestion === 'availabilityCheck') chipQuestion = flow.questions.availabilityCheck
   else if (state.currentQuestion === 'brochureTrigger') chipQuestion = flow.questions.brochureTrigger
-  else if (state.currentQuestion === 'afhaakReasons') chipQuestion = flow.questions.afhaakReasons
+  else if (state.currentQuestion === 'afhaakReasons' || state.currentQuestion === 'afhaakReason') chipQuestion = flow.questions.afhaakReasons
   else if (state.currentQuestion === 'size') chipQuestion = flow.questions.size
   else if (state.currentQuestion === 'timeline') chipQuestion = flow.questions.timeline
   else if (state.currentQuestion === 'followup') chipQuestion = flow.questions.followup
@@ -584,24 +668,23 @@ function Demo() {
     .filter((k) => state.answers[k]).length
   const progress = state.view === 'chat' ? { current: Math.min(6, Math.max(1, answeredCount + 1)), total: 6 } : null
 
+  // De aanpassen-knop tonen we vanaf het moment dat er minimaal 1 antwoord is gegeven.
+  const showAnswersButton = state.view === 'chat' && Object.values(state.answers).some(Boolean)
+
   return (
     <AppShell
       progress={progress}
-      onDebugToggle={toggleDebug}
-      debugOpen={state.debugOpen}
       hideHeader={state.view === 'intro'}
       waLink={headerWaLink}
       onWaClick={onWaClick}
+      showAnswersButton={showAnswersButton}
+      onAnswersOpen={() => setAnswersOpen(true)}
     >
       {state.view === 'intro' && <IntroScreen onStart={start} />}
 
       {state.view === 'chat' && (
         <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-md">
-          <ChatThread
-            messages={state.messages}
-            onBrochure={onBrochure}
-            onReset={reset}
-          />
+          <ChatThread messages={state.messages} onBrochure={onBrochure} />
           {chipQuestion && (
             <SuggestedChips options={chipQuestion.options} onPick={onChipPick} />
           )}
@@ -616,6 +699,14 @@ function Demo() {
         </div>
       )}
 
+      <AnswersSheet
+        open={answersOpen}
+        answers={state.answers}
+        onClose={() => setAnswersOpen(false)}
+        onEdit={onEditAnswer}
+        onForgetLead={onForgetLead}
+      />
+
       <DebugPanel
         open={state.debugOpen}
         state={state}
@@ -624,7 +715,11 @@ function Demo() {
         stage={stage}
         temperature={temperature}
         onClose={toggleDebug}
-        onReset={reset}
+        onReset={() => {
+          clearPersisted()
+          _id = 0
+          dispatch({ type: 'RESET' })
+        }}
       />
     </AppShell>
   )
