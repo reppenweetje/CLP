@@ -1,17 +1,20 @@
 // Flowconfiguratie. Sentence case voor labels, geen punten of vraagtekens op chips.
-// De eerste vraag is direct persona-select: dat collapst de oude intent + focus
-// in één laagdrempelige keuze.
+// Volgorde: intent (persona) → microValue (USP cards) → brochureTrigger →
+// (ja: lead email → name → phoneAsk → phone | nee: afhaakReasons) →
+// size → timeline → recommendation → moreInfo → followup → thankyou
 export const flow = {
   steps: [
     'intro',
     'intent',
     'microValue',
-    'leadName',
+    'brochureTrigger',
+    'afhaakReasons',
     'leadEmail',
+    'leadName',
     'leadPhoneAsk',
     'leadPhone',
-    'timeline',
     'size',
+    'timeline',
     'recommendation',
     'moreInfo',
     'followup',
@@ -19,7 +22,7 @@ export const flow = {
   ],
 
   questions: {
-    // Eerste vraag is persona-select. Geen tijdsbelofte, geen "korte vraag" intro.
+    // Eerste vraag is direct persona-select.
     intent: {
       key: 'intent',
       label: 'Waar kijk je vooral naar?',
@@ -31,27 +34,53 @@ export const flow = {
       ],
     },
 
+    // Brochure-gate na de USP cards. Twee chips: door naar lead capture,
+    // of naar de afhaak-redenen vraag voor marktonderzoek.
+    brochureTrigger: {
+      key: 'brochureTrigger',
+      label: 'Is dit wat voor je? Dan kan ik je de brochure mailen.',
+      options: [
+        { id: 'ja', label: 'Ja, stuur maar', score: 20, intent: true },
+        { id: 'nee', label: 'Nee, ik zoek iets anders', score: 0, afhaak: true },
+      ],
+    },
+
+    // Optioneel afhaak-pad voor wie aangeeft iets anders te zoeken.
+    // Antwoord wordt als markonderzoek-data opgeslagen.
+    afhaakReasons: {
+      key: 'afhaakReasons',
+      label: 'Wat past minder?',
+      options: [
+        { id: 'prijs', label: 'Prijs te hoog', score: 0 },
+        { id: 'locatie', label: 'Locatie past niet', score: 0 },
+        { id: 'oppervlakte', label: 'Oppervlakte past niet', score: 0 },
+        { id: 'huur', label: 'Huur in plaats van koop', score: 0 },
+        { id: 'anders', label: 'Iets anders', score: 0 },
+      ],
+    },
+
+    // Size focus is begane grond zodat consument niet hoeft te
+    // schatten over twee verdiepingen heen. Reden zit in de bot-copy.
+    size: {
+      key: 'size',
+      label: 'Hoe groot wil je dat de begane grond is?',
+      options: [
+        { id: 'tot_50', label: '50 m²', score: 12, unit: 'L' },
+        { id: 'rond_100', label: '100 m²', score: 15, unit: 'L' },
+        { id: 'meer_dan_100', label: 'Groter dan 100 m²', score: 15, unit: 'XXL' },
+        { id: 'weet_niet', label: 'Weet ik nog niet', score: 5 },
+      ],
+    },
+
     timeline: {
       key: 'timeline',
-      label: 'Wanneer zou je willen kopen of starten?',
+      label: 'Om je op het juiste moment te benaderen: voor wanneer ben je op zoek?',
       options: [
         { id: 'zsm', label: 'Zo snel mogelijk', score: 35 },
         { id: '3mnd', label: 'Binnen 3 maanden', score: 25 },
         { id: '6mnd', label: 'Binnen 6 maanden', score: 15 },
         { id: 'dit_jaar', label: 'Later dit jaar', score: 10 },
         { id: 'weet_niet', label: 'Weet ik nog niet', score: 3 },
-      ],
-    },
-
-    size: {
-      key: 'size',
-      label: 'Welke grootte past ongeveer?',
-      options: [
-        { id: 'rond_100', label: 'Rond 100 m²', score: 15, unit: 'L' },
-        { id: 'meer_dan_100', label: 'Meer dan 100 m²', score: 15, unit: 'XXL' },
-        { id: 'zo_groot', label: 'Zo groot mogelijk', score: 12, unit: 'XXL' },
-        { id: 'beschikbaar', label: 'Wat nu beschikbaar is', score: 18, unit: 'L' },
-        { id: 'weet_niet', label: 'Weet ik nog niet', score: 5 },
       ],
     },
 

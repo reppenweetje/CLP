@@ -39,11 +39,12 @@ export default function DebugPanel({ open, state, score, persona, stage, tempera
         </div>
 
         <Section title="antwoorden">
-          <Row k="intentie" v={answers.intent?.label || 'nog niet'} />
-          <Row k="focus" v={answers.focus?.label || 'nog niet'} />
+          <Row k="persona-keuze" v={answers.intent?.label || 'nog niet'} />
+          <Row k="brochure" v={answers.brochureTrigger?.label || 'nog niet'} />
+          {answers.afhaakReason && <Row k="afhaak-reden" v={answers.afhaakReason.label} />}
           <Row k="lead" v={leadLabel(answers.lead)} />
-          <Row k="termijn" v={answers.timeline?.label || 'nog niet'} />
           <Row k="grootte" v={answers.size?.label || 'nog niet'} />
+          <Row k="termijn" v={answers.timeline?.label || 'nog niet'} />
           <Row k="vervolg" v={answers.followup?.label || 'nog niet'} />
         </Section>
 

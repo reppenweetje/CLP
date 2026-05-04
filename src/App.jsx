@@ -26,7 +26,7 @@ import DebugPanel from './components/DebugPanel.jsx'
 let _id = 0
 const nextId = () => ++_id
 
-const STORAGE_KEY = 'clp-state-v3'
+const STORAGE_KEY = 'clp-state-v4'
 
 const initial = {
   view: 'intro',
@@ -115,7 +115,6 @@ function reducer(state, action) {
   }
 }
 
-// Korte ack na de persona-keuze, direct gevolgd door USP-kaarten.
 function pickMicroIntro(persona) {
   if (persona === 'belegger') return 'Helder. Voor jou tellen vooral verhuurbaarheid, schaarste en prijs per m².'
   if (persona === 'eigen_gebruiker') return 'Helder. Dan zijn vooral bereikbaarheid, parkeren en flexibele indeling belangrijk.'
@@ -179,6 +178,11 @@ function isValidPhoneText(text) {
   return /^(?:\+316\d{8}|316\d{8}|06\d{8})$/.test(stripped)
 }
 
+function capitalize(s) {
+  if (!s) return s
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
+}
+
 export default function App() {
   const [state, dispatch] = useReducer(reducer, initial, (init) => {
     const loaded = loadPersisted()
@@ -207,23 +211,73 @@ export default function App() {
     const q = state.currentQuestion
     if (!q) return
 
+    // Persona-select. Daarna USP-cards en brochure-gate.
     if (q === 'intent') {
       const personaNext = opt.persona || 'onbekend'
       const microIntro = pickMicroIntro(personaNext)
       const cards = uspCardOrder(personaNext)
-      dispatch({ type: 'ANSWER', key: 'intent', value: opt, next: 'lead-name' })
+      dispatch({ type: 'ANSWER', key: 'intent', value: opt, next: 'brochureTrigger' })
       dispatch({
         type: 'APPEND',
         messages: [
           { kind: 'user-text', text: userTextFromOpt(opt) },
           { kind: 'bot-text', text: microIntro },
           { kind: 'usp-cards', payload: { cards } },
-          { kind: 'bot-text', text: 'Wat is je naam?' },
+          { kind: 'bot-text', text: flow.questions.brochureTrigger.label },
         ],
       })
       return
     }
 
+    // Brochure-gate. Ja → email-flow. Nee → afhaakReasons.
+    if (q === 'brochureTrigger') {
+      if (opt.afhaak) {
+        dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: opt, next: 'afhaakReasons' })
+        dispatch({
+          type: 'APPEND',
+          messages: [
+            { kind: 'user-text', text: userTextFromOpt(opt) },
+            { kind: 'bot-text', text: 'Geen probleem.' },
+            { kind: 'bot-text', text: flow.questions.afhaakReasons.label },
+          ],
+        })
+      } else {
+        dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: opt, next: 'lead-email' })
+        dispatch({
+          type: 'APPEND',
+          messages: [
+            { kind: 'user-text', text: userTextFromOpt(opt) },
+            { kind: 'bot-text', text: 'Wat is je e-mailadres?' },
+          ],
+        })
+      }
+      return
+    }
+
+    // Afhaak-pad: registreer reden en sluit af met cta-card zonder brochure.
+    if (q === 'afhaakReasons') {
+      const wa = whatsAppDeeplink(project, '', `Geen match: ${opt.label.toLowerCase()}`)
+      dispatch({ type: 'ANSWER', key: 'afhaakReason', value: opt, next: null })
+      dispatch({
+        type: 'APPEND',
+        messages: [
+          { kind: 'user-text', text: userTextFromOpt(opt) },
+          { kind: 'bot-text', text: 'Dank voor de eerlijkheid. Dat helpt ons om beter te matchen.' },
+          { kind: 'bot-text', text: 'Mocht je later wel willen oriënteren of een vraag hebben, je kunt ons altijd bereiken.' },
+          {
+            kind: 'cta-card',
+            payload: {
+              waLink: wa,
+              summary: `Niet matchend: ${opt.label}`,
+              hideBrochure: true,
+            },
+          },
+        ],
+      })
+      return
+    }
+
+    // Lead phone-ask. Ja → 06 input, Nee → afsluiten zonder 06.
     if (q === 'lead-phoneAsk') {
       if (opt.id === 'yes') {
         dispatch({
@@ -237,33 +291,32 @@ export default function App() {
       } else {
         finishLead(state.leadDraft, [
           { kind: 'user-text', text: userTextFromOpt(opt) },
-          { kind: 'bot-text', text: 'Geen probleem. Ons nummer staat ook in de mail als je later wilt schakelen.' },
+          { kind: 'bot-text', text: 'Geen probleem. Ons nummer staat in de mail als je later wilt schakelen.' },
         ])
       }
       return
     }
 
-    if (q === 'timeline') {
-      dispatch({ type: 'ANSWER', key: 'timeline', value: opt, next: 'size' })
+    // Size eerst, dan timeline. Beide vragen bevatten een expliciete reden in de bot-copy.
+    if (q === 'size') {
+      dispatch({ type: 'ANSWER', key: 'size', value: opt, next: 'timeline' })
       dispatch({
         type: 'APPEND',
         messages: [
           { kind: 'user-text', text: userTextFromOpt(opt) },
-          { kind: 'bot-text', text: flow.questions.size.label },
+          { kind: 'bot-text', text: flow.questions.timeline.label },
         ],
       })
       return
     }
 
-    if (q === 'size') {
-      const merged = { ...state.answers, size: opt }
+    if (q === 'timeline') {
+      const merged = { ...state.answers, timeline: opt }
       const unit = recommendUnit(merged, project)
       const personaNext = derivePersona(merged)
       const copy = recommendCopy(personaNext)
       const confidence = leadConfidence(merged)
-      const messages = [
-        { kind: 'user-text', text: userTextFromOpt(opt) },
-      ]
+      const messages = [{ kind: 'user-text', text: userTextFromOpt(opt) }]
       if (confidence >= 2) {
         messages.push(
           { kind: 'bot-text', text: `Op basis van je antwoorden lijkt vooral de ${unit.primary.type}-unit interessant.` },
@@ -271,7 +324,7 @@ export default function App() {
         )
       } else {
         messages.push(
-          { kind: 'bot-text', text: 'Je hebt nog niet veel voorkeuren ingegeven. We sturen je eerst een overzicht van de beschikbare opties en kunnen via WhatsApp meedenken.' },
+          { kind: 'bot-text', text: 'Je hebt nog niet veel voorkeuren ingegeven. We sturen je eerst een overzicht van de beschikbare opties; via WhatsApp denken we graag mee.' },
           { kind: 'unit-card', payload: unit },
         )
       }
@@ -279,7 +332,7 @@ export default function App() {
         { kind: 'bot-text', text: copy },
         { kind: 'bot-text', text: 'Wil je nog ergens meer over weten, of meteen verder?' },
       )
-      dispatch({ type: 'ANSWER', key: 'size', value: opt, next: 'moreInfo' })
+      dispatch({ type: 'ANSWER', key: 'timeline', value: opt, next: 'moreInfo' })
       dispatch({ type: 'APPEND', messages })
       return
     }
@@ -321,7 +374,7 @@ export default function App() {
           { kind: 'user-text', text: userTextFromOpt(opt) },
           { kind: 'bot-text', text: tc.lead },
           { kind: 'bot-text', text: tc.body },
-          { kind: 'cta-card', payload: { waLink: wa, summary: sum, brochureUrl: project.brochureUrl } },
+          { kind: 'cta-card', payload: { waLink: wa, summary: sum } },
         ],
       })
       return
@@ -330,65 +383,12 @@ export default function App() {
 
   const onChatInputSend = (text) => {
     const q = state.currentQuestion
-    if (q === 'lead-name') return handleLeadNameText(text)
     if (q === 'lead-email') return handleLeadEmailText(text)
+    if (q === 'lead-name') return handleLeadNameText(text)
     if (q === 'lead-phone') return handleLeadPhoneText(text)
   }
 
-  function handleLeadNameText(text) {
-    const parsed = parseLeadInput(text)
-    const draft = mergeLead(state.leadDraft, parsed)
-    const userBubble = { kind: 'user-text', text }
-
-    if (!draft.firstName && !draft.email) {
-      dispatch({ type: 'LEAD_DRAFT', draft })
-      dispatch({
-        type: 'APPEND',
-        messages: [
-          userBubble,
-          { kind: 'bot-text', text: 'Kreeg je naam niet helemaal mee. Kun je het opnieuw typen?' },
-        ],
-      })
-      return
-    }
-
-    if (draft.email && draft.firstName) {
-      dispatch({ type: 'LEAD_DRAFT', draft })
-      dispatch({
-        type: 'APPEND',
-        messages: [
-          userBubble,
-          { kind: 'bot-text', text: 'Dank. We zorgen dat je de brochure straks naar je toe krijgt.' },
-          { kind: 'bot-text', text: 'Wij houden bij dit soort projecten vaak kort contact via WhatsApp, bijvoorbeeld over beschikbaarheid of als je nog vragen hebt. Vind je dat prettig?' },
-        ],
-      })
-      dispatch({ type: 'SET_QUESTION', next: 'lead-phoneAsk' })
-      return
-    }
-
-    if (draft.email && !draft.firstName) {
-      dispatch({ type: 'LEAD_DRAFT', draft })
-      dispatch({
-        type: 'APPEND',
-        messages: [
-          userBubble,
-          { kind: 'bot-text', text: 'Dank. En hoe heet je?' },
-        ],
-      })
-      return
-    }
-
-    dispatch({ type: 'LEAD_DRAFT', draft })
-    dispatch({
-      type: 'APPEND',
-      messages: [
-        userBubble,
-        { kind: 'bot-text', text: 'Mag ik je e-mailadres, zodat we je de brochure alvast kunnen mailen?' },
-      ],
-    })
-    dispatch({ type: 'SET_QUESTION', next: 'lead-email' })
-  }
-
+  // Email is de eerste vraag in de lead capture. Daarna naam dan WA-vraag.
   function handleLeadEmailText(text) {
     const parsed = parseLeadInput(text)
     const draft = mergeLead(state.leadDraft, parsed)
@@ -412,13 +412,59 @@ export default function App() {
       return
     }
 
+    // Email binnen. Als naam toevallig ook in dezelfde tekst zat, slaan we de naam-vraag over.
+    if (draft.firstName) {
+      dispatch({ type: 'LEAD_DRAFT', draft })
+      dispatch({
+        type: 'APPEND',
+        messages: [
+          userBubble,
+          { kind: 'bot-text', text: 'Dank. Ik zorg dat deze zo naar je toe komt.' },
+          { kind: 'bot-text', text: `Top, ${draft.firstName}.` },
+          { kind: 'bot-text', text: 'We houden bij dit soort projecten vaak kort contact via WhatsApp, bijvoorbeeld over beschikbaarheid of als je nog vragen hebt. Vind je dat prettig?' },
+        ],
+      })
+      dispatch({ type: 'SET_QUESTION', next: 'lead-phoneAsk' })
+      return
+    }
+
     dispatch({ type: 'LEAD_DRAFT', draft })
     dispatch({
       type: 'APPEND',
       messages: [
         userBubble,
-        { kind: 'bot-text', text: 'Dank. We zorgen dat je de brochure straks naar je toe krijgt.' },
-        { kind: 'bot-text', text: 'Wij houden bij dit soort projecten vaak kort contact via WhatsApp, bijvoorbeeld over beschikbaarheid of als je nog vragen hebt. Vind je dat prettig?' },
+        { kind: 'bot-text', text: 'Dank. Ik zorg dat deze zo naar je toe komt.' },
+        { kind: 'bot-text', text: 'Oh wacht. Ook nog handig om je naam te weten, zodat we weten aan wie we het sturen.' },
+        { kind: 'bot-text', text: 'Wat is je naam?' },
+      ],
+    })
+    dispatch({ type: 'SET_QUESTION', next: 'lead-name' })
+  }
+
+  function handleLeadNameText(text) {
+    const parsed = parseLeadInput(text)
+    const fallbackFirst = text.trim().split(/\s+/)[0]
+    const firstName = parsed.firstName || (fallbackFirst ? capitalize(fallbackFirst) : null)
+
+    if (!firstName) {
+      dispatch({
+        type: 'APPEND',
+        messages: [
+          { kind: 'user-text', text },
+          { kind: 'bot-text', text: 'Kreeg je naam niet helemaal mee. Kun je het opnieuw typen?' },
+        ],
+      })
+      return
+    }
+
+    const draft = { ...state.leadDraft, firstName, email: parsed.email || state.leadDraft.email }
+    dispatch({ type: 'LEAD_DRAFT', draft })
+    dispatch({
+      type: 'APPEND',
+      messages: [
+        { kind: 'user-text', text },
+        { kind: 'bot-text', text: `Top, ${firstName}.` },
+        { kind: 'bot-text', text: 'We houden bij dit soort projecten vaak kort contact via WhatsApp, bijvoorbeeld over beschikbaarheid of als je nog vragen hebt. Vind je dat prettig?' },
       ],
     })
     dispatch({ type: 'SET_QUESTION', next: 'lead-phoneAsk' })
@@ -442,16 +488,13 @@ export default function App() {
 
   function finishLead(lead, prependMessages = []) {
     dispatch({ type: 'LEAD_DRAFT', draft: lead })
-    dispatch({ type: 'ANSWER', key: 'lead', value: lead, next: 'timeline' })
+    dispatch({ type: 'ANSWER', key: 'lead', value: lead, next: 'size' })
     dispatch({
       type: 'APPEND',
       messages: [
         ...prependMessages,
-        {
-          kind: 'bot-text',
-          text: 'Goed. Nog één vraag, zodat we weten welke plattegrond en prijsinformatie het meest relevant is.',
-        },
-        { kind: 'bot-text', text: flow.questions.timeline.label },
+        { kind: 'bot-text', text: 'Goed. Nog even, zodat we de juiste prijslijst en plattegronden meesturen.' },
+        { kind: 'bot-text', text: flow.questions.size.label },
       ],
     })
   }
@@ -478,8 +521,10 @@ export default function App() {
   let chipQuestion = null
   let inputConfig = null
   if (state.currentQuestion === 'intent') chipQuestion = flow.questions.intent
-  else if (state.currentQuestion === 'timeline') chipQuestion = flow.questions.timeline
+  else if (state.currentQuestion === 'brochureTrigger') chipQuestion = flow.questions.brochureTrigger
+  else if (state.currentQuestion === 'afhaakReasons') chipQuestion = flow.questions.afhaakReasons
   else if (state.currentQuestion === 'size') chipQuestion = flow.questions.size
+  else if (state.currentQuestion === 'timeline') chipQuestion = flow.questions.timeline
   else if (state.currentQuestion === 'followup') chipQuestion = flow.questions.followup
   else if (state.currentQuestion === 'moreInfo') {
     chipQuestion = {
@@ -492,21 +537,22 @@ export default function App() {
       key: 'lead-phoneAsk',
       label: 'phone ask',
       options: [
-        { id: 'yes', label: 'Ja, WhatsApp is handig' },
-        { id: 'no', label: 'Liever alleen per mail' },
+        { id: 'yes', label: 'Ja, dat is handig' },
+        { id: 'no', label: 'Nee, liever niet' },
       ],
     }
-  } else if (state.currentQuestion === 'lead-name') {
-    inputConfig = { placeholder: 'Je naam', inputMode: undefined }
   } else if (state.currentQuestion === 'lead-email') {
     inputConfig = { placeholder: 'Je e-mailadres', inputMode: 'email' }
+  } else if (state.currentQuestion === 'lead-name') {
+    inputConfig = { placeholder: 'Je naam', inputMode: undefined }
   } else if (state.currentQuestion === 'lead-phone') {
     inputConfig = { placeholder: '06 12 34 56 78', inputMode: 'tel', validate: isValidPhoneText }
   }
 
-  const answeredCount = ['intent', 'lead', 'timeline', 'size', 'followup']
+  // Progress: 6 telbare stappen in normale flow.
+  const answeredCount = ['intent', 'brochureTrigger', 'lead', 'size', 'timeline', 'followup']
     .filter((k) => state.answers[k]).length
-  const progress = state.view === 'chat' ? { current: Math.min(5, Math.max(1, answeredCount + 1)), total: 5 } : null
+  const progress = state.view === 'chat' ? { current: Math.min(6, Math.max(1, answeredCount + 1)), total: 6 } : null
 
   return (
     <AppShell

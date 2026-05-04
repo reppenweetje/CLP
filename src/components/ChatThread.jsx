@@ -72,7 +72,7 @@ export default function ChatThread({ messages, onBrochure, onReset }) {
                 key={m.id}
                 waLink={m.payload.waLink}
                 summary={m.payload.summary}
-                onBrochure={onBrochure}
+                onBrochure={m.payload.hideBrochure ? null : onBrochure}
                 onReset={onReset}
               />
             )
