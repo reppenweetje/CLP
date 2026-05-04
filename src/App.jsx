@@ -404,6 +404,11 @@ function Demo() {
   const SAFE_HANDOFF_QUESTIONS = ['moreInfo', 'followup', null]
   const isSafeMoment = SAFE_HANDOFF_QUESTIONS.includes(state.currentQuestion)
 
+  // De handoff bubble is "actief" zodra hij getoond is en de bezoeker nog
+  // niets heeft gekozen. Tijdens deze fase verbergen we chip-bar, input en
+  // header-shortcuts zodat de bubble zelf de enige interactie is.
+  const warmHandoffActive = !!state.behaviors?.warmHandoffShown && !state.behaviors?.warmHandoffOutcome
+
   useEffect(() => {
     if (state.view !== 'chat') return
     if (state.behaviors?.warmHandoffShown) return
@@ -1094,9 +1099,9 @@ function Demo() {
     <AppShell
       progress={progress}
       hideHeader={state.view === 'intro'}
-      waLink={headerWaLink}
+      waLink={warmHandoffActive ? null : headerWaLink}
       onWaClick={onWaClick}
-      phoneLink={headerPhoneLink}
+      phoneLink={warmHandoffActive ? null : headerPhoneLink}
       onPhoneClick={onPhoneClick}
       showAnswersButton={showAnswersButton}
       onAnswersOpen={() => setAnswersOpen(true)}
@@ -1118,10 +1123,10 @@ function Demo() {
               dispatch({ type: 'RESET' })
             }}
           />
-          {chipQuestion && (state.messageQueue?.length || 0) === 0 && (
+          {chipQuestion && (state.messageQueue?.length || 0) === 0 && !warmHandoffActive && (
             <SuggestedChips options={chipQuestion.options} onPick={onChipPick} />
           )}
-          {inputConfig && (state.messageQueue?.length || 0) === 0 && (
+          {inputConfig && (state.messageQueue?.length || 0) === 0 && !warmHandoffActive && (
             <ChatInput
               placeholder={inputConfig.placeholder}
               inputMode={inputConfig.inputMode}
