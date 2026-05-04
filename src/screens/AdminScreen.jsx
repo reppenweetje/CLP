@@ -3,6 +3,8 @@ import {
   buildAbandonByStep,
   buildAfhaakReasons,
   buildFunnel,
+  buildHandoffByPersona,
+  buildHandoffStats,
   buildPersonaBreakdown,
   buildVariantBreakdown,
   clearAllEvents,
@@ -50,6 +52,8 @@ export default function AdminScreen() {
   const variants = buildVariantBreakdown(sessions)
   const abandonByStep = buildAbandonByStep(sessions)
   const reasons = buildAfhaakReasons(sessions)
+  const handoffStats = buildHandoffStats(sessions)
+  const handoffByPersona = buildHandoffByPersona(sessions)
 
   const onClear = () => {
     if (typeof window !== 'undefined' && window.confirm('Alle event-data wordt verwijderd. Doorgaan?')) {
@@ -128,6 +132,8 @@ export default function AdminScreen() {
           </div>
         </div>
 
+        <HandoffBlock stats={handoffStats} byPersona={handoffByPersona} />
+
         <AfhaakBreakdown byStep={abandonByStep} byReason={reasons} />
 
         <SessionsList sessions={sessions} />
@@ -138,6 +144,64 @@ export default function AdminScreen() {
         </footer>
       </main>
     </div>
+  )
+}
+
+function HandoffBlock({ stats, byPersona }) {
+  if (!stats || stats.shown === 0) {
+    return (
+      <section className="rounded-2xl border border-mist-light bg-paper p-5">
+        <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium mb-1">
+          Warm-handoff
+        </div>
+        <div className="text-[14px] font-semibold text-ink">Nog geen hot signalen gedetecteerd</div>
+        <div className="text-[12px] text-ink-soft leading-relaxed mt-1">
+          Zodra een sessie genoeg koopsignalen geeft (unit-detail twee keer, calc-interactie, korte timeline) verschijnt hier de conversie van de warm-handoff bubble.
+        </div>
+      </section>
+    )
+  }
+  const acceptRate = stats.shown > 0 ? Math.round((stats.accepted / stats.shown) * 100) : 0
+  return (
+    <section className="rounded-2xl border border-mist-light bg-paper p-5">
+      <div className="flex items-baseline justify-between gap-3 mb-3">
+        <div>
+          <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium mb-1">
+            Warm-handoff
+          </div>
+          <div className="text-[14px] font-semibold text-ink">Hot signalen en accept-rate</div>
+        </div>
+        <div className="text-[11px] text-ink-mute">
+          {stats.shown} {stats.shown === 1 ? 'sessie' : 'sessies'} hot
+        </div>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <KpiCard label="Getoond" value={stats.shown} subtext={`${Math.round((stats.shown / Math.max(1, stats.total)) * 100)}% van alle sessies`} />
+        <KpiCard label="Accepteerd" value={stats.accepted} subtext={`${acceptRate}% accept-rate`} accent={acceptRate >= 25} />
+        <KpiCard label="Afgewezen" value={stats.dismissed} subtext="Liever later" />
+        <KpiCard label="Geen actie" value={stats.noAction} subtext="Wel getoond, niet getapt" />
+      </div>
+      {byPersona.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-mist-light">
+          <div className="text-[10px] tracking-[0.16em] text-ink-mute uppercase mb-2">Per persona</div>
+          <div className="space-y-1.5">
+            {byPersona.map((row) => {
+              const rate = row.shown > 0 ? Math.round((row.accepted / row.shown) * 100) : 0
+              return (
+                <div key={row.persona} className="flex items-baseline justify-between gap-3 text-[12.5px]">
+                  <span className="text-ink-soft capitalize">{row.persona.replace('_', ' ')}</span>
+                  <span className="text-ink tabular-nums">
+                    <span className="font-semibold">{row.accepted}</span>
+                    <span className="text-ink-mute"> van {row.shown}</span>
+                    <span className="text-ink-mute ml-2">({rate}%)</span>
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </section>
   )
 }
 

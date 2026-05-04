@@ -7,7 +7,7 @@ import { trackEvent } from '../lib/analytics.js'
 // 14 units 2 rijen volgens werkelijke situatietekening
 // status kleuren matchen de officiele kopen repp nl plattegrond
 // klik op een unit voor m² prijs en status detail
-export default function SitePlanBubble({ sitePlan, units, persona }) {
+export default function SitePlanBubble({ sitePlan, units, persona, onUnitView, onCalcInteract }) {
   const [selectedNumber, setSelectedNumber] = useState(null)
   const allUnits = sitePlan.rows.flatMap((r) => r.units)
   const selected = allUnits.find((u) => u.number === selectedNumber)
@@ -55,6 +55,7 @@ export default function SitePlanBubble({ sitePlan, units, persona }) {
                             setSelectedNumber(next)
                             if (next !== null) {
                               trackEvent('unit:detail-opened', { number: u.number, type: u.type, state: u.state })
+                              if (onUnitView) onUnitView({ number: u.number, type: u.type, state: u.state })
                             }
                           }}
                           className={`relative aspect-[3/4] rounded-md border transition active:scale-95 ${stateClasses(u.state)} ${
@@ -87,7 +88,7 @@ export default function SitePlanBubble({ sitePlan, units, persona }) {
             </div>
 
             {selected && selectedTypeData && (
-              <UnitDetail unit={selected} typeData={selectedTypeData} persona={persona} />
+              <UnitDetail unit={selected} typeData={selectedTypeData} persona={persona} onCalcInteract={onCalcInteract} />
             )}
           </div>
         </div>
@@ -96,7 +97,7 @@ export default function SitePlanBubble({ sitePlan, units, persona }) {
   )
 }
 
-function UnitDetail({ unit, typeData, persona }) {
+function UnitDetail({ unit, typeData, persona, onCalcInteract }) {
   // Beleggers en mensen die als beide kijken zien een rendement-indicator.
   // Eigen gebruikers en onbekend zien een maandlast-calculator.
   const showRentability = persona === 'belegger' || persona === 'beide'
@@ -138,11 +139,13 @@ function UnitDetail({ unit, typeData, persona }) {
               price={typeData.priceFrom}
               size={typeData.size}
               indicative={unit.state === 'coming_soon'}
+              onInteract={() => onCalcInteract && onCalcInteract('rentability')}
             />
           ) : (
             <MortgageCalc
               price={typeData.priceFrom}
               indicative={unit.state === 'coming_soon'}
+              onInteract={() => onCalcInteract && onCalcInteract('mortgage')}
             />
           )}
         </div>

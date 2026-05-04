@@ -93,6 +93,10 @@ export function getSessions() {
       stage: evs.find((e) => e.type === 'flow:complete')?.payload?.stage,
       followup: evs.find((e) => e.type === 'followup:answered')?.payload?.label,
       afhaakReason: evs.find((e) => e.type === 'afhaak-reason:answered')?.payload?.label,
+      handoffShown: evs.some((e) => e.type === 'warm-handoff:shown'),
+      handoffOutcome: evs.find((e) => e.type?.startsWith('warm-handoff:') && e.type !== 'warm-handoff:shown')?.type?.replace('warm-handoff:', '') || null,
+      handoffTemperature: evs.find((e) => e.type === 'warm-handoff:shown')?.payload?.temperature || null,
+      handoffPersona: evs.find((e) => e.type === 'warm-handoff:shown')?.payload?.persona || null,
     })
   }
   return out.sort((a, b) => b.startedAt - a.startedAt)
@@ -167,6 +171,27 @@ export function buildPersonaBreakdown(sessions) {
     .sort((a, b) => b.count - a.count)
 }
 
+export function buildHandoffStats(sessions) {
+  const shown = sessions.filter((s) => s.handoffShown).length
+  const accepted = sessions.filter((s) => ['callback', 'whatsapp', 'phone'].includes(s.handoffOutcome)).length
+  const dismissed = sessions.filter((s) => s.handoffOutcome === 'dismissed').length
+  const noAction = sessions.filter((s) => s.handoffShown && !s.handoffOutcome).length
+  return { shown, accepted, dismissed, noAction, total: sessions.length }
+}
+
+export function buildHandoffByPersona(sessions) {
+  const counts = new Map()
+  for (const s of sessions) {
+    if (!s.handoffShown) continue
+    const key = s.handoffPersona || 'onbekend'
+    if (!counts.has(key)) counts.set(key, { shown: 0, accepted: 0 })
+    const entry = counts.get(key)
+    entry.shown += 1
+    if (['callback', 'whatsapp', 'phone'].includes(s.handoffOutcome)) entry.accepted += 1
+  }
+  return [...counts.entries()].map(([persona, v]) => ({ persona, ...v }))
+}
+
 export function buildVariantBreakdown(sessions) {
   const counts = new Map()
   for (const s of sessions) {
@@ -211,6 +236,16 @@ export function humanizeEventType(type) {
     case 'financing:credion-shared': return 'Financiering naar Credion gedeeld'
     case 'rent-match:registered': return 'Huur-interesse vastgelegd'
     case 'unit:detail-opened': return 'Unit-detail bekeken'
+    case 'calc:rentability-interaction': return 'Rendement-calc gebruikt'
+    case 'calc:mortgage-interaction': return 'Maandlast-calc gebruikt'
+    case 'warm-handoff:shown': return 'Warm-handoff getoond'
+    case 'warm-handoff:callback': return 'Terugbel-verzoek'
+    case 'warm-handoff:whatsapp': return 'WhatsApp via handoff'
+    case 'warm-handoff:phone': return 'Bel-zelf via handoff'
+    case 'warm-handoff:dismissed': return 'Handoff afgewezen'
+    case 'warm-handoff:callback-chip-clicked': return 'Callback-chip gebruikt'
+    case 'location:tab-switched': return 'Locatie-tab gewisseld'
+    case 'location:maps-opened': return 'Google Maps geopend'
     default: return type
   }
 }

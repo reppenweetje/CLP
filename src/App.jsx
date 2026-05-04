@@ -17,6 +17,7 @@ import {
 import { parseLeadInput, mergeLead } from './lib/parseLead.js'
 import { startNewSession, trackEvent } from './lib/analytics.js'
 import { sendCredionLead } from './lib/credion.js'
+import { computeBuyingSignals, EMPTY_BEHAVIORS, getCallbackPromise, getTimeContext } from './lib/buyingSignals.js'
 
 import AppShell from './components/AppShell.jsx'
 import IntroScreen from './components/IntroScreen.jsx'
@@ -35,10 +36,12 @@ const STORAGE_KEY = 'clp-state-v5'
 const initial = {
   view: 'intro',
   messages: [],
+  messageQueue: [],
   currentQuestion: null,
   answers: {},
   leadDraft: {},
   moreInfoSeen: [],
+  behaviors: EMPTY_BEHAVIORS,
   debugOpen: false,
 }
 
@@ -65,6 +68,7 @@ function persist(state) {
       answers: state.answers,
       leadDraft: state.leadDraft,
       moreInfoSeen: state.moreInfoSeen,
+      behaviors: state.behaviors,
       _idCounter: _id,
     }
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave))
@@ -93,13 +97,17 @@ function reducer(state, action) {
   switch (action.type) {
     case 'START_CHAT': {
       const intentQ = flow.questions.intent
+      // Eerste bubble direct in beeld (anders blijft het scherm leeg met
+      // typing-indicator), de rest in de release-queue.
       return {
         ...state,
         view: 'chat',
         messages: [
           { id: nextId(), kind: 'bot-text', text: 'Hoi, ik ben Jesse van REPP.' },
-          { id: nextId(), kind: 'bot-text', text: 'Om de juiste brochure en prijzen met je te delen heb ik een korte vraag.' },
-          { id: nextId(), kind: 'bot-text', text: intentQ.label },
+        ],
+        messageQueue: [
+          { kind: 'bot-text', text: 'Om de juiste brochure en prijzen met je te delen heb ik een korte vraag.' },
+          { kind: 'bot-text', text: intentQ.label },
         ],
         currentQuestion: 'intent',
       }
@@ -109,6 +117,22 @@ function reducer(state, action) {
         ...state,
         messages: [...state.messages, ...action.messages.map((m) => ({ id: nextId(), ...m }))],
       }
+    case 'SET_MESSAGES':
+      return { ...state, messages: action.messages }
+    case 'ENQUEUE':
+      return { ...state, messageQueue: [...(state.messageQueue || []), ...action.messages] }
+    case 'RELEASE_NEXT': {
+      const queue = state.messageQueue || []
+      if (queue.length === 0) return state
+      const [next, ...rest] = queue
+      return {
+        ...state,
+        messages: [...state.messages, { id: nextId(), ...next }],
+        messageQueue: rest,
+      }
+    }
+    case 'CLEAR_QUEUE':
+      return { ...state, messageQueue: [] }
     case 'ANSWER':
       return {
         ...state,
@@ -140,6 +164,53 @@ function reducer(state, action) {
     }
     case 'FORGET_LEAD':
       return { ...state, leadDraft: {}, answers: { ...state.answers, lead: undefined } }
+    case 'BEHAVIOR_UNIT_VIEWED': {
+      const b = state.behaviors || EMPTY_BEHAVIORS
+      const unique = new Set(b.uniqueUnitsViewed || [])
+      unique.add(action.number)
+      return {
+        ...state,
+        behaviors: {
+          ...b,
+          unitDetailOpens: (b.unitDetailOpens || 0) + 1,
+          uniqueUnitsViewed: [...unique],
+          lastUnitViewed: action.number,
+        },
+      }
+    }
+    case 'BEHAVIOR_CALC_INTERACTED': {
+      const b = state.behaviors || EMPTY_BEHAVIORS
+      if (action.calcType === 'rentability') {
+        return { ...state, behaviors: { ...b, rentabilityCalcInteracts: (b.rentabilityCalcInteracts || 0) + 1 } }
+      }
+      if (action.calcType === 'mortgage') {
+        return { ...state, behaviors: { ...b, mortgageCalcInteracts: (b.mortgageCalcInteracts || 0) + 1 } }
+      }
+      return state
+    }
+    case 'BEHAVIOR_MORE_INFO_VIEWED': {
+      const b = state.behaviors || EMPTY_BEHAVIORS
+      const ids = b.moreInfoIds || []
+      if (ids.includes(action.id)) {
+        return { ...state, behaviors: { ...b, moreInfoViewCount: (b.moreInfoViewCount || 0) + 1 } }
+      }
+      return {
+        ...state,
+        behaviors: {
+          ...b,
+          moreInfoIds: [...ids, action.id],
+          moreInfoViewCount: (b.moreInfoViewCount || 0) + 1,
+        },
+      }
+    }
+    case 'BEHAVIOR_BROCHURE_CLICKED':
+      return { ...state, behaviors: { ...(state.behaviors || EMPTY_BEHAVIORS), brochureClicked: true } }
+    case 'BEHAVIOR_PHONE_DECLINED':
+      return { ...state, behaviors: { ...(state.behaviors || EMPTY_BEHAVIORS), phoneAskedDeclined: true } }
+    case 'WARM_HANDOFF_SHOWN':
+      return { ...state, behaviors: { ...(state.behaviors || EMPTY_BEHAVIORS), warmHandoffShown: true } }
+    case 'WARM_HANDOFF_OUTCOME':
+      return { ...state, behaviors: { ...(state.behaviors || EMPTY_BEHAVIORS), warmHandoffOutcome: action.outcome } }
     case 'RESET':
       return { ...initial, debugOpen: state.debugOpen }
     default:
@@ -177,15 +248,21 @@ const MORE_INFO_DEFS = {
   financing: { label: 'Financiering' },
 }
 
-function moreInfoChips(persona, seen) {
+function moreInfoChips(persona, seen, temperature) {
   const opts = []
   for (const [id, def] of Object.entries(MORE_INFO_DEFS)) {
     if (seen.includes(id)) continue
     if (def.personas && !def.personas.includes(persona)) continue
     opts.push({ id, label: def.label })
   }
-  opts.push({ id: '__contact', label: 'Direct contact' })
-  return opts
+
+  const directContact = { id: '__contact', label: 'Direct contact' }
+  const callback = { id: '__callback', label: 'Laat Jann mij bellen' }
+
+  // Hot of warm: contact-opties bovenaan, plus expliciete callback-chip.
+  if (temperature === 'hot') return [callback, directContact, ...opts]
+  if (temperature === 'warm') return [directContact, ...opts]
+  return [...opts, directContact]
 }
 
 function buildMoreInfoMessages(id, persona) {
@@ -248,6 +325,22 @@ function capitalize(s) {
   return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
 }
 
+// Hoe lang we wachten voordat de volgende bot-bubble verschijnt. Korter voor
+// korte tekst, langer voor lange tekst en rich cards. Levert een typing-bubble
+// gevoel zonder te traag te worden.
+function computeReleaseDelay(message) {
+  if (!message) return 500
+  if (message.kind === 'bot-text') {
+    const len = message.text?.length || 30
+    return Math.max(450, Math.min(900, 350 + len * 9))
+  }
+  // Rich cards en interactieve bubbles vragen iets meer aandacht.
+  if (['site-plan', 'usp-cards', 'unit-card', 'gallery', 'investor', 'price', 'price-compare', 'location', 'cta-card', 'warm-handoff', 'brochure', 'highlights', 'process', 'planning'].includes(message.kind)) {
+    return 700
+  }
+  return 500
+}
+
 function isAdminRoute() {
   if (typeof window === 'undefined') return false
   return window.location.pathname.startsWith('/admin')
@@ -261,7 +354,15 @@ export default function App() {
 function Demo() {
   const [state, dispatch] = useReducer(reducer, initial, (init) => {
     const loaded = loadPersisted()
-    if (loaded) return { ...init, ...loaded, debugOpen: false }
+    if (loaded) {
+      return {
+        ...init,
+        ...loaded,
+        behaviors: { ...EMPTY_BEHAVIORS, ...(loaded.behaviors || {}) },
+        messageQueue: [],
+        debugOpen: false,
+      }
+    }
     return init
   })
   const [answersOpen, setAnswersOpen] = useState(false)
@@ -273,6 +374,19 @@ function Demo() {
     if (state.view === 'chat') persist(state)
   }, [state])
 
+  // Sequential bot-bubble reveal. Eén bot-bericht per tick, met delay op basis
+  // van de inhoud. De bezoeker ziet de typing-indicator onderaan zolang de queue
+  // nog items heeft, en de chip-bar verschijnt pas als de laatste vraag is
+  // verschenen. Voorkomt dat de vraag onder het scherm valt achter rich cards.
+  useEffect(() => {
+    const queue = state.messageQueue || []
+    if (queue.length === 0) return
+    const next = queue[0]
+    const delay = computeReleaseDelay(next)
+    const t = setTimeout(() => dispatch({ type: 'RELEASE_NEXT' }), delay)
+    return () => clearTimeout(t)
+  }, [state.messageQueue?.length])
+
   useEffect(() => {
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
@@ -283,6 +397,72 @@ function Demo() {
   const score = computeScore(state.answers)
   const stage = deriveStage(state.answers)
   const temperature = deriveTemperature(stage)
+  const buying = computeBuyingSignals(state.answers, state.behaviors)
+
+  // Veilige momenten om de warm-handoff in te schieten. Tijdens lead-capture
+  // of een sub-flow zoals financingAsk willen we niet onderbreken.
+  const SAFE_HANDOFF_QUESTIONS = ['moreInfo', 'followup', null]
+  const isSafeMoment = SAFE_HANDOFF_QUESTIONS.includes(state.currentQuestion)
+
+  useEffect(() => {
+    if (state.view !== 'chat') return
+    if (state.behaviors?.warmHandoffShown) return
+    if (buying.temperature !== 'hot') return
+    if (!isSafeMoment) return
+    // Wacht totdat de release-queue leeg is, anders breekt de handoff-bubble
+    // door het sequentiële reveal-ritme heen.
+    if ((state.messageQueue?.length || 0) > 0) return
+    // Geen handoff als bezoeker al expliciet om direct contact heeft gevraagd.
+    if (state.answers.followup) return
+
+    const personaForCopy = buying.inferredPersona !== 'onbekend' ? buying.inferredPersona : persona
+    const lead = state.answers.lead || {}
+    const phoneDeclined = !lead.phone && state.behaviors?.phoneAskedDeclined === true
+
+    const summary = `Hot signaal vanuit ${personaForCopy === 'belegger' ? 'belegger-flow' : personaForCopy === 'eigen_gebruiker' ? 'eigen-gebruiker-flow' : 'gemengde flow'}`
+    const wa = whatsAppDeeplink(project, lead.firstName || '', summary)
+    const phoneLink = buildPhoneLink(project.phoneNumber)
+
+    trackEvent('warm-handoff:shown', {
+      persona: personaForCopy,
+      declaredPersona: buying.declaredPersona,
+      temperature: buying.temperature,
+      score: buying.score,
+      signalCount: buying.signals.length,
+      signalIds: buying.signals.map((s) => s.id),
+      currentQuestion: state.currentQuestion,
+    })
+
+    dispatch({ type: 'WARM_HANDOFF_SHOWN' })
+    dispatch({
+      type: 'ENQUEUE',
+      messages: [
+        {
+          kind: 'warm-handoff',
+          payload: {
+            persona: personaForCopy,
+            signals: buying.signals,
+            unitFocus: state.behaviors?.lastUnitViewed || null,
+            name: lead.firstName || '',
+            hasPhone: !!lead.phone,
+            phoneDeclined,
+            waLink: wa,
+            phoneLink,
+            phoneDisplay: project.phoneNumber,
+            outcome: null,
+          },
+        },
+      ],
+    })
+  }, [
+    state.view,
+    state.behaviors?.warmHandoffShown,
+    buying.temperature,
+    buying.score,
+    isSafeMoment,
+    state.answers.followup,
+    state.messageQueue?.length,
+  ])
 
   const start = (variant) => {
     startNewSession()
@@ -298,6 +478,22 @@ function Demo() {
     _msgCountBefore: state.messages.length,
   })
 
+  // User-bubble gaat direct, bot-bubbles in de release-queue zodat ze met
+  // typing-pauzes verschijnen. Voorkomt dat een vraag direct na een rich card
+  // onder het scherm valt.
+  const sendSequence = (userText, botMessages = []) => {
+    const append = []
+    if (userText !== null && userText !== undefined) {
+      append.push({ kind: 'user-text', text: userText })
+    }
+    if (append.length > 0) {
+      dispatch({ type: 'APPEND', messages: append })
+    }
+    if (botMessages.length > 0) {
+      dispatch({ type: 'ENQUEUE', messages: botMessages })
+    }
+  }
+
   const onChipPick = (opt) => {
     const q = state.currentQuestion
     if (!q) return
@@ -308,15 +504,11 @@ function Demo() {
       const cards = uspCardOrder(personaNext)
       trackEvent('intent:answered', { id: opt.id, label: opt.label, persona: personaNext })
       dispatch({ type: 'ANSWER', key: 'intent', value: answerValue(opt), next: 'availabilityCheck' })
-      dispatch({
-        type: 'APPEND',
-        messages: [
-          { kind: 'user-text', text: userTextFromOpt(opt) },
-          { kind: 'bot-text', text: microIntro },
-          { kind: 'usp-cards', payload: { cards } },
-          { kind: 'bot-text', text: flow.questions.availabilityCheck.label },
-        ],
-      })
+      sendSequence(userTextFromOpt(opt), [
+        { kind: 'bot-text', text: microIntro },
+        { kind: 'usp-cards', payload: { cards } },
+        { kind: 'bot-text', text: flow.questions.availabilityCheck.label },
+      ])
       return
     }
 
@@ -324,16 +516,16 @@ function Demo() {
     // voor het brochure-moment; dat geeft urgentie en concrete context.
     if (q === 'availabilityCheck') {
       trackEvent('availability-check:answered', { id: opt.id, label: opt.label })
-      const messages = [{ kind: 'user-text', text: userTextFromOpt(opt) }]
+      const botMessages = []
       if (opt.id === 'ja') {
-        messages.push(
+        botMessages.push(
           { kind: 'bot-text', text: 'Hier zijn de 14 units met de actuele status. Tik op een unit voor de specs.' },
           { kind: 'site-plan', payload: { sitePlan: project.sitePlan, units: project.units, persona } },
         )
       }
-      messages.push({ kind: 'bot-text', text: flow.questions.brochureTrigger.label })
+      botMessages.push({ kind: 'bot-text', text: flow.questions.brochureTrigger.label })
       dispatch({ type: 'ANSWER', key: 'availabilityCheck', value: answerValue(opt), next: 'brochureTrigger' })
-      dispatch({ type: 'APPEND', messages })
+      sendSequence(userTextFromOpt(opt), botMessages)
       return
     }
 
@@ -342,39 +534,27 @@ function Demo() {
 
       if (opt.afhaak) {
         dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: answerValue(opt), next: 'afhaakReasons' })
-        dispatch({
-          type: 'APPEND',
-          messages: [
-            { kind: 'user-text', text: userTextFromOpt(opt) },
-            { kind: 'bot-text', text: 'Geen probleem.' },
-            { kind: 'bot-text', text: flow.questions.afhaakReasons.label },
-          ],
-        })
+        sendSequence(userTextFromOpt(opt), [
+          { kind: 'bot-text', text: 'Geen probleem.' },
+          { kind: 'bot-text', text: flow.questions.afhaakReasons.label },
+        ])
         return
       }
 
       // Brochure-ja, lead al bekend? Sla lead-capture over en spring naar size.
       if (state.answers.lead) {
         dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: answerValue(opt), next: 'size' })
-        dispatch({
-          type: 'APPEND',
-          messages: [
-            { kind: 'user-text', text: userTextFromOpt(opt) },
-            { kind: 'bot-text', text: 'Top, we sturen je de juiste info.' },
-            { kind: 'bot-text', text: flow.questions.size.label },
-          ],
-        })
+        sendSequence(userTextFromOpt(opt), [
+          { kind: 'bot-text', text: 'Top, we sturen je de juiste info.' },
+          { kind: 'bot-text', text: flow.questions.size.label },
+        ])
         return
       }
 
       dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: answerValue(opt), next: 'lead-email' })
-      dispatch({
-        type: 'APPEND',
-        messages: [
-          { kind: 'user-text', text: userTextFromOpt(opt) },
-          { kind: 'bot-text', text: 'Wat is je e-mailadres?' },
-        ],
-      })
+      sendSequence(userTextFromOpt(opt), [
+        { kind: 'bot-text', text: 'Wat is je e-mailadres?' },
+      ])
       return
     }
 
@@ -387,37 +567,29 @@ function Demo() {
       // in De Hofman die hun unit willen verhuren.
       if (opt.id === 'huur') {
         dispatch({ type: 'ANSWER', key: 'afhaakReason', value: answerValue(opt), next: 'rentRange' })
-        dispatch({
-          type: 'APPEND',
-          messages: [
-            { kind: 'user-text', text: userTextFromOpt(opt) },
-            { kind: 'bot-text', text: 'Begrijpelijk. Bij De Hofman zijn er ook beleggers die hun unit verhuren.' },
-            { kind: 'bot-text', text: 'Met je voorkeur kunnen we je in de toekomst koppelen aan een belegger als er een match is.' },
-            { kind: 'bot-text', text: flow.questions.rentRange.label },
-          ],
-        })
+        sendSequence(userTextFromOpt(opt), [
+          { kind: 'bot-text', text: 'Begrijpelijk. Bij De Hofman zijn er ook beleggers die hun unit verhuren.' },
+          { kind: 'bot-text', text: 'Met je voorkeur kunnen we je in de toekomst koppelen aan een belegger als er een match is.' },
+          { kind: 'bot-text', text: flow.questions.rentRange.label },
+        ])
         return
       }
 
       trackEvent('flow:complete', { stage: 'afhaak', persona })
       const wa = whatsAppDeeplink(project, state.answers.lead?.firstName || '', `Geen match: ${opt.label.toLowerCase()}`)
       dispatch({ type: 'ANSWER', key: 'afhaakReason', value: answerValue(opt), next: null })
-      dispatch({
-        type: 'APPEND',
-        messages: [
-          { kind: 'user-text', text: userTextFromOpt(opt) },
-          { kind: 'bot-text', text: 'Dank voor je eerlijkheid.' },
-          { kind: 'bot-text', text: 'Misschien kunnen we via WhatsApp samen kijken naar wat wel past. Sommige projecten staan nog niet online en we denken graag mee.' },
-          {
-            kind: 'cta-card',
-            payload: {
-              waLink: wa,
-              summary: `Niet matchend: ${opt.label}`,
-              hideBrochure: true,
-            },
+      sendSequence(userTextFromOpt(opt), [
+        { kind: 'bot-text', text: 'Dank voor je eerlijkheid.' },
+        { kind: 'bot-text', text: 'Misschien kunnen we via WhatsApp samen kijken naar wat wel past. Sommige projecten staan nog niet online en we denken graag mee.' },
+        {
+          kind: 'cta-card',
+          payload: {
+            waLink: wa,
+            summary: `Niet matchend: ${opt.label}`,
+            hideBrochure: true,
           },
-        ],
-      })
+        },
+      ])
       return
     }
 
@@ -432,37 +604,30 @@ function Demo() {
         `Huur-interesse, range ${opt.label}`,
       )
       dispatch({ type: 'ANSWER', key: 'rentRange', value: answerValue(opt), next: null })
-      dispatch({
-        type: 'APPEND',
-        messages: [
-          { kind: 'user-text', text: userTextFromOpt(opt) },
-          { kind: 'bot-text', text: 'Genoteerd. We bewaren je voorkeur en nemen contact op zodra er een match is.' },
-          { kind: 'bot-text', text: 'Mocht je nog vragen hebben, stuur ons dan gerust een WhatsApp.' },
-          {
-            kind: 'cta-card',
-            payload: {
-              waLink: wa,
-              summary: `Huur-interesse, ${opt.label}`,
-              hideBrochure: true,
-            },
+      sendSequence(userTextFromOpt(opt), [
+        { kind: 'bot-text', text: 'Genoteerd. We bewaren je voorkeur en nemen contact op zodra er een match is.' },
+        { kind: 'bot-text', text: 'Mocht je nog vragen hebben, stuur ons dan gerust een WhatsApp.' },
+        {
+          kind: 'cta-card',
+          payload: {
+            waLink: wa,
+            summary: `Huur-interesse, ${opt.label}`,
+            hideBrochure: true,
           },
-        ],
-      })
+        },
+      ])
       return
     }
 
     if (q === 'lead-phoneAsk') {
       trackEvent('lead-phone-ask:answered', { id: opt.id, label: opt.label })
       if (opt.id === 'yes') {
-        dispatch({
-          type: 'APPEND',
-          messages: [
-            { kind: 'user-text', text: userTextFromOpt(opt) },
-            { kind: 'bot-text', text: 'Wat is je 06-nummer?' },
-          ],
-        })
+        sendSequence(userTextFromOpt(opt), [
+          { kind: 'bot-text', text: 'Wat is je 06-nummer?' },
+        ])
         dispatch({ type: 'SET_QUESTION', next: 'lead-phone' })
       } else {
+        dispatch({ type: 'BEHAVIOR_PHONE_DECLINED' })
         finishLead(state.leadDraft, [
           { kind: 'user-text', text: userTextFromOpt(opt) },
           { kind: 'bot-text', text: 'Geen probleem. Ons nummer staat in de mail als je later wilt schakelen.' },
@@ -474,13 +639,9 @@ function Demo() {
     if (q === 'size') {
       trackEvent('size:answered', { id: opt.id, label: opt.label })
       dispatch({ type: 'ANSWER', key: 'size', value: answerValue(opt), next: 'timeline' })
-      dispatch({
-        type: 'APPEND',
-        messages: [
-          { kind: 'user-text', text: userTextFromOpt(opt) },
-          { kind: 'bot-text', text: flow.questions.timeline.label },
-        ],
-      })
+      sendSequence(userTextFromOpt(opt), [
+        { kind: 'bot-text', text: flow.questions.timeline.label },
+      ])
       return
     }
 
@@ -491,28 +652,45 @@ function Demo() {
       const copy = recommendCopy(personaNext)
       const confidence = leadConfidence(merged)
       trackEvent('timeline:answered', { id: opt.id, label: opt.label, recommendedUnit: unit.primary?.type })
-      const messages = [{ kind: 'user-text', text: userTextFromOpt(opt) }]
+      const botMessages = []
       if (confidence >= 2) {
-        messages.push(
+        botMessages.push(
           { kind: 'bot-text', text: `Op basis van je antwoorden lijkt vooral de ${unit.primary.type}-unit interessant.` },
           { kind: 'unit-card', payload: unit },
         )
       } else {
-        messages.push(
+        botMessages.push(
           { kind: 'bot-text', text: 'Je hebt nog niet veel voorkeuren ingegeven. We sturen je eerst een overzicht van de beschikbare opties; via WhatsApp denken we graag mee.' },
           { kind: 'unit-card', payload: unit },
         )
       }
-      messages.push(
+      botMessages.push(
         { kind: 'bot-text', text: copy },
         { kind: 'bot-text', text: 'Wil je nog ergens meer over weten, of direct contact?' },
       )
       dispatch({ type: 'ANSWER', key: 'timeline', value: answerValue(opt), next: 'moreInfo' })
-      dispatch({ type: 'APPEND', messages })
+      sendSequence(userTextFromOpt(opt), botMessages)
       return
     }
 
     if (q === 'moreInfo') {
+      if (opt.id === '__callback') {
+        const merged = state.answers
+        const personaNext = derivePersona(merged)
+        trackEvent('warm-handoff:callback-chip-clicked', { persona: personaNext, temperature: buying.temperature })
+        dispatch({ type: 'WARM_HANDOFF_OUTCOME', outcome: 'callback' })
+        if (state.answers.lead?.phone) {
+          sendSequence(userTextFromOpt(opt), [
+            { kind: 'bot-text', text: `Top. Mijn collega Jann belt je ${getCallbackPromise(getTimeContext())} op ${state.answers.lead.phone}.` },
+          ])
+        } else {
+          sendSequence(userTextFromOpt(opt), [
+            { kind: 'bot-text', text: 'Top. Wat is je 06-nummer? Dan zorg ik dat Jann je belt.' },
+          ])
+          dispatch({ type: 'SET_QUESTION', next: 'lead-phone' })
+        }
+        return
+      }
       if (opt.id === '__contact') {
         // Direct contact: einde van de flow met cta-card (bellen + WhatsApp).
         const merged = state.answers
@@ -528,47 +706,35 @@ function Demo() {
           value: { ...answerValue({ id: 'direct-contact', label: 'Direct contact', score: 32 }) },
           next: null,
         })
-        dispatch({
-          type: 'APPEND',
-          messages: [
-            { kind: 'user-text', text: userTextFromOpt(opt) },
-            { kind: 'bot-text', text: 'Top. Bel of WhatsApp ons direct, dan zorgen we dat je vandaag nog antwoord hebt.' },
-            {
-              kind: 'cta-card',
-              payload: {
-                waLink: wa,
-                phoneLink,
-                phoneDisplay: project.phoneNumber,
-                summary: sum,
-              },
+        sendSequence(userTextFromOpt(opt), [
+          { kind: 'bot-text', text: 'Top. Bel of WhatsApp ons direct, dan zorgen we dat je vandaag nog antwoord hebt.' },
+          {
+            kind: 'cta-card',
+            payload: {
+              waLink: wa,
+              phoneLink,
+              phoneDisplay: project.phoneNumber,
+              summary: sum,
             },
-          ],
-        })
+          },
+        ])
         return
       }
       if (opt.id === 'financing') {
         trackEvent('more-info:viewed', { id: opt.id, label: opt.label })
         dispatch({ type: 'MORE_INFO_SEEN', id: 'financing' })
-        dispatch({
-          type: 'APPEND',
-          messages: [
-            { kind: 'user-text', text: userTextFromOpt(opt) },
-            { kind: 'bot-text', text: 'Onze partner Credion kan vrijblijvend met je meedenken over de financiering.' },
-            { kind: 'bot-text', text: 'Wil je dat we je gegevens met Credion delen, zodat zij contact met je opnemen?' },
-          ],
-        })
+        dispatch({ type: 'BEHAVIOR_MORE_INFO_VIEWED', id: 'financing' })
+        sendSequence(userTextFromOpt(opt), [
+          { kind: 'bot-text', text: 'Onze partner Credion kan vrijblijvend met je meedenken over de financiering.' },
+          { kind: 'bot-text', text: 'Wil je dat we je gegevens met Credion delen, zodat zij contact met je opnemen?' },
+        ])
         dispatch({ type: 'SET_QUESTION', next: 'financingAsk' })
         return
       }
       trackEvent('more-info:viewed', { id: opt.id, label: opt.label })
       dispatch({ type: 'MORE_INFO_SEEN', id: opt.id })
-      dispatch({
-        type: 'APPEND',
-        messages: [
-          { kind: 'user-text', text: userTextFromOpt(opt) },
-          ...buildMoreInfoMessages(opt.id, persona),
-        ],
-      })
+      dispatch({ type: 'BEHAVIOR_MORE_INFO_VIEWED', id: opt.id })
+      sendSequence(userTextFromOpt(opt), buildMoreInfoMessages(opt.id, persona))
       return
     }
 
@@ -580,21 +746,13 @@ function Demo() {
           size: state.answers.size?.label,
           timeline: state.answers.timeline?.label,
         })
-        dispatch({
-          type: 'APPEND',
-          messages: [
-            { kind: 'user-text', text: userTextFromOpt(opt) },
-            { kind: 'bot-text', text: 'Top. We delen je gegevens met Credion. Zij nemen vrijblijvend contact met je op.' },
-          ],
-        })
+        sendSequence(userTextFromOpt(opt), [
+          { kind: 'bot-text', text: 'Top. We delen je gegevens met Credion. Zij nemen vrijblijvend contact met je op.' },
+        ])
       } else {
-        dispatch({
-          type: 'APPEND',
-          messages: [
-            { kind: 'user-text', text: userTextFromOpt(opt) },
-            { kind: 'bot-text', text: 'Geen probleem.' },
-          ],
-        })
+        sendSequence(userTextFromOpt(opt), [
+          { kind: 'bot-text', text: 'Geen probleem.' },
+        ])
       }
       dispatch({ type: 'SET_QUESTION', next: 'moreInfo' })
       return
@@ -610,15 +768,11 @@ function Demo() {
       trackEvent('followup:answered', { id: opt.id, label: opt.label })
       trackEvent('flow:complete', { stage: stageNext, persona: personaNext })
       dispatch({ type: 'ANSWER', key: 'followup', value: answerValue(opt), next: null })
-      dispatch({
-        type: 'APPEND',
-        messages: [
-          { kind: 'user-text', text: userTextFromOpt(opt) },
-          { kind: 'bot-text', text: tc.lead },
-          { kind: 'bot-text', text: tc.body },
-          { kind: 'cta-card', payload: { waLink: wa, summary: sum } },
-        ],
-      })
+      sendSequence(userTextFromOpt(opt), [
+        { kind: 'bot-text', text: tc.lead },
+        { kind: 'bot-text', text: tc.body },
+        { kind: 'cta-card', payload: { waLink: wa, summary: sum } },
+      ])
       return
     }
   }
@@ -654,13 +808,7 @@ function Demo() {
     }
 
     if (error) {
-      dispatch({
-        type: 'APPEND',
-        messages: [
-          { kind: 'user-text', text },
-          { kind: 'bot-text', text: error },
-        ],
-      })
+      sendSequence(text, [{ kind: 'bot-text', text: error }])
       return
     }
 
@@ -680,37 +828,26 @@ function Demo() {
       next: editReturnQuestion ?? null,
     })
     setEditReturnQuestion(null)
-    dispatch({
-      type: 'APPEND',
-      messages: [
-        { kind: 'user-text', text },
-        { kind: 'bot-text', text: 'Bijgewerkt.' },
-      ],
-    })
+    sendSequence(text, [{ kind: 'bot-text', text: 'Bijgewerkt.' }])
   }
 
   function handleLeadEmailText(text) {
     const parsed = parseLeadInput(text)
     const draft = mergeLead(state.leadDraft, parsed)
-    const userBubble = { kind: 'user-text', text }
     const triedEmail = text.includes('@')
 
     if (!draft.email) {
       dispatch({ type: 'LEAD_DRAFT', draft })
       // Naam of telefoon kan toch al binnen zijn ondanks geen geldig mailadres
       trackNewLeadFields(state.leadDraft, draft)
-      dispatch({
-        type: 'APPEND',
-        messages: [
-          userBubble,
-          {
-            kind: 'bot-text',
-            text: triedEmail
-              ? 'Het mailadres lijkt niet helemaal te kloppen. Kun je het opnieuw tikken?'
-              : 'Daar zat geen mailadres in. Kun je het opnieuw typen?',
-          },
-        ],
-      })
+      sendSequence(text, [
+        {
+          kind: 'bot-text',
+          text: triedEmail
+            ? 'Het mailadres lijkt niet helemaal te kloppen. Kun je het opnieuw tikken?'
+            : 'Daar zat geen mailadres in. Kun je het opnieuw typen?',
+        },
+      ])
       return
     }
 
@@ -718,29 +855,21 @@ function Demo() {
 
     if (draft.firstName) {
       dispatch({ type: 'LEAD_DRAFT', draft })
-      dispatch({
-        type: 'APPEND',
-        messages: [
-          userBubble,
-          { kind: 'bot-text', text: 'Dank. Ik zorg dat deze zo naar je toe komt.' },
-          { kind: 'bot-text', text: `Top, ${draft.firstName}.` },
-          { kind: 'bot-text', text: 'We houden bij dit soort projecten vaak kort contact via WhatsApp, bijvoorbeeld over beschikbaarheid of als je nog vragen hebt. Vind je dat prettig?' },
-        ],
-      })
+      sendSequence(text, [
+        { kind: 'bot-text', text: 'Dank. Ik zorg dat deze zo naar je toe komt.' },
+        { kind: 'bot-text', text: `Top, ${draft.firstName}.` },
+        { kind: 'bot-text', text: 'We houden bij dit soort projecten vaak kort contact via WhatsApp, bijvoorbeeld over beschikbaarheid of als je nog vragen hebt. Vind je dat prettig?' },
+      ])
       dispatch({ type: 'SET_QUESTION', next: 'lead-phoneAsk' })
       return
     }
 
     dispatch({ type: 'LEAD_DRAFT', draft })
-    dispatch({
-      type: 'APPEND',
-      messages: [
-        userBubble,
-        { kind: 'bot-text', text: 'Dank. Ik zorg dat deze zo naar je toe komt.' },
-        { kind: 'bot-text', text: 'Oh wacht. Ook nog handig om je naam te weten, zodat we weten aan wie we het sturen.' },
-        { kind: 'bot-text', text: 'Wat is je naam?' },
-      ],
-    })
+    sendSequence(text, [
+      { kind: 'bot-text', text: 'Dank. Ik zorg dat deze zo naar je toe komt.' },
+      { kind: 'bot-text', text: 'Oh wacht. Ook nog handig om je naam te weten, zodat we weten aan wie we het sturen.' },
+      { kind: 'bot-text', text: 'Wat is je naam?' },
+    ])
     dispatch({ type: 'SET_QUESTION', next: 'lead-name' })
   }
 
@@ -750,13 +879,9 @@ function Demo() {
     const firstName = parsed.firstName || (fallbackFirst ? capitalize(fallbackFirst) : null)
 
     if (!firstName) {
-      dispatch({
-        type: 'APPEND',
-        messages: [
-          { kind: 'user-text', text },
-          { kind: 'bot-text', text: 'Kreeg je naam niet helemaal mee. Kun je het opnieuw typen?' },
-        ],
-      })
+      sendSequence(text, [
+        { kind: 'bot-text', text: 'Kreeg je naam niet helemaal mee. Kun je het opnieuw typen?' },
+      ])
       return
     }
 
@@ -768,27 +893,19 @@ function Demo() {
     }
     trackNewLeadFields(state.leadDraft, draft)
     dispatch({ type: 'LEAD_DRAFT', draft })
-    dispatch({
-      type: 'APPEND',
-      messages: [
-        { kind: 'user-text', text },
-        { kind: 'bot-text', text: `Top, ${firstName}.` },
-        { kind: 'bot-text', text: 'We houden bij dit soort projecten vaak kort contact via WhatsApp, bijvoorbeeld over beschikbaarheid of als je nog vragen hebt. Vind je dat prettig?' },
-      ],
-    })
+    sendSequence(text, [
+      { kind: 'bot-text', text: `Top, ${firstName}.` },
+      { kind: 'bot-text', text: 'We houden bij dit soort projecten vaak kort contact via WhatsApp, bijvoorbeeld over beschikbaarheid of als je nog vragen hebt. Vind je dat prettig?' },
+    ])
     dispatch({ type: 'SET_QUESTION', next: 'lead-phoneAsk' })
   }
 
   function handleLeadPhoneText(text) {
     const parsed = parseLeadInput(text)
     if (!parsed.phone) {
-      dispatch({
-        type: 'APPEND',
-        messages: [
-          { kind: 'user-text', text },
-          { kind: 'bot-text', text: 'Daar zat geen geldig 06-nummer in. Kun je het opnieuw tikken?' },
-        ],
-      })
+      sendSequence(text, [
+        { kind: 'bot-text', text: 'Daar zat geen geldig 06-nummer in. Kun je het opnieuw tikken?' },
+      ])
       return
     }
     const lead = { ...state.leadDraft, phone: parsed.phone }
@@ -799,10 +916,17 @@ function Demo() {
   function finishLead(lead, prependMessages = []) {
     dispatch({ type: 'LEAD_DRAFT', draft: lead })
     dispatch({ type: 'ANSWER', key: 'lead', value: lead, next: 'size' })
+    // prependMessages bevat user-text + eventueel een bot-bevestiging.
+    // Splits: user-text direct, bot-bubbles in de queue.
+    const userMsgs = prependMessages.filter((m) => m.kind === 'user-text')
+    const botPrepend = prependMessages.filter((m) => m.kind !== 'user-text')
+    if (userMsgs.length > 0) {
+      dispatch({ type: 'APPEND', messages: userMsgs })
+    }
     dispatch({
-      type: 'APPEND',
+      type: 'ENQUEUE',
       messages: [
-        ...prependMessages,
+        ...botPrepend,
         { kind: 'bot-text', text: 'Goed. Nog even, zodat we de juiste prijslijst en plattegronden meesturen.' },
         { kind: 'bot-text', text: flow.questions.size.label },
       ],
@@ -811,6 +935,7 @@ function Demo() {
 
   const onBrochure = () => {
     trackEvent('cta:brochure-clicked', { location: state.currentQuestion || 'thankyou' })
+    dispatch({ type: 'BEHAVIOR_BROCHURE_CLICKED' })
     if (typeof window !== 'undefined' && project.brochureUrl && project.brochureUrl !== '#') {
       window.open(project.brochureUrl, '_blank', 'noopener,noreferrer')
     }
@@ -818,6 +943,46 @@ function Demo() {
 
   const onWaClick = () => {
     trackEvent('cta:whatsapp-clicked', { location: 'header' })
+  }
+
+  // Behavior callbacks vanuit de site-plan en calc-componenten.
+  const onUnitView = ({ number }) => {
+    dispatch({ type: 'BEHAVIOR_UNIT_VIEWED', number })
+  }
+
+  const onCalcInteract = (calcType) => {
+    trackEvent(calcType === 'rentability' ? 'calc:rentability-interaction' : 'calc:mortgage-interaction', {})
+    dispatch({ type: 'BEHAVIOR_CALC_INTERACTED', calcType })
+  }
+
+  // Wat de bezoeker met de warm-handoff bubble doet. We muteren het bestaande
+  // bericht zodat de visuele feedback (groen vinkje, "Jann belt je vandaag")
+  // direct in de chat verschijnt zonder extra bubble.
+  const onHandoffAction = (msgId, outcome) => {
+    trackEvent(`warm-handoff:${outcome}`, {
+      persona: buying.inferredPersona,
+      temperature: buying.temperature,
+      score: buying.score,
+    })
+    dispatch({ type: 'WARM_HANDOFF_OUTCOME', outcome })
+    // Mute het bestaande handoff-bericht met de uitkomst.
+    const newMessages = state.messages.map((m) => {
+      if (m.id !== msgId) return m
+      return { ...m, payload: { ...m.payload, outcome } }
+    })
+    // We bouwen om dit te dispatchen via een SET_MESSAGES action.
+    dispatch({ type: 'SET_MESSAGES', messages: newMessages })
+
+    // Bij callback en geen telefoon-nummer in lead: ask phone.
+    if (outcome === 'callback' && !state.answers.lead?.phone) {
+      dispatch({
+        type: 'ENQUEUE',
+        messages: [
+          { kind: 'bot-text', text: 'Top. Wat is je 06-nummer? Dan zorg ik dat Jann je belt.' },
+        ],
+      })
+      dispatch({ type: 'SET_QUESTION', next: 'lead-phone' })
+    }
   }
 
   const onPhoneClick = () => {
@@ -871,7 +1036,7 @@ function Demo() {
         : field === 'name'
         ? 'Wat is je naam?'
         : 'Wat is je 06-nummer?'
-    dispatch({ type: 'APPEND', messages: [{ kind: 'bot-text', text: label }] })
+    dispatch({ type: 'ENQUEUE', messages: [{ kind: 'bot-text', text: label }] })
   }
 
   const toggleDebug = () => dispatch({ type: 'TOGGLE_DEBUG' })
@@ -890,7 +1055,7 @@ function Demo() {
     chipQuestion = {
       key: 'moreInfo',
       label: 'meer info',
-      options: moreInfoChips(persona, state.moreInfoSeen),
+      options: moreInfoChips(persona, state.moreInfoSeen, buying.temperature),
     }
   } else if (state.currentQuestion === 'lead-phoneAsk') {
     chipQuestion = {
@@ -942,17 +1107,21 @@ function Demo() {
         <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-md">
           <ChatThread
             messages={state.messages}
+            showTyping={(state.messageQueue?.length || 0) > 0}
             onBrochure={onBrochure}
+            onUnitView={onUnitView}
+            onCalcInteract={onCalcInteract}
+            onHandoffAction={onHandoffAction}
             onReset={() => {
               clearPersisted()
               _id = 0
               dispatch({ type: 'RESET' })
             }}
           />
-          {chipQuestion && (
+          {chipQuestion && (state.messageQueue?.length || 0) === 0 && (
             <SuggestedChips options={chipQuestion.options} onPick={onChipPick} />
           )}
-          {inputConfig && (
+          {inputConfig && (state.messageQueue?.length || 0) === 0 && (
             <ChatInput
               placeholder={inputConfig.placeholder}
               inputMode={inputConfig.inputMode}

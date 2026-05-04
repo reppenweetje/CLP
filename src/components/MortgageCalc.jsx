@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 
 // Maandlast-indicator met sliders voor eigen vermogen en rente.
 // 20 jaar annuïtair, indicatief — geen advies. Bij eigen vermogen tonen we
@@ -15,12 +15,19 @@ function formatEuro(n) {
   return Math.round(n).toLocaleString('nl-NL')
 }
 
-export default function MortgageCalc({ price, indicative = false }) {
+export default function MortgageCalc({ price, indicative = false, onInteract }) {
   const [downPayment, setDownPayment] = useState(30)
   const [rate, setRate] = useState(5.0)
+  const interactedRef = useRef(false)
   const monthly = calcMonthly(price, downPayment, rate)
   const loan = price * (1 - downPayment / 100)
   const equity = price * (downPayment / 100)
+
+  const trackOnce = () => {
+    if (interactedRef.current) return
+    interactedRef.current = true
+    if (onInteract) onInteract()
+  }
 
   return (
     <div className="rounded-2xl bg-paper border border-mist-light p-3.5">
@@ -51,7 +58,7 @@ export default function MortgageCalc({ price, indicative = false }) {
               max={70}
               step={5}
               value={downPayment}
-              onChange={(e) => setDownPayment(Number(e.target.value))}
+              onChange={(e) => { setDownPayment(Number(e.target.value)); trackOnce() }}
               className="repp-range"
               aria-label="eigen vermogen"
             />
@@ -67,7 +74,7 @@ export default function MortgageCalc({ price, indicative = false }) {
               max={7.0}
               step={0.1}
               value={rate}
-              onChange={(e) => setRate(Number(e.target.value))}
+              onChange={(e) => { setRate(Number(e.target.value)); trackOnce() }}
               className="repp-range"
               aria-label="rente"
             />

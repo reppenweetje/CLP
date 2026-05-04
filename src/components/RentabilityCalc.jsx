@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 
 // Rendement-indicator voor beleggers. Toont BAR (bruto aanvangsrendement)
 // op basis van een instelbare markthuur per m² per jaar. BAR = jaarhuur
@@ -8,10 +8,19 @@ function formatEuro(n) {
   return Math.round(n).toLocaleString('nl-NL')
 }
 
-export default function RentabilityCalc({ price, size, indicative = false }) {
+export default function RentabilityCalc({ price, size, indicative = false, onInteract }) {
   const [marktHuur, setMarktHuur] = useState(175)
+  const interactedRef = useRef(false)
   const yearlyRent = size * marktHuur
   const bar = price > 0 ? (yearlyRent / price) * 100 : 0
+
+  const handleSliderChange = (value) => {
+    setMarktHuur(value)
+    if (!interactedRef.current) {
+      interactedRef.current = true
+      if (onInteract) onInteract()
+    }
+  }
 
   return (
     <div className="rounded-2xl bg-paper border border-mist-light p-3.5">
@@ -42,7 +51,7 @@ export default function RentabilityCalc({ price, size, indicative = false }) {
               max={250}
               step={5}
               value={marktHuur}
-              onChange={(e) => setMarktHuur(Number(e.target.value))}
+              onChange={(e) => handleSliderChange(Number(e.target.value))}
               className="repp-range"
               aria-label="markthuur per m² per jaar"
             />

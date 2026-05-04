@@ -103,17 +103,29 @@ export const project = {
     city: 'Haarlem',
     district: 'Waarderpolder',
     aerialImage: '/images/exterieur.jpg',
+    mapsQuery: 'A.+Hofmanweg+Haarlem',
+    mapsLink: 'https://www.google.com/maps?q=A.+Hofmanweg+Haarlem',
     travelTimes: [
-      { to: 'A9', value: '3 min' },
-      { to: 'Amsterdam', value: '25 min' },
-      { to: 'Schiphol', value: '25 min' },
-      { to: 'Alkmaar', value: '25 min' },
+      { to: 'A9', value: '3 min', mode: 'car' },
+      { to: 'Haarlem CS', value: '6 min', mode: 'car' },
+      { to: 'Schalkwijk', value: '5 min', mode: 'car' },
+      { to: 'Schiphol', value: '25 min', mode: 'car' },
+      { to: 'Amsterdam', value: '25 min', mode: 'car' },
+      { to: 'Alkmaar', value: '25 min', mode: 'car' },
+    ],
+    surroundings: [
+      { icon: 'business', text: 'Gevestigde bedrijvenlocatie met meer dan duizend ondernemingen' },
+      { icon: 'water', text: 'Direct aan het Spaarne, met groen op loopafstand' },
+      { icon: 'home', text: 'Woonwijk Schalkwijk en Haarlem-Oost op fietsafstand' },
+      { icon: 'parking', text: 'Eigen parkeerplaats per unit, ruim voldoende bezoekersparkeren' },
+      { icon: 'lunch', text: 'Lunch en koffie binnen de Polder op loopafstand' },
     ],
     highlights: [
       'Rust aan het water, reuring om de hoek.',
       'Gevestigde bedrijvenlocatie in Haarlem.',
       'In de Metropoolregio Amsterdam.',
     ],
+    scarcityNote: 'Schaarste in Haarlem. Binnen de stadsgrenzen is dit een van de laatste nieuwbouw-locaties voor bedrijfsunits.',
   },
 
   status: {
