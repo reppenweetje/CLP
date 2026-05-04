@@ -2,11 +2,12 @@ import { useEffect } from 'react'
 
 // Bottom-sheet met alle gegeven antwoorden. Bezoeker kan een antwoord
 // "wijzigen": de flow rolt terug naar dat punt, alle downstream-antwoorden
-// worden gewist, lead-data blijft bewaard tenzij expliciet "vergeten".
+// worden gewist, lead-data blijft bewaard.
 //
-// Lead-data tonen we alleen als "we hebben dit al" met een aparte
-// vergeet-actie zodat de bezoeker er niet onnodig opnieuw door hoeft.
-export default function AnswersSheet({ open, answers, onClose, onEdit, onForgetLead, onReset }) {
+// Lead-data tonen we per veld (naam / e-mail / 06) zodat de bezoeker
+// alleen het veld kan aanpassen dat hij wil veranderen, of in één keer
+// alles vergeten.
+export default function AnswersSheet({ open, answers, onClose, onEdit, onEditLeadField, onForgetLead, onReset }) {
   useEffect(() => {
     if (!open) return
     const onKey = (e) => e.key === 'Escape' && onClose()
@@ -49,22 +50,55 @@ export default function AnswersSheet({ open, answers, onClose, onEdit, onForgetL
                 onClick={onForgetLead}
                 className="text-[11px] text-rose-700 hover:text-rose-900"
               >
-                Vergeten
+                Alles vergeten
               </button>
             </div>
-            <div className="space-y-1 text-[13px] text-ink">
+            <div className="rounded-xl bg-paper border border-mist-light overflow-hidden">
               {lead.firstName && (
-                <div><span className="text-ink-mute mr-2">Naam</span>{lead.firstName}</div>
+                <LeadRow
+                  label="Naam"
+                  value={lead.firstName}
+                  onEdit={() => {
+                    onEditLeadField('name')
+                    onClose()
+                  }}
+                />
               )}
               {lead.email && (
-                <div><span className="text-ink-mute mr-2">E-mail</span>{lead.email}</div>
+                <LeadRow
+                  label="E-mail"
+                  value={lead.email}
+                  onEdit={() => {
+                    onEditLeadField('email')
+                    onClose()
+                  }}
+                />
               )}
               {lead.phone && (
-                <div><span className="text-ink-mute mr-2">06</span>{lead.phone}</div>
+                <LeadRow
+                  label="06"
+                  value={lead.phone}
+                  onEdit={() => {
+                    onEditLeadField('phone')
+                    onClose()
+                  }}
+                />
+              )}
+              {!lead.phone && (
+                <LeadRow
+                  label="06"
+                  value="Niet gedeeld"
+                  muted
+                  onEdit={() => {
+                    onEditLeadField('phone')
+                    onClose()
+                  }}
+                  editLabel="Toevoegen"
+                />
               )}
             </div>
             <p className="text-[11px] text-ink-mute leading-snug mt-2">
-              We vragen deze niet opnieuw, tenzij je ze vergeet.
+              We vragen deze niet opnieuw, tenzij je ze aanpast of vergeet.
             </p>
           </div>
         )}
@@ -126,10 +160,31 @@ export default function AnswersSheet({ open, answers, onClose, onEdit, onForgetL
   )
 }
 
+function LeadRow({ label, value, onEdit, muted, editLabel = 'Aanpassen' }) {
+  return (
+    <div className="flex items-center gap-3 px-3.5 py-2.5 border-b border-mist-light last:border-b-0">
+      <div className="flex-1 min-w-0">
+        <div className="text-[10px] tracking-[0.16em] text-ink-mute uppercase">{label}</div>
+        <div className={`text-[13px] truncate ${muted ? 'text-ink-mute italic' : 'text-ink'}`}>
+          {value}
+        </div>
+      </div>
+      <button
+        onClick={onEdit}
+        className="text-[11px] text-midnite hover:text-midnite-soft border border-mist hover:border-midnite px-2.5 py-1 rounded-full transition shrink-0"
+      >
+        {editLabel}
+      </button>
+    </div>
+  )
+}
+
 const ROW_DEFS = [
   { key: 'intent', label: 'Voor wie' },
   { key: 'availabilityCheck', label: 'Beschikbaarheid bekeken' },
   { key: 'brochureTrigger', label: 'Brochure' },
+  { key: 'afhaakReason', label: 'Afhaak-reden' },
+  { key: 'rentRange', label: 'Huurprijs-range' },
   { key: 'size', label: 'Grootte begane grond' },
   { key: 'timeline', label: 'Termijn' },
   { key: 'followup', label: 'Vervolg' },

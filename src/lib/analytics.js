@@ -209,6 +209,7 @@ export function humanizeEventType(type) {
     case 'cta:brochure-clicked': return 'Brochure geopend'
     case 'direct-contact:requested': return 'Direct contact gevraagd'
     case 'financing:credion-shared': return 'Financiering naar Credion gedeeld'
+    case 'rent-match:registered': return 'Huur-interesse vastgelegd'
     case 'unit:detail-opened': return 'Unit-detail bekeken'
     default: return type
   }

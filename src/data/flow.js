@@ -70,6 +70,21 @@ export const flow = {
       ],
     },
 
+    // Sub-vraag voor het rent-match pad. Wanneer iemand aangeeft te
+    // willen huren slaan we de gewenste huurprijs-range op zodat we
+    // later kunnen koppelen aan beleggers die hun unit willen verhuren.
+    rentRange: {
+      key: 'rentRange',
+      label: 'Welke huurprijs zou je redelijk vinden per m² per jaar?',
+      options: [
+        { id: 'tot_150', label: 'Tot €150', score: 0 },
+        { id: '150_200', label: '€150 tot €200', score: 0 },
+        { id: '200_250', label: '€200 tot €250', score: 0 },
+        { id: 'meer_250', label: 'Meer dan €250', score: 0 },
+        { id: 'weet_niet', label: 'Weet ik nog niet', score: 0 },
+      ],
+    },
+
     // Size focus is begane grond zodat consument niet hoeft te
     // schatten over twee verdiepingen heen. Reden zit in de bot-copy.
     size: {

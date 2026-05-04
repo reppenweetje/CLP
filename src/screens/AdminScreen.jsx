@@ -75,10 +75,8 @@ export default function AdminScreen() {
       <header className="sticky top-0 z-10 bg-canvas/90 backdrop-blur-md border-b border-mist-light">
         <div className="mx-auto max-w-6xl px-5 sm:px-8 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-full bg-midnite text-paper flex items-center justify-center shrink-0">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <rect x="6" y="6" width="12" height="12" transform="rotate(45 12 12)" />
-              </svg>
+            <div className="w-9 h-9 rounded-full bg-midnite flex items-center justify-center shrink-0">
+              <img src="/images/repp-mark.svg" alt="" aria-hidden="true" className="w-[22px]" />
             </div>
             <div className="min-w-0">
               <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium leading-none whitespace-nowrap">REPP CLP analytics</div>

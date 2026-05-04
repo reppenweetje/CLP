@@ -32,10 +32,8 @@ export default function AppShell({
                   </svg>
                 </button>
               ) : (
-                <div className="w-7 h-7 rounded-full bg-midnite text-paper flex items-center justify-center">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                    <rect x="6" y="6" width="12" height="12" transform="rotate(45 12 12)" />
-                  </svg>
+                <div className="w-7 h-7 rounded-full bg-midnite flex items-center justify-center">
+                  <img src="/images/repp-mark.svg" alt="" aria-hidden="true" className="w-[18px]" />
                 </div>
               )}
               <div className="text-[12px] tracking-[0.18em] text-ink uppercase font-medium whitespace-nowrap">de hofman</div>

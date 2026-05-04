@@ -20,7 +20,7 @@ import BrochureBubble from './BrochureBubble.jsx'
 // Scrollable chat thread. Bij nieuwe messages scrollen we zo dat
 // het laatste user-bubble bovenaan komt te staan; de bot-replies daaronder
 // blijven leesbaar zonder dat de bezoeker handmatig terug moet scrollen.
-export default function ChatThread({ messages, onBrochure }) {
+export default function ChatThread({ messages, onBrochure, onReset }) {
   const containerRef = useRef(null)
   const prevLengthRef = useRef(0)
 
@@ -59,14 +59,14 @@ export default function ChatThread({ messages, onBrochure }) {
     <div ref={containerRef} className="flex-1 overflow-y-auto px-4 pt-4 pb-2 space-y-3">
       {messages.map((m, i) => (
         <div key={m.id} data-msg-idx={i}>
-          {renderMessage(m, { onBrochure })}
+          {renderMessage(m, { onBrochure, onReset })}
         </div>
       ))}
     </div>
   )
 }
 
-function renderMessage(m, { onBrochure }) {
+function renderMessage(m, { onBrochure, onReset }) {
   switch (m.kind) {
     case 'bot-text':
       return <BotMessage>{m.text}</BotMessage>
@@ -116,6 +116,7 @@ function renderMessage(m, { onBrochure }) {
           intro={m.payload.intro}
           summary={m.payload.summary}
           onBrochure={m.payload.hideBrochure ? null : onBrochure}
+          onReset={onReset}
         />
       )
     default:

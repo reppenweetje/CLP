@@ -370,7 +370,7 @@ export const project = {
     { name: 'Project R', role: 'projectteam' },
   ],
 
-  whatsappNumber: '+31612345678',
+  whatsappNumber: '+31616079428',
   // Outbound bel-nummer voor de header- en thankyou-CTA.
   phoneNumber: '020-2610080',
   brochureUrl: '/brochure.pdf',

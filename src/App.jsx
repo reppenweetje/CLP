@@ -81,7 +81,7 @@ function clearPersisted() {
 // Volgorde van de antwoord-keys voor downstream-clearing bij rollback.
 // Lead is bewust niet in deze lijst zodat naam/mail/06 behouden blijven
 // tenzij de bezoeker ze expliciet vergeet via de antwoorden-sheet.
-const ANSWER_ORDER = ['intent', 'availabilityCheck', 'brochureTrigger', 'afhaakReason', 'size', 'timeline', 'followup']
+const ANSWER_ORDER = ['intent', 'availabilityCheck', 'brochureTrigger', 'afhaakReason', 'rentRange', 'size', 'timeline', 'followup']
 
 function downstreamKeys(fromKey) {
   const idx = ANSWER_ORDER.indexOf(fromKey)
@@ -265,6 +265,9 @@ function Demo() {
     return init
   })
   const [answersOpen, setAnswersOpen] = useState(false)
+  // Bewaart de currentQuestion van vóór een lead-edit zodat we na het
+  // bijwerken van email/naam/06 terug kunnen naar waar de bezoeker was.
+  const [editReturnQuestion, setEditReturnQuestion] = useState(null)
 
   useEffect(() => {
     if (state.view === 'chat') persist(state)
@@ -378,6 +381,24 @@ function Demo() {
     // Afhaak-pad: registreer reden, sluit af met sterke WhatsApp-uitnodiging.
     if (q === 'afhaakReasons') {
       trackEvent('afhaak-reason:answered', { id: opt.id, label: opt.label })
+
+      // Rent-match sub-flow: bezoeker zoekt huur, niet koop. Slaan we de
+      // huurprijs-range op zodat we later kunnen koppelen aan beleggers
+      // in De Hofman die hun unit willen verhuren.
+      if (opt.id === 'huur') {
+        dispatch({ type: 'ANSWER', key: 'afhaakReason', value: answerValue(opt), next: 'rentRange' })
+        dispatch({
+          type: 'APPEND',
+          messages: [
+            { kind: 'user-text', text: userTextFromOpt(opt) },
+            { kind: 'bot-text', text: 'Begrijpelijk. Bij De Hofman zijn er ook beleggers die hun unit verhuren.' },
+            { kind: 'bot-text', text: 'Met je voorkeur kunnen we je in de toekomst koppelen aan een belegger als er een match is.' },
+            { kind: 'bot-text', text: flow.questions.rentRange.label },
+          ],
+        })
+        return
+      }
+
       trackEvent('flow:complete', { stage: 'afhaak', persona })
       const wa = whatsAppDeeplink(project, state.answers.lead?.firstName || '', `Geen match: ${opt.label.toLowerCase()}`)
       dispatch({ type: 'ANSWER', key: 'afhaakReason', value: answerValue(opt), next: null })
@@ -392,6 +413,36 @@ function Demo() {
             payload: {
               waLink: wa,
               summary: `Niet matchend: ${opt.label}`,
+              hideBrochure: true,
+            },
+          },
+        ],
+      })
+      return
+    }
+
+    // Rent-match: huurprijs-range vastleggen voor toekomstige
+    // matchmaking met beleggers. Deze data is goud voor REPP.
+    if (q === 'rentRange') {
+      trackEvent('rent-match:registered', { id: opt.id, label: opt.label })
+      trackEvent('flow:complete', { stage: 'rent-match', persona })
+      const wa = whatsAppDeeplink(
+        project,
+        state.answers.lead?.firstName || '',
+        `Huur-interesse, range ${opt.label}`,
+      )
+      dispatch({ type: 'ANSWER', key: 'rentRange', value: answerValue(opt), next: null })
+      dispatch({
+        type: 'APPEND',
+        messages: [
+          { kind: 'user-text', text: userTextFromOpt(opt) },
+          { kind: 'bot-text', text: 'Genoteerd. We bewaren je voorkeur en nemen contact op zodra er een match is.' },
+          { kind: 'bot-text', text: 'Mocht je nog vragen hebben, stuur ons dan gerust een WhatsApp.' },
+          {
+            kind: 'cta-card',
+            payload: {
+              waLink: wa,
+              summary: `Huur-interesse, ${opt.label}`,
               hideBrochure: true,
             },
           },
@@ -577,6 +628,65 @@ function Demo() {
     if (q === 'lead-email') return handleLeadEmailText(text)
     if (q === 'lead-name') return handleLeadNameText(text)
     if (q === 'lead-phone') return handleLeadPhoneText(text)
+    if (q === 'lead-edit-email') return handleLeadEditField('email', text)
+    if (q === 'lead-edit-name') return handleLeadEditField('name', text)
+    if (q === 'lead-edit-phone') return handleLeadEditField('phone', text)
+  }
+
+  // Eén handler voor alle drie de lead-edit-stappen. Valideert het veld,
+  // werkt leadDraft en answers.lead bij, en stuurt de bezoeker terug
+  // naar de oorspronkelijke currentQuestion.
+  function handleLeadEditField(field, text) {
+    const parsed = parseLeadInput(text)
+    let value = null
+    let error = null
+
+    if (field === 'email') {
+      if (parsed.email) value = parsed.email
+      else error = 'Het mailadres lijkt niet helemaal te kloppen. Kun je het opnieuw tikken?'
+    } else if (field === 'name') {
+      const fallback = text.trim().split(/\s+/)[0]
+      value = parsed.firstName || (fallback ? capitalize(fallback) : null)
+      if (!value) error = 'Kreeg je naam niet helemaal mee. Kun je het opnieuw typen?'
+    } else if (field === 'phone') {
+      if (parsed.phone) value = parsed.phone
+      else error = 'Daar zat geen geldig 06-nummer in. Kun je het opnieuw tikken?'
+    }
+
+    if (error) {
+      dispatch({
+        type: 'APPEND',
+        messages: [
+          { kind: 'user-text', text },
+          { kind: 'bot-text', text: error },
+        ],
+      })
+      return
+    }
+
+    const draftKey = field === 'name' ? 'firstName' : field
+    const trackEventName =
+      field === 'email' ? 'lead-email:submitted' : field === 'name' ? 'lead-name:submitted' : 'lead-phone:submitted'
+    trackEvent(trackEventName, { [draftKey]: value })
+
+    const newDraft = { ...state.leadDraft, [draftKey]: value }
+    const newLead = { ...(state.answers.lead || {}), [draftKey]: value }
+
+    dispatch({ type: 'LEAD_DRAFT', draft: newDraft })
+    dispatch({
+      type: 'ANSWER',
+      key: 'lead',
+      value: newLead,
+      next: editReturnQuestion ?? null,
+    })
+    setEditReturnQuestion(null)
+    dispatch({
+      type: 'APPEND',
+      messages: [
+        { kind: 'user-text', text },
+        { kind: 'bot-text', text: 'Bijgewerkt.' },
+      ],
+    })
   }
 
   function handleLeadEmailText(text) {
@@ -717,26 +827,51 @@ function Demo() {
   const headerWaLink = whatsAppDeeplink(project, state.answers.lead?.firstName || '', 'Graag info over De Hofman')
   const headerPhoneLink = buildPhoneLink(project.phoneNumber)
 
-  // Wijzig een eerder gegeven antwoord vanuit de antwoorden-sheet:
-  // de flow rolt terug naar dat punt en de bezoeker mag opnieuw kiezen.
+  // Wijzig een eerder gegeven antwoord vanuit de antwoorden-sheet.
+  // De flow rolt terug naar het punt vlak voor de oude user-bubble; de
+  // originele bot-vraag staat nog in de thread, dus de bezoeker ziet
+  // automatisch dezelfde vraag opnieuw met de chips. Geen duplicaat.
   const onEditAnswer = (key) => {
     trackEvent('answer:edit', { key })
     dispatch({ type: 'ROLLBACK', key })
-    // Re-prompt de vraag onder zijn target index
-    const questionLabel = key === 'afhaakReason'
-      ? flow.questions.afhaakReasons.label
-      : flow.questions[key]?.label
-    if (questionLabel) {
-      dispatch({
-        type: 'APPEND',
-        messages: [{ kind: 'bot-text', text: questionLabel }],
-      })
-    }
   }
 
   const onForgetLead = () => {
     trackEvent('answer:forget-lead', {})
     dispatch({ type: 'FORGET_LEAD' })
+  }
+
+  // Per-veld edit van lead. Veld wordt gewist en de bezoeker wordt
+  // gevraagd het opnieuw in te tikken via de chat-input. Andere lead-velden
+  // blijven bewaard. Na succes komt de bezoeker terug op zijn vorige
+  // currentQuestion (chips of niets).
+  const onEditLeadField = (field) => {
+    trackEvent('answer:edit-lead-field', { field })
+    const draftKey = field === 'name' ? 'firstName' : field
+    const newDraft = { ...state.leadDraft }
+    delete newDraft[draftKey]
+    dispatch({ type: 'LEAD_DRAFT', draft: newDraft })
+
+    const newLead = { ...(state.answers.lead || {}) }
+    delete newLead[draftKey]
+    const hasOtherFields = newLead.firstName || newLead.email || newLead.phone
+    dispatch({
+      type: 'ANSWER',
+      key: 'lead',
+      value: hasOtherFields ? newLead : undefined,
+      next: state.currentQuestion,
+    })
+
+    setEditReturnQuestion(state.currentQuestion)
+    dispatch({ type: 'SET_QUESTION', next: `lead-edit-${field}` })
+
+    const label =
+      field === 'email'
+        ? 'Wat is je e-mailadres?'
+        : field === 'name'
+        ? 'Wat is je naam?'
+        : 'Wat is je 06-nummer?'
+    dispatch({ type: 'APPEND', messages: [{ kind: 'bot-text', text: label }] })
   }
 
   const toggleDebug = () => dispatch({ type: 'TOGGLE_DEBUG' })
@@ -747,6 +882,7 @@ function Demo() {
   else if (state.currentQuestion === 'availabilityCheck') chipQuestion = flow.questions.availabilityCheck
   else if (state.currentQuestion === 'brochureTrigger') chipQuestion = flow.questions.brochureTrigger
   else if (state.currentQuestion === 'afhaakReasons' || state.currentQuestion === 'afhaakReason') chipQuestion = flow.questions.afhaakReasons
+  else if (state.currentQuestion === 'rentRange') chipQuestion = flow.questions.rentRange
   else if (state.currentQuestion === 'size') chipQuestion = flow.questions.size
   else if (state.currentQuestion === 'timeline') chipQuestion = flow.questions.timeline
   else if (state.currentQuestion === 'followup') chipQuestion = flow.questions.followup
@@ -774,11 +910,11 @@ function Demo() {
         { id: 'no', label: 'Liever niet' },
       ],
     }
-  } else if (state.currentQuestion === 'lead-email') {
+  } else if (state.currentQuestion === 'lead-email' || state.currentQuestion === 'lead-edit-email') {
     inputConfig = { placeholder: 'Je e-mailadres', inputMode: 'email' }
-  } else if (state.currentQuestion === 'lead-name') {
+  } else if (state.currentQuestion === 'lead-name' || state.currentQuestion === 'lead-edit-name') {
     inputConfig = { placeholder: 'Je naam', inputMode: undefined }
-  } else if (state.currentQuestion === 'lead-phone') {
+  } else if (state.currentQuestion === 'lead-phone' || state.currentQuestion === 'lead-edit-phone') {
     inputConfig = { placeholder: '06 12 34 56 78', inputMode: 'tel', validate: isValidPhoneText }
   }
 
@@ -804,7 +940,15 @@ function Demo() {
 
       {state.view === 'chat' && (
         <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-md">
-          <ChatThread messages={state.messages} onBrochure={onBrochure} />
+          <ChatThread
+            messages={state.messages}
+            onBrochure={onBrochure}
+            onReset={() => {
+              clearPersisted()
+              _id = 0
+              dispatch({ type: 'RESET' })
+            }}
+          />
           {chipQuestion && (
             <SuggestedChips options={chipQuestion.options} onPick={onChipPick} />
           )}
@@ -824,6 +968,7 @@ function Demo() {
         answers={state.answers}
         onClose={() => setAnswersOpen(false)}
         onEdit={onEditAnswer}
+        onEditLeadField={onEditLeadField}
         onForgetLead={onForgetLead}
         onReset={() => {
           clearPersisted()

@@ -8,6 +8,7 @@ export default function CtaBubble({
   phoneLink,
   phoneDisplay,
   onBrochure,
+  onReset,
   summary,
   intro,
 }) {
@@ -50,6 +51,20 @@ export default function CtaBubble({
               className="block w-full text-center rounded-full border border-midnite/40 bg-paper text-midnite font-medium py-3.5 text-[14px] hover:bg-canvas-2 transition"
             >
               Bekijk brochure
+            </button>
+          )}
+          {onReset && (
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined' && !window.confirm('Wil je opnieuw beginnen? Je antwoorden en gegevens worden gewist.')) {
+                  return
+                }
+                onReset()
+              }}
+              className="block w-full text-[12px] text-ink-mute hover:text-ink py-2 text-center transition"
+            >
+              Start opnieuw
             </button>
           )}
         </div>
