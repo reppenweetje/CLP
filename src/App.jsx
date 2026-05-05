@@ -1129,19 +1129,30 @@ function Demo() {
     }
   }
 
-  // Centrale WA-handler. Onderbreekt de klik wanneer we nog geen voornaam
-  // hebben en vraagt 'm eerst, zodat het prefilled WhatsApp-bericht
-  // persoonlijk klinkt en wij naam + 06 als koppel kunnen opslaan zodra
-  // de bezoeker terug-appt. Source is een korte string voor analytics.
-  // Summary wordt bewaard zodat we de WA-link na naam-capture opnieuw
-  // kunnen opbouwen met de zojuist gegeven naam.
+  // Centrale WA-handler. Twee paden:
+  //
+  //  1. Naam bekend: link altijd rebuilden met de huidige voornaam plus de
+  //     opgeslagen summary. Voorkomt dat een oude bubble (waarvan de waLink
+  //     bij dispatch werd opgebouwd) een achterhaalde naam bevat nadat de
+  //     bezoeker zijn naam via de antwoorden-sheet heeft gewijzigd.
+  //
+  //  2. Naam onbekend: onderbreek voor een naam-vraag. Daarna opent de
+  //     handleLeadNamePreWaText handler de WA-link met de zojuist gegeven
+  //     naam zodat naam plus 06 (uit de WA-reply) als koppel kunnen landen.
+  //
+  // Source is een korte string voor analytics. Summary is de klant-stem
+  // beschrijving van de situatie op het moment dat de bubble werd getoond.
   const requestWhatsAppOpen = (e, summary, source) => {
     trackEvent('cta:whatsapp-clicked', { location: source })
-    if (state.answers.lead?.firstName) {
-      // Naam bekend; laat de anchor zijn werk doen. Geen preventDefault.
+    if (e && e.preventDefault) e.preventDefault()
+    const lead = state.answers.lead || {}
+    if (lead.firstName) {
+      const wa = whatsAppDeeplink(project, lead.firstName, summary || '')
+      if (typeof window !== 'undefined') {
+        window.open(wa, '_blank', 'noopener,noreferrer')
+      }
       return
     }
-    if (e && e.preventDefault) e.preventDefault()
     setPendingWa({ summary: summary || '', source, returnQuestion: state.currentQuestion })
     dispatch({ type: 'SET_QUESTION', next: 'lead-name-pre-wa' })
     dispatch({
