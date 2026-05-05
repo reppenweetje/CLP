@@ -25,7 +25,7 @@ export default function ChatInput({ placeholder, inputMode, validate, onSend, se
   }
 
   return (
-    <div className="border-t border-mist-light bg-canvas/95 backdrop-blur-md px-4 pt-3 pb-4 shrink-0">
+    <div className="border-t border-mist-light bg-canvas/95 backdrop-blur-md px-4 pt-3 pb-3 shrink-0">
       <div className="flex items-center gap-2">
         <input
           ref={ref}
@@ -66,6 +66,18 @@ export default function ChatInput({ placeholder, inputMode, validate, onSend, se
             <polyline points="12 5 19 12 12 19" />
           </svg>
         </button>
+      </div>
+      <div className="text-[10.5px] text-ink-mute text-center mt-2 leading-tight">
+        We bewaren je antwoorden om je goed te helpen.{' '}
+        <a
+          href="/privacy.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-ink-soft hover:text-midnite underline underline-offset-2 decoration-mist hover:decoration-midnite"
+        >
+          Lees hoe in onze privacystatement
+        </a>
+        .
       </div>
     </div>
   )

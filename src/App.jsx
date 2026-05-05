@@ -606,6 +606,7 @@ function Demo() {
       dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: answerValue(opt), next: 'lead-email' })
       sendSequence(userTextFromOpt(opt), [
         { kind: 'bot-text', text: 'Wat is je e-mailadres?' },
+        { kind: 'bot-text', text: 'We mailen je de brochure en bewaren je voorkeur. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).' },
       ])
       return
     }
@@ -845,7 +846,7 @@ function Demo() {
         dispatch({ type: 'BEHAVIOR_MORE_INFO_VIEWED', id: 'financing' })
         sendSequence(userTextFromOpt(opt), [
           { kind: 'bot-text', text: 'Onze partner Credion kan vrijblijvend met je meedenken over de financiering.' },
-          { kind: 'bot-text', text: 'Wil je dat we je gegevens met Credion delen, zodat zij contact met je opnemen?' },
+          { kind: 'bot-text', text: 'Mag ik je naam, e-mailadres en 06 met Credion delen voor een vrijblijvende financieringsscan? Zonder je akkoord doen we dat niet.' },
         ])
         dispatch({ type: 'SET_QUESTION', next: 'financingAsk' })
         return

@@ -155,6 +155,19 @@ export default function AnswersSheet({ open, answers, onClose, onEdit, onEditLea
             Opnieuw beginnen
           </button>
         )}
+
+        <div className="mt-4 pt-3 border-t border-mist-light text-[11px] text-ink-mute leading-relaxed text-center">
+          We bewaren deze antwoorden lokaal in jouw browser.{' '}
+          <a
+            href="/privacy.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-ink-soft hover:text-midnite underline underline-offset-2 decoration-mist hover:decoration-midnite"
+          >
+            Lees ons privacystatement
+          </a>
+          .
+        </div>
       </div>
     </div>
   )

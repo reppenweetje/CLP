@@ -249,18 +249,32 @@ Geen formele versie-bump nodig (klein project, geen CLAUDE.md-regel daarvoor in 
 - Of REPP-eigen API endpoint, koppelen aan REMIND backend (Hetzner)
 
 ### b) AVG-compliance
-**Status**: nog niet ingericht.
+**Status**: basis ingericht (mei 2026), backend-deel staat nog open.
 
-**Op te lossen**:
-- Cookie-banner / consent flow (TCF v2 of light eigen variant)
-- Privacy-statement linkbaar vanuit chat-input ("Je gegevens worden..." link)
-- Data-retentie: hoe lang bewaren we lead-data zonder follow-up?
-- Recht op inzage / verwijdering: API-endpoint of email-flow
-- Verwerker-overeenkomsten met partijen (Vercel, gekozen analytics, gekozen CRM, Zapier voor Credion)
-- Logging van consent (timestamp, scope)
+**Wat al geregeld is**:
+- `public/privacy.html` — privacystatement in klant-stem, bereikbaar via permanente link onder elk chat-input/chip-veld plus voet van AnswersSheet
+- `BotMessage` ondersteunt inline `[tekst](url)` markdown-stijl links zodat bot in-context naar de privacystatement kan verwijzen
+- Bij `brochureTrigger=ja` (mailadres-vraag) verschijnt een bot-bubble met zin + privacystatement-link → just-in-time transparantie zonder cookie-banner
+- Financing-chip is herschreven naar expliciete consent met data + doel: "Mag ik je naam, e-mailadres en 06 met Credion delen voor een vrijblijvende financieringsscan?"
+- "Alles vergeten"-knop in AnswersSheet wist alle lokale data — eerste stap richting recht-op-vergetelheid
+- Geen tracking-cookies, geen IP-opslag, geen browser-fingerprinting; alleen `localStorage` op apparaat van bezoeker voor sessie-continuïteit
+
+**Wat nog open staat (voor wanneer er een backend komt)**:
+- Server-side data-retentie: hard-delete na 24 mnd zonder contact (in privacystatement al beloofd)
+- API-endpoint voor recht op inzage / verwijdering (nu alleen via mail naar jann@repp.nl)
+- Verwerkersovereenkomsten formaliseren: Vercel (host), Zapier (Credion-route), Meta (WhatsApp-handoff)
+- Zapier-US data-residency: check of we EU-data-residency contract hebben of bouw eigen webhook-relay
+- Logging van consent (timestamp + scope) — alleen relevant zodra er backend is
 - Pseudonimisering van events waar mogelijk (geen PII in event-payload)
-- Cookieless analytics waar kan (PostHog met EU-host, geen IP-opslag)
-- Wat valt onder "noodzakelijk" (geen consent nodig) vs marketing/profilering (consent nodig)
+- Cookieless analytics indien toegevoegd (PostHog EU-host of Plausible — beide AVG-vriendelijk)
+
+**Verwerkers/data-flow** (voor in DPA-administratie):
+| Partij | Wat ziet 'ie | Wanneer |
+|---|---|---|
+| Vercel | hosting van app, geen PII-opslag aan onze kant | altijd (technisch noodzakelijk) |
+| REPP zelf | naam, mail, 06 (optioneel), antwoorden, gedrag | bij brochure-keuze |
+| Credion via Zapier | naam, mail, 06 + project-context | alleen na expliciete chat-consent |
+| Meta WhatsApp | bericht-inhoud + bezoekers-06 | alleen als bezoeker zelf op WA-knop tikt |
 
 ### c) Template voor nieuwe bots
 **Status**: nu hardcoded voor De Hofman.
