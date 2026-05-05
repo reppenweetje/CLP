@@ -2,6 +2,81 @@
 
 Project-specifieke instructies voor Claude Code sessies. Lees dit eerst bij het openen van deze repo.
 
+## Template-modus: nieuw project opzetten
+
+Deze repo is óók een GitHub-template. Als je deze repo net gekloond hebt voor een nieuw project, of als de gebruiker zegt **"nieuw project"**, **"setup nieuwe CLP"**, **"start nieuwe template"** of iets in die richting, doorloop dan de wizard hieronder. Ga pas verder met development als de wizard klaar is.
+
+**Detecteer of dit een verse template is**: kijk of `src/data/project.js` nog `id: 'de-hofman'` bevat én of de gebruiker actief om een setup vraagt. Anders niets doen — de gebruiker werkt waarschijnlijk gewoon door op De Hofman.
+
+### Wizard — interactief, één vraag per keer
+
+Stel de vragen één voor één. Geef bij elke vraag een voorbeeld uit De Hofman als referentie. Schrijf de antwoorden samen op naar `src/data/project.js`. Run aan het einde `npm run check-content` om te valideren.
+
+**Stap 1 — projectbasis**
+- `id` (slug, lowercase met streepjes): bv. `de-hofman`, `het-anker`
+- `name` (lowercase): bv. `de hofman`
+- `displayName` (titlecase): bv. `De Hofman`, `Het Anker`
+- `tagline`: 1 regel, sentence case, vaak met locatie. bv. `Omdat Haarlem werkt.`
+- `shortDescription`: 1 zin met aantal units en locatie. bv. `14 hoogwaardige bedrijfsunits in Haarlem Waarderpolder.`
+
+**Stap 2 — sales team**
+- `salesTeam.bot.name`: chat-persona, default `Jesse`
+- `salesTeam.bot.org`: organisatie, default `REPP`
+- `salesTeam.rep.name`: collega die belt, default `Jann`
+- `salesTeam.rep.context`: korte marktcontext voor de handoff-copy. bv. `Waarderpolder-markt`, `centrum Utrecht-markt`
+
+**Stap 3 — contact**
+- `phoneNumber`: outbound bel-nummer voor header en cta-card
+- `whatsappNumber`: WA-nummer (begint met `+`, alleen cijfers en spaties)
+- `brochureUrl`: pad naar de brochure-PDF, default `/brochure.pdf` (zorg dat je `public/brochure.pdf` plaatst)
+
+**Stap 4 — assets-checklist**
+Vraag de gebruiker om de volgende files in `public/images/` te plaatsen voordat je doorgaat:
+- `hero.jpg` — exterieur of representatief beeld
+- `exterieur.jpg` — extra exterieur shot
+- 4-6 sfeerbeelden voor de gallery (mix exterieur + ingerichte units)
+- 1 beeld per unit-type (`unit-l.jpg`, `unit-xl.jpg`, etc.)
+Plus `public/brochure.pdf`. Run `npm run check-content` om te zien of alles aanwezig is.
+
+**Stap 5 — units en pricing**
+Vraag per unit-type: type-letter (L, XL, XXL), m², aantal lagen, prijs vanaf, beschikbaarheid (available/sold/coming_soon), pitch-zin, gebruiks-tags (`['opslag', 'showroom', ...]`). Bouw `project.units` en `project.sitePlan.rows`.
+
+**Stap 6 — persona-copy** (per persona: eigen_gebruiker, belegger, beide, onbekend)
+Voor elke persona vraag je:
+- `microIntro`: korte zin direct na de intent-keuze
+- `recommendCopy`: 1-2 zinnen na de unit-aanbeveling op het niet-hot-pad
+- `handoff.observations.calc / .multiUnit / .default`: korte erken-zinnen
+- `handoff.shortTimelineHeadline`: zin als bezoeker korte timeline koos
+- `handoff.body`: 2-3 zinnen die normaliseren ("een bedrijfsunit koop je niet zomaar") en de collega introduceren
+- `handoff.valueBullets`: 3 bullets met wat de call concreet oplevert
+- `waPhrase`: zin in de eerste persoon voor het prefilled WhatsApp-bericht (bv. `Ik kijk als belegger`)
+
+Bied de De Hofman versie aan als startpunt en pas aan op suggestie van de gebruiker. Voor `onbekend` mag `waPhrase` leeg zijn.
+
+**Stap 7 — overige content**
+- `highlights`: 6-8 USPs (title + body per stuk)
+- `uspCards`: 6 cards (zie shape in De Hofman)
+- `process`: 6 stappen van oriëntatie tot oplevering
+- `planning`: 4 fases met dates
+- `priceComparison`: rows met vergelijkbare projecten in dezelfde markt (peildatum + name + tag + price + isOurs flag)
+- `investor`: alleen als belegger-doelgroep (BAR-bandbreedte, kernfactoren, fiscale punten); anders leeg laten
+- `location`: bereikbaarheid + omgeving + kaart-coords
+- `contentCards`: 6-7 generieke content-cards
+
+**Stap 8 — bouw + check**
+1. `npm install` als nog niet gedaan
+2. `npm run check-content` — moet groen zijn voordat je verder kan
+3. `npm run check-copy` — Nederlandse interpunctie-check
+4. `npm run build` — full build verificatie
+5. `npm run dev` en doorloop de chat zelf om te zien of alle copy klopt
+6. Update `package.json` `name` en `description` naar het nieuwe project
+7. Update deze `CLAUDE.md` zodat de "Wat is dit" sectie het nieuwe project beschrijft
+8. Pas `public/architectuur.html` en `public/privacy.html` aan op het nieuwe project (zoek-en-vervang `De Hofman` / `Waarderpolder` / `Jann`)
+
+**Stap 9 — deploy**
+- Push naar een nieuwe Vercel-project (één per CLP)
+- Test header-WA, brochure-flow, hot-pad en cta-card eindes
+
 ## Wat is dit
 
 REPP **Conversational Landing Page** demo — pilot **De Hofman** (14 bedrijfsunits in Haarlem Waarderpolder). Mobile-first chat-thread waar bezoekers vanaf een Meta of Insta ad in een gestructureerde maar conversational flow door de project-info worden geleid en gecapteerd. Demo, dus geen echte CRM of mail-API maar wel een werkende WhatsApp-deeplink en een lokale state-machine die persona, aankoopfase en leadscore afleidt voor sales.

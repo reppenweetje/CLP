@@ -48,15 +48,23 @@ export function leadConfidence(answers) {
   return known.length
 }
 
-export function recommendCopy(persona) {
+export function recommendCopy(persona, project) {
+  // Wanneer een project wordt meegegeven lezen we de copy uit
+  // project.personaCopy, zodat dezelfde codepath voor elk project werkt.
+  // Voor backwards-compat blijft een hardcoded fallback bestaan, maar nieuwe
+  // call-sites moeten altijd `project` meegeven.
+  if (project?.personaCopy) {
+    const copy = project.personaCopy[persona] || project.personaCopy.onbekend
+    if (copy?.recommendCopy) return copy.recommendCopy
+  }
   if (persona === 'belegger') {
-    return 'Voor jou tellen vooral verhuurbaarheid, schaarste en prijs per m². De Hofman is kleinschalig, nieuwbouw en ligt op een gevestigde bedrijvenlocatie in Haarlem.'
+    return 'Voor jou tellen vooral verhuurbaarheid, schaarste en prijs per m².'
   }
   if (persona === 'eigen_gebruiker') {
-    return 'Dan zijn vooral bereikbaarheid, parkeren en flexibele indeling belangrijk. De Hofman is ontworpen voor ondernemers die praktische ruimte combineren met een representatieve uitstraling.'
+    return 'Dan zijn vooral bereikbaarheid, parkeren en flexibele indeling belangrijk.'
   }
   if (persona === 'beide') {
-    return 'Dan kijken we vanuit beide kanten. De Hofman werkt voor ondernemers die zelf willen gebruiken én voor beleggers die schaarste en locatie zoeken.'
+    return 'Dan kijken we vanuit beide kanten.'
   }
   return 'We tonen je vooral de informatie die voor jouw situatie relevant is.'
 }
@@ -103,19 +111,23 @@ export function whatsAppDeeplink(project, name, summary) {
 // "Jouw interesse"-strook in de cta-card. Bewust geen interne taal als
 // "lead", "match", "signaal" of "flow" — de bezoeker mag zichzelf nooit
 // als lead zien. Wel persoonlijke ik-voorkeur.
-export function buildCustomerWaSummary(answers) {
+//
+// Optionele `project` arg laat een project zijn eigen waPhrase per persona
+// opgeven via `project.personaCopy[persona].waPhrase`.
+export function buildCustomerWaSummary(answers, project) {
   const persona = answers?.intent?.persona
   const sizeId = answers?.size?.id
   const tlId = answers?.timeline?.id
 
-  const personaPhrase =
-    persona === 'belegger'
+  const overridePhrase = project?.personaCopy?.[persona]?.waPhrase
+  const personaPhrase = overridePhrase ||
+    (persona === 'belegger'
       ? 'Ik kijk als belegger'
       : persona === 'eigen_gebruiker'
       ? 'Ik zoek voor mijn eigen bedrijf'
       : persona === 'beide'
       ? 'Ik kijk zowel voor eigen gebruik als belegging'
-      : null
+      : null)
 
   const sizePhrase =
     sizeId === 'tot_50'

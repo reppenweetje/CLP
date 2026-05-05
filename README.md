@@ -1,14 +1,22 @@
 # REPP · Conversational Landing Page (CLP)
 
-Mobile-first conversational landing page demo voor REPP — pilot **De Hofman**, 14 hoogwaardige bedrijfsunits in Haarlem Waarderpolder.
+Mobile-first conversational landing page voor REPP-projecten. Eerste pilot: **De Hofman**, 14 bedrijfsunits in Haarlem Waarderpolder.
 
 > Voelt als chat, werkt als een gestructureerde verkoopassistent. Niet één centraal lead-formulier maar een doorlopende thread met chips en vrije-tekst input. Bouwt persona, aankoopfase en leadscore op uit gedrag — sales krijgt een compleet profiel terug.
+
+## Template-modus
+
+Deze repo is óók een **GitHub-template**: gebruik de _Use this template_ knop op GitHub om een nieuwe CLP voor een ander project op te starten. Het hele copy-traject (microIntro, recommendCopy, persoonlijke handoff, WhatsApp-zinnen) is data-gestuurd via `src/data/project.js` — geen forks van componenten nodig.
+
+Twee setup-paden:
+- **Met Claude Code**: open de gekloonde repo, zeg `nieuw project setup`. De wizard in [CLAUDE.md](CLAUDE.md) loopt 9 stappen door en vult alles in.
+- **Handmatig**: zie [SETUP.md](SETUP.md) voor stap-voor-stap instructies.
 
 ## Voor wie
 
 - **REPP intern** — om te beoordelen of een conversational-mobile-first flow beter werkt dan een klassieke landingspagina voor social-ad traffic
 - **Pilotproject De Hofman** — werkelijke prijzen + actuele beschikbaarheid van de 14 units uit `kopen.repp.nl`
-- **Architectuur is herbruikbaar** voor andere REPP-projecten (Project R, etc.) — vervang `src/data/project.js`
+- **Andere REPP-projecten** — Project R en alle vervolgprojecten gebruiken deze template als startpunt
 
 ## Live demo
 
@@ -95,11 +103,14 @@ thankyou (cta-card met WhatsApp deeplink + brochure)
 
 ## Documentatie
 
-- [CLAUDE.md](CLAUDE.md) — conventies, architectuur, anti-patterns voor Claude Code sessies
-- [src/data/project.js](src/data/project.js) — alle De Hofman content op één plek
+- [SETUP.md](SETUP.md) — nieuw project opzetten vanuit deze template
+- [CLAUDE.md](CLAUDE.md) — wizard voor template-modus + project-conventies + valkuilen voor Claude Code sessies
+- [src/data/project.js](src/data/project.js) — alle De Hofman content op één plek (de enige bron-van-waarheid die per project wijzigt)
 - [src/data/flow.js](src/data/flow.js) — vragen, chip-opties, scores
 - [src/lib/scoring.js](src/lib/scoring.js) — persona, stage, temperatuur, leadscore-logica
 - [src/lib/recommendation.js](src/lib/recommendation.js) — unit-advies, copy-keuzes, salesactie
+- [src/lib/handoffCopy.js](src/lib/handoffCopy.js) — persona-aware copy-resolver voor service-card en warm-handoff
+- [scripts/check-content.mjs](scripts/check-content.mjs) — validator die `project.js` en assets controleert; loopt automatisch in `prebuild`
 
 ## Roadmap
 

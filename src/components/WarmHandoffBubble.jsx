@@ -2,22 +2,13 @@ import Avatar from './Avatar.jsx'
 import { getTimeContext, getCallbackPromise } from '../lib/buyingSignals.js'
 
 // Persoonlijke nudge richting telefonisch contact wanneer een bezoeker
-// gedrag laat zien dat 'm hot maakt. Tone-of-voice volgt het 4-stappen model:
-// erken wat we zagen, normaliseer (een bedrijfsunit koop je niet zomaar),
-// bied waarde, geef control via de 3-tier ladder.
-//
-// Persona stuurt de toon, niet de structuur:
-//   belegger        rendement, BAR, scenario's, schaarste
-//   eigen_gebruiker bezichtiging, indeling, financiering
-//   beide           strategisch (verhuren of zelf gebruiken)
-//   onbekend        rustig, generiek, met inferred-leaning als hint
+// gedrag laat zien dat 'm hot maakt. Copy wordt door App.jsx via
+// buildHandoffCopy() opgebouwd uit project.personaCopy en als prop
+// meegegeven. Component is puur presentationaal.
 export default function WarmHandoffBubble({
-  persona,
-  signals = [],
-  unitFocus = null,
-  name = '',
+  copy,
+  salesTeam,
   hasPhone = false,
-  phoneDeclined = false,
   waLink,
   phoneLink,
   phoneDisplay,
@@ -29,7 +20,9 @@ export default function WarmHandoffBubble({
 }) {
   const time = getTimeContext()
   const promise = getCallbackPromise(time)
-  const copy = buildCopy(persona, { name, signals, unitFocus, hasPhone, phoneDeclined, promise })
+  const repName = salesTeam?.rep?.name || 'een collega'
+  const botOrg = salesTeam?.bot?.org || ''
+  const safeCopy = copy || { tag: 'Persoonlijk', headline: '', body: '', value: [], primaryCta: 'Laat mij bellen' }
 
   const primaryDone = outcome === 'callback' || outcome === 'phone' || outcome === 'whatsapp'
 
@@ -40,22 +33,22 @@ export default function WarmHandoffBubble({
         <div className="rounded-3xl rounded-tl-md bg-paper border border-mist-light overflow-hidden">
           <div className="px-4 pt-3.5 pb-3 border-b border-mist-light bg-canvas-2/50">
             <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium">
-              {copy.tag}
+              {safeCopy.tag}
             </div>
             <div className="text-[15px] font-semibold text-ink mt-1 leading-snug">
-              {copy.headline}
+              {safeCopy.headline}
             </div>
           </div>
           <div className="px-4 py-3.5 space-y-3">
-            <p className="text-[13.5px] text-ink leading-relaxed">{copy.body}</p>
+            <p className="text-[13.5px] text-ink leading-relaxed">{safeCopy.body}</p>
 
-            {copy.value && (
+            {safeCopy.value && (
               <div className="rounded-xl bg-canvas-2 border border-mist-light px-3 py-2.5">
                 <div className="text-[10px] tracking-[0.16em] text-ink-mute uppercase mb-1">
                   Wat we kort kunnen doornemen
                 </div>
                 <ul className="text-[12.5px] text-ink-soft leading-relaxed space-y-0.5">
-                  {copy.value.map((v) => (
+                  {safeCopy.value.map((v) => (
                     <li key={v} className="flex gap-2">
                       <span className="text-midnite mt-1.5 shrink-0 w-1 h-1 rounded-full bg-midnite" />
                       <span>{v}</span>
@@ -68,7 +61,7 @@ export default function WarmHandoffBubble({
             {outcome === 'callback' && (
               <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2.5">
                 <div className="text-[12.5px] text-emerald-900 leading-relaxed">
-                  Genoteerd. Jann belt je {promise}.
+                  Genoteerd. {repName} belt je {promise}.
                 </div>
               </div>
             )}
@@ -94,7 +87,7 @@ export default function WarmHandoffBubble({
                   className="w-full bg-midnite hover:bg-midnite-soft text-paper text-[13px] font-medium py-3 rounded-full transition flex items-center justify-center gap-2"
                 >
                   <PhoneIcon />
-                  <span>{copy.primaryCta}</span>
+                  <span>{safeCopy.primaryCta}</span>
                 </button>
                 <div className="flex gap-2">
                   <a
@@ -105,7 +98,7 @@ export default function WarmHandoffBubble({
                     className="flex-1 border border-mist hover:border-midnite text-ink hover:text-midnite text-[12.5px] py-2.5 rounded-full transition flex items-center justify-center gap-1.5"
                   >
                     <WaIcon />
-                    <span>WhatsApp REPP</span>
+                    <span>WhatsApp {botOrg || 'ons'}</span>
                   </a>
                   <a
                     href={phoneLink}
@@ -128,103 +121,6 @@ export default function WarmHandoffBubble({
       </div>
     </div>
   )
-}
-
-// Vier-staps copy-formule. Erken (tag + headline). Normaliseer (body).
-// Bied waarde (value bullets). Geef control (CTA).
-function buildCopy(persona, { name, signals, unitFocus, hasPhone, phoneDeclined, promise }) {
-  const greet = name ? `${name}, ` : ''
-  const signalIds = new Set(signals.map((s) => s.id))
-  const hasCalc = signalIds.has('rentability_calc') || signalIds.has('mortgage_calc')
-  const hasMultiUnit = signalIds.has('unit_detail_multi')
-  const hasShortTimeline = signalIds.has('timeline_zsm') || signalIds.has('timeline_3mnd')
-
-  const primaryCta = hasPhone
-    ? `Jann belt mij ${promise}`
-    : phoneDeclined
-    ? 'Plan een belmoment'
-    : 'Laat Jann mij terugbellen'
-
-  if (persona === 'belegger') {
-    const observation = hasCalc
-      ? 'we zien dat je in het rendement aan het rekenen bent'
-      : hasMultiUnit
-      ? 'we zien dat je verschillende units met elkaar vergelijkt'
-      : 'fijn dat je verder kijkt'
-    return {
-      tag: 'Persoonlijk',
-      headline: hasShortTimeline
-        ? `${greet}met deze timeline is even schakelen vaak handig`
-        : `${greet}${observation}`,
-      body:
-        'Een bedrijfsunit als belegging koop je niet zomaar. ' +
-        'Mijn collega Jann kent de Waarderpolder-markt en kan in 10 minuten met je door de cijfers ' +
-        'lopen en laten zien wat er nu nog beschikbaar is.',
-      value: [
-        'BAR-scenario\'s op basis van actuele markthuur Waarderpolder',
-        'Welke units in De Hofman het hardst lopen en waarom',
-        'Wat aankoop in privé of bv financieel-fiscaal verschilt',
-      ],
-      primaryCta,
-    }
-  }
-
-  if (persona === 'eigen_gebruiker') {
-    const observation = hasCalc
-      ? 'we zien dat je de maandlasten aan het uitrekenen bent'
-      : hasMultiUnit
-      ? 'we zien dat je je in meerdere units verdiept'
-      : 'fijn dat je verder kijkt'
-    return {
-      tag: 'Persoonlijk',
-      headline: hasShortTimeline
-        ? `${greet}met die timeline is een korte call vaak prettiger dan veel mailen`
-        : `${greet}${observation}`,
-      body:
-        'Een bedrijfsunit voor je eigen bedrijf koop je niet elke dag. ' +
-        'Mijn collega Jann denkt graag tien minuten met je mee over indeling, ' +
-        'financiering en de stap naar een bezichtiging.',
-      value: [
-        'Welke unit qua indeling en grootte past bij jouw bedrijf',
-        'Bezichtigings­moment plannen als dat zinvol is',
-        'Wat de stap naar financiering concreet inhoudt',
-      ],
-      primaryCta,
-    }
-  }
-
-  if (persona === 'beide') {
-    return {
-      tag: 'Persoonlijk',
-      headline: `${greet}je kijkt vanuit twee kanten, laat ons even meedenken`,
-      body:
-        'Of je nu zelf gebruikt of verhuurt: een bedrijfsunit koop je niet zomaar. ' +
-        'Mijn collega Jann legt graag in een korte call beide scenario\'s naast ' +
-        'elkaar voor jouw situatie.',
-      value: [
-        'Eigen gebruik versus verhuur: wat brengt wat op',
-        'Welke unit voor welke optie het meest geschikt is',
-        'Hoe collega-kopers in De Hofman dit aanpakken',
-      ],
-      primaryCta,
-    }
-  }
-
-  // Onbekend persona: rustig en open. Inferred leaning kan al iets gestuurd hebben.
-  return {
-    tag: 'Persoonlijk',
-    headline: `${greet}fijn dat je rondkijkt`,
-    body:
-      'Een bedrijfsunit koop je niet zomaar. Mijn collega Jann denkt graag ' +
-      'tien minuten met je mee, zonder verplichting. Vaak prettiger dan ' +
-      'zelf alles uitzoeken.',
-    value: [
-      'Wat De Hofman onderscheidt van andere bedrijfsunits in Haarlem',
-      'Welke unit past bij jouw situatie',
-      'Wat de volgende stap concreet zou kunnen zijn',
-    ],
-    primaryCta,
-  }
 }
 
 function PhoneIcon() {

@@ -388,6 +388,113 @@ export const project = {
   brochureUrl: '/brochure.pdf',
   // Webhook voor financiering-doorgeven aan Credion (Zapier-trigger).
   credionWebhookUrl: 'https://hooks.zapier.com/hooks/catch/2082653/ua9zc1l/',
+
+  // Sales team. Bot is de chat-persona (kop van elk bot-bericht); rep is de
+  // mens die belt en in de handoff-copy genoemd wordt. Per project anders
+  // mogelijk; default Jesse (REPP) en Jann.
+  salesTeam: {
+    bot: { name: 'Jesse', org: 'REPP' },
+    rep: { name: 'Jann', context: 'Waarderpolder-markt' },
+  },
+
+  // Persona-aware copy. Elke persona heeft vier buckets: microIntro
+  // (direct na de intent-keuze), recommendCopy (na de unit-aanbeveling op
+  // het niet-hot-pad), handoff (de service-card en warm-handoff teksten),
+  // en waPhrase (de eerste zin in het prefilled WhatsApp-bericht).
+  //
+  // Voor template-projecten: deze kun je per project geheel overschrijven.
+  // Refereer in body of valueBullets gerust naar project-specifieke
+  // kenmerken; geen placeholders, gewoon volledige zinnen.
+  personaCopy: {
+    eigen_gebruiker: {
+      microIntro: 'Helder. Dan zijn vooral bereikbaarheid, parkeren en flexibele indeling belangrijk.',
+      recommendCopy: 'Dan zijn vooral bereikbaarheid, parkeren en flexibele indeling belangrijk. De Hofman is ontworpen voor ondernemers die praktische ruimte combineren met een representatieve uitstraling.',
+      handoff: {
+        observations: {
+          calc: 'we zien dat je de maandlasten aan het uitrekenen bent',
+          multiUnit: 'we zien dat je je in meerdere units verdiept',
+          default: 'fijn dat je verder kijkt',
+        },
+        shortTimelineHeadline: 'met die timeline is een korte call vaak prettiger dan veel mailen',
+        body:
+          'Een bedrijfsunit voor je eigen bedrijf koop je niet elke dag. ' +
+          'Mijn collega Jann denkt graag tien minuten met je mee over indeling, ' +
+          'financiering en de stap naar een bezichtiging.',
+        valueBullets: [
+          'Welke unit qua indeling en grootte past bij jouw bedrijf',
+          'Bezichtigings­moment plannen als dat zinvol is',
+          'Wat de stap naar financiering concreet inhoudt',
+        ],
+      },
+      waPhrase: 'Ik zoek voor mijn eigen bedrijf',
+    },
+    belegger: {
+      microIntro: 'Helder. Voor jou tellen vooral verhuurbaarheid, schaarste en prijs per m².',
+      recommendCopy: 'Voor jou tellen vooral verhuurbaarheid, schaarste en prijs per m². De Hofman is kleinschalig, nieuwbouw en ligt op een gevestigde bedrijvenlocatie in Haarlem.',
+      handoff: {
+        observations: {
+          calc: 'we zien dat je in het rendement aan het rekenen bent',
+          multiUnit: 'we zien dat je verschillende units met elkaar vergelijkt',
+          default: 'fijn dat je verder kijkt',
+        },
+        shortTimelineHeadline: 'met deze timeline is even schakelen vaak handig',
+        body:
+          'Een bedrijfsunit als belegging koop je niet zomaar. ' +
+          'Mijn collega Jann kent de Waarderpolder-markt en kan in 10 minuten met je door de cijfers ' +
+          'lopen en laten zien wat er nu nog beschikbaar is.',
+        valueBullets: [
+          "BAR-scenario's op basis van actuele markthuur Waarderpolder",
+          'Welke units in De Hofman het hardst lopen en waarom',
+          'Wat aankoop in privé of bv financieel-fiscaal verschilt',
+        ],
+      },
+      waPhrase: 'Ik kijk als belegger',
+    },
+    beide: {
+      microIntro: 'Helder. Dan kijken we vanuit beide kanten: eigen gebruik én beleggingsperspectief.',
+      recommendCopy: 'Dan kijken we vanuit beide kanten. De Hofman werkt voor ondernemers die zelf willen gebruiken én voor beleggers die schaarste en locatie zoeken.',
+      handoff: {
+        observations: {
+          calc: 'we zien dat je aan het rekenen bent',
+          multiUnit: 'we zien dat je verschillende units met elkaar vergelijkt',
+          default: 'je kijkt vanuit twee kanten, laat ons even meedenken',
+        },
+        shortTimelineHeadline: 'met deze timeline is even schakelen vaak handig',
+        body:
+          'Of je nu zelf gebruikt of verhuurt: een bedrijfsunit koop je niet zomaar. ' +
+          "Mijn collega Jann legt graag in een korte call beide scenario's naast " +
+          'elkaar voor jouw situatie.',
+        valueBullets: [
+          'Eigen gebruik versus verhuur: wat brengt wat op',
+          'Welke unit voor welke optie het meest geschikt is',
+          'Hoe collega-kopers in De Hofman dit aanpakken',
+        ],
+      },
+      waPhrase: 'Ik kijk zowel voor eigen gebruik als belegging',
+    },
+    onbekend: {
+      microIntro: 'Goed om te weten. We tonen de informatie die voor jouw situatie het meest relevant is.',
+      recommendCopy: 'We tonen je vooral de informatie die voor jouw situatie relevant is.',
+      handoff: {
+        observations: {
+          calc: 'we zien dat je aan het rekenen bent',
+          multiUnit: 'we zien dat je je in meerdere units verdiept',
+          default: 'fijn dat je rondkijkt',
+        },
+        shortTimelineHeadline: 'met die timeline is even schakelen vaak handig',
+        body:
+          'Een bedrijfsunit koop je niet zomaar. Mijn collega Jann denkt graag ' +
+          'tien minuten met je mee, zonder verplichting. Vaak prettiger dan ' +
+          'zelf alles uitzoeken.',
+        valueBullets: [
+          'Wat De Hofman onderscheidt van andere bedrijfsunits in Haarlem',
+          'Welke unit past bij jouw situatie',
+          'Wat de volgende stap concreet zou kunnen zijn',
+        ],
+      },
+      waPhrase: '',
+    },
+  },
 }
 
 // Volgorde van USP-cards aangepast aan persona.

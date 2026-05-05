@@ -92,12 +92,9 @@ function renderMessage(m, { onBrochure, onReset, onUnitView, onCalcInteract, onH
     case 'warm-handoff':
       return (
         <WarmHandoffBubble
-          persona={m.payload.persona}
-          signals={m.payload.signals}
-          unitFocus={m.payload.unitFocus}
-          name={m.payload.name}
+          copy={m.payload.copy}
+          salesTeam={m.payload.salesTeam}
           hasPhone={m.payload.hasPhone}
-          phoneDeclined={m.payload.phoneDeclined}
           waLink={m.payload.waLink}
           phoneLink={m.payload.phoneLink}
           phoneDisplay={m.payload.phoneDisplay}
@@ -115,12 +112,10 @@ function renderMessage(m, { onBrochure, onReset, onUnitView, onCalcInteract, onH
       return (
         <ServiceCardBubble
           unit={m.payload.unit}
-          persona={m.payload.persona}
-          signals={m.payload.signals}
-          name={m.payload.name}
+          copy={m.payload.copy}
+          salesTeam={m.payload.salesTeam}
           hasPhone={m.payload.hasPhone}
           phoneDisplay={m.payload.phoneDisplay}
-          phoneDeclined={m.payload.phoneDeclined}
           waLink={m.payload.waLink}
           phoneLink={m.payload.phoneLink}
           phoneTextDisplay={m.payload.phoneTextDisplay}

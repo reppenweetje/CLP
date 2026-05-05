@@ -21,6 +21,7 @@ import { parseLeadInput, mergeLead } from './lib/parseLead.js'
 import { startNewSession, trackEvent } from './lib/analytics.js'
 import { sendCredionLead } from './lib/credion.js'
 import { computeBuyingSignals, EMPTY_BEHAVIORS, getCallbackPromise, getTimeContext } from './lib/buyingSignals.js'
+import { buildHandoffCopy, resolveMicroIntro, resolveRecommendCopy } from './lib/handoffCopy.js'
 
 import AppShell from './components/AppShell.jsx'
 import IntroScreen from './components/IntroScreen.jsx'
@@ -100,13 +101,14 @@ function reducer(state, action) {
   switch (action.type) {
     case 'START_CHAT': {
       const intentQ = flow.questions.intent
+      const bot = action.bot || { name: 'Jesse', org: 'REPP' }
       // Eerste bubble direct in beeld (anders blijft het scherm leeg met
       // typing-indicator), de rest in de release-queue.
       return {
         ...state,
         view: 'chat',
         messages: [
-          { id: nextId(), kind: 'bot-text', text: 'Hoi, ik ben Jesse van REPP.' },
+          { id: nextId(), kind: 'bot-text', text: `Hoi, ik ben ${bot.name} van ${bot.org}.` },
         ],
         messageQueue: [
           { kind: 'bot-text', text: 'Om de juiste brochure en prijzen met je te delen heb ik een korte vraag.' },
@@ -222,10 +224,7 @@ function reducer(state, action) {
 }
 
 function pickMicroIntro(persona) {
-  if (persona === 'belegger') return 'Helder. Voor jou tellen vooral verhuurbaarheid, schaarste en prijs per m².'
-  if (persona === 'eigen_gebruiker') return 'Helder. Dan zijn vooral bereikbaarheid, parkeren en flexibele indeling belangrijk.'
-  if (persona === 'beide') return 'Helder. Dan kijken we vanuit beide kanten: eigen gebruik én beleggingsperspectief.'
-  return 'Goed om te weten. We tonen de informatie die voor jouw situatie het meest relevant is.'
+  return resolveMicroIntro(persona, project)
 }
 
 function userTextFromOpt(opt) {
@@ -470,7 +469,7 @@ function Demo() {
     const lead = state.answers.lead || {}
     const phoneDeclined = !lead.phone && state.behaviors?.phoneAskedDeclined === true
 
-    const summary = buildCustomerWaSummary(state.answers)
+    const summary = buildCustomerWaSummary(state.answers, project)
     const wa = whatsAppDeeplink(project, lead.firstName || '', summary)
     const phoneLink = buildPhoneLink(project.phoneNumber)
 
@@ -484,6 +483,12 @@ function Demo() {
       currentQuestion: state.currentQuestion,
     })
 
+    const handoffCopy = buildHandoffCopy(personaForCopy, project, {
+      signals: buying.signals,
+      name: lead.firstName || '',
+      hasPhone: !!lead.phone,
+      phoneDeclined,
+    })
     dispatch({ type: 'WARM_HANDOFF_SHOWN' })
     dispatch({
       type: 'ENQUEUE',
@@ -491,12 +496,9 @@ function Demo() {
         {
           kind: 'warm-handoff',
           payload: {
-            persona: personaForCopy,
-            signals: buying.signals,
-            unitFocus: state.behaviors?.lastUnitViewed || null,
-            name: lead.firstName || '',
+            copy: handoffCopy,
+            salesTeam: project.salesTeam,
             hasPhone: !!lead.phone,
-            phoneDeclined,
             waLink: wa,
             waSummary: summary,
             phoneLink,
@@ -520,7 +522,7 @@ function Demo() {
     startNewSession()
     trackEvent('session:start', { variant })
     trackEvent('intro:cta-clicked', { variant })
-    dispatch({ type: 'START_CHAT' })
+    dispatch({ type: 'START_CHAT', bot: project.salesTeam?.bot })
   }
 
   // Helper: maakt een answer-value met _msgCountBefore zodat ROLLBACK
@@ -700,7 +702,7 @@ function Demo() {
       const merged = { ...state.answers, timeline: opt }
       const unit = recommendUnit(merged, project)
       const personaNext = derivePersona(merged)
-      const copy = recommendCopy(personaNext)
+      const copy = recommendCopy(personaNext, project)
       const confidence = leadConfidence(merged)
       trackEvent('timeline:answered', { id: opt.id, label: opt.label, recommendedUnit: unit.primary?.type })
 
@@ -719,7 +721,7 @@ function Demo() {
           buyingNext.inferredPersona !== 'onbekend' ? buyingNext.inferredPersona : personaNext
         const lead = state.answers.lead || {}
         const phoneDeclined = !lead.phone && state.behaviors?.phoneAskedDeclined === true
-        const summary = buildCustomerWaSummary(merged)
+        const summary = buildCustomerWaSummary(merged, project)
         const wa = whatsAppDeeplink(project, lead.firstName || '', summary)
         const phoneLink = buildPhoneLink(project.phoneNumber)
 
@@ -754,12 +756,15 @@ function Demo() {
             kind: 'service-card',
             payload: {
               unit,
-              persona: personaForCard,
-              signals: buyingNext.signals,
-              name: lead.firstName || '',
+              copy: buildHandoffCopy(personaForCard, project, {
+                signals: buyingNext.signals,
+                name: lead.firstName || '',
+                hasPhone: !!lead.phone,
+                phoneDeclined,
+              }),
+              salesTeam: project.salesTeam,
               hasPhone: !!lead.phone,
               phoneDisplay: lead.phone || '',
-              phoneDeclined,
               waLink: wa,
               waSummary: summary,
               phoneLink,
@@ -815,7 +820,7 @@ function Demo() {
         // Direct contact: einde van de flow met cta-card (bellen + WhatsApp).
         const merged = state.answers
         const personaNext = derivePersona(merged)
-        const customerSummary = buildCustomerWaSummary(merged)
+        const customerSummary = buildCustomerWaSummary(merged, project)
         const wa = whatsAppDeeplink(project, state.answers.lead?.firstName, customerSummary)
         const phoneLink = buildPhoneLink(project.phoneNumber)
         trackEvent('direct-contact:requested', { from: 'moreInfo' })
@@ -883,7 +888,7 @@ function Demo() {
       const personaNext = derivePersona(merged)
       const stageNext = deriveStage(merged)
       const tc = thankYouCopy(stageNext, personaNext, state.answers.lead?.firstName)
-      const customerSummary = buildCustomerWaSummary(merged)
+      const customerSummary = buildCustomerWaSummary(merged, project)
       const wa = whatsAppDeeplink(project, state.answers.lead?.firstName, customerSummary)
       trackEvent('followup:answered', { id: opt.id, label: opt.label })
       trackEvent('flow:complete', { stage: stageNext, persona: personaNext })
