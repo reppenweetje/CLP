@@ -407,7 +407,7 @@ export const project = {
   // kenmerken; geen placeholders, gewoon volledige zinnen.
   personaCopy: {
     eigen_gebruiker: {
-      microIntro: 'Helder. Dan zijn vooral bereikbaarheid, parkeren en flexibele indeling belangrijk.',
+      microIntro: 'Helemaal goed. Dan ga ik je wat meer laten zien over De Hofman, zodat je een goed beeld krijgt van wat bij jouw wensen past.',
       recommendCopy: 'Dan zijn vooral bereikbaarheid, parkeren en flexibele indeling belangrijk. De Hofman is ontworpen voor ondernemers die praktische ruimte combineren met een representatieve uitstraling.',
       handoff: {
         observations: {
@@ -429,7 +429,7 @@ export const project = {
       waPhrase: 'Ik zoek voor mijn eigen bedrijf',
     },
     belegger: {
-      microIntro: 'Helder. Voor jou tellen vooral verhuurbaarheid, schaarste en prijs per m².',
+      microIntro: 'Helemaal goed. Dan ga ik je wat meer laten zien over De Hofman, met aandacht voor de cijfers en de markt.',
       recommendCopy: 'Voor jou tellen vooral verhuurbaarheid, schaarste en prijs per m². De Hofman is kleinschalig, nieuwbouw en ligt op een gevestigde bedrijvenlocatie in Haarlem.',
       handoff: {
         observations: {
@@ -451,7 +451,7 @@ export const project = {
       waPhrase: 'Ik kijk als belegger',
     },
     beide: {
-      microIntro: 'Helder. Dan kijken we vanuit beide kanten: eigen gebruik én beleggingsperspectief.',
+      microIntro: 'Helemaal goed. Dan ga ik je wat meer laten zien over De Hofman, vanuit beide kanten — eigen gebruik én beleggingsperspectief.',
       recommendCopy: 'Dan kijken we vanuit beide kanten. De Hofman werkt voor ondernemers die zelf willen gebruiken én voor beleggers die schaarste en locatie zoeken.',
       handoff: {
         observations: {
@@ -473,7 +473,7 @@ export const project = {
       waPhrase: 'Ik kijk zowel voor eigen gebruik als belegging',
     },
     onbekend: {
-      microIntro: 'Goed om te weten. We tonen de informatie die voor jouw situatie het meest relevant is.',
+      microIntro: 'Helemaal goed. Dan ga ik je wat meer laten zien over De Hofman, zodat je een goed beeld krijgt van wat bij jouw wensen past.',
       recommendCopy: 'We tonen je vooral de informatie die voor jouw situatie relevant is.',
       handoff: {
         observations: {

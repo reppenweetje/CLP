@@ -28,7 +28,7 @@ export function buildHandoffCopy(persona, project, { signals = [], name = '', ha
     ? `${greet}${handoff.shortTimelineHeadline}`
     : observation
     ? `${greet}${observation}`
-    : greet.trim() || 'Persoonlijk'
+    : greet.trim() || 'Hulp op maat'
 
   const primaryCta = hasPhone
     ? `Laat ${repName} mij bellen`
@@ -37,7 +37,7 @@ export function buildHandoffCopy(persona, project, { signals = [], name = '', ha
     : `Laat ${repName} mij bellen`
 
   return {
-    tag: 'Persoonlijk',
+    tag: 'Hulp op maat',
     headline,
     body: handoff.body || '',
     value: handoff.valueBullets || [],

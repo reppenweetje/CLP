@@ -98,13 +98,16 @@ export const flow = {
     // later kunnen koppelen aan beleggers die hun unit willen verhuren.
     rentRange: {
       key: 'rentRange',
-      label: 'Welke huurprijs zou je redelijk vinden per m² per jaar?',
+      // Per-maand frame is voor de meeste mensen direct te begrijpen.
+      // Per m²/jaar (de B2B-conventie) was te abstract — feedback bevestigde
+      // dat. We rekenen intern indien nodig terug.
+      label: 'Welk bedrag vind je redelijk per maand?',
       options: [
-        { id: 'tot_150', label: 'Tot €150', score: 0 },
-        { id: '150_200', label: '€150 tot €200', score: 0 },
-        { id: '200_250', label: '€200 tot €250', score: 0 },
-        { id: 'meer_250', label: 'Meer dan €250', score: 0 },
-        { id: 'weet_niet', label: 'Weet ik nog niet', score: 0 },
+        { id: 'tot_1500',   label: 'Tot €1500',         score: 0 },
+        { id: '1500_2500',  label: '€1500 tot €2500',   score: 0 },
+        { id: '2500_4000',  label: '€2500 tot €4000',   score: 0 },
+        { id: 'meer_4000',  label: 'Meer dan €4000',    score: 0 },
+        { id: 'weet_niet',  label: 'Weet ik nog niet',  score: 0 },
       ],
     },
 

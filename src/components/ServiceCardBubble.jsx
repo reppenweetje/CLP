@@ -36,7 +36,7 @@ export default function ServiceCardBubble({
   const time = getTimeContext()
   const promise = getCallbackPromise(time)
   const u = unit?.primary
-  const safeCopy = copy || { tag: 'Persoonlijk', headline: '', body: '', value: [], primaryCta: 'Laat mij bellen' }
+  const safeCopy = copy || { tag: 'Hulp op maat', headline: '', body: '', value: [], primaryCta: 'Laat mij bellen' }
 
   const primaryDone = outcome === 'callback' || outcome === 'phone' || outcome === 'whatsapp'
   const isInteractive = !primaryDone && outcome !== 'dismissed'

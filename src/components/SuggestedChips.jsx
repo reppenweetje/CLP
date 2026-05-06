@@ -1,7 +1,13 @@
 // Chips als suggested replies onderaan het scherm.
-// Horizontale scroll bij veel opties zodat de chip-bar maar één rij hoog is en
-// niet over het hele scherm uitsmeert. WhatsApp QuickReply patroon: belangrijke
-// chips eerst, swipe voor meer.
+//
+// Layout-keuze (na user-feedback): wrap-naar-volgende-regel ipv horizontale
+// scroll. De gebruiker zag in de oude versie alleen de eerste 2-3 opties en
+// moest naar rechts scrollen om de rest te ontdekken — onontdekte opties
+// = lagere conversie. Wrap zorgt dat alle opties in één oogopslag zichtbaar
+// zijn. Compacte rechter-padding houdt 't visueel rustig.
+//
+// Bij ≥5 opties (bv. afhaak-redenen) wordt 't 2 regels — nog steeds
+// makkelijker te scannen dan side-scroll.
 export default function SuggestedChips({ options, onPick, hint }) {
   if (!options || options.length === 0) return null
   return (
@@ -9,15 +15,12 @@ export default function SuggestedChips({ options, onPick, hint }) {
       {hint && (
         <div className="text-[11px] tracking-wider text-ink-mute uppercase mb-2 px-4">{hint}</div>
       )}
-      <div
-        className="flex gap-2 overflow-x-auto px-4 [&::-webkit-scrollbar]:hidden"
-        style={{ scrollbarWidth: 'none' }}
-      >
+      <div className="flex flex-wrap gap-2 px-4 justify-center">
         {options.map((opt) => (
           <button
             key={opt.id}
             onClick={() => onPick(opt)}
-            className="shrink-0 rounded-full bg-paper border border-mist hover:border-midnite hover:bg-canvas-2 active:scale-[0.98] text-ink text-[13.5px] px-3.5 py-2 transition leading-snug whitespace-nowrap"
+            className="rounded-full bg-paper border border-mist hover:border-midnite hover:bg-canvas-2 active:scale-[0.98] text-ink text-[13.5px] px-3.5 py-2 transition leading-snug"
           >
             {opt.label}
           </button>

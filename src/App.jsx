@@ -172,12 +172,22 @@ function reducer(state, action) {
       const removeKeys = downstreamKeys(action.key)
       const newAnswers = { ...state.answers }
       for (const k of removeKeys) delete newAnswers[k]
+      // BUG-fix #14: queue moet ook leeg, anders blijft de chip/input
+      // verborgen achter de check `messageQueue.length === 0` en lijkt
+      // de chat vast te zitten. Behaviors-reset voorkomt dat een eerder
+      // getoonde warm-handoff blokkerend blijft staan na rollback van
+      // size/timeline (die hot-signal-input leveren).
+      const newBehaviors = ['size', 'timeline', 'followup'].includes(action.key)
+        ? { ...state.behaviors, warmHandoffShown: false, warmHandoffOutcome: null }
+        : state.behaviors
       return {
         ...state,
         messages: state.messages.slice(0, idx),
+        messageQueue: [],
         answers: newAnswers,
-        currentQuestion: action.key === 'followup' || action.key === 'timeline' || action.key === 'size' ? action.key : action.key,
+        currentQuestion: action.key,
         moreInfoSeen: ['size', 'timeline', 'followup'].includes(action.key) ? [] : state.moreInfoSeen,
+        behaviors: newBehaviors,
       }
     }
     case 'FORGET_LEAD':
@@ -614,8 +624,13 @@ function Demo() {
       const microIntro = pickMicroIntro(personaNext)
       const cards = uspCardOrder(personaNext)
       dispatch({ type: 'ANSWER', key: 'intent', value: answerValue(opt), next: 'availabilityCheck' })
+      // Aankondiging vóór de carousel zodat de bezoeker begrijpt dat
+      // 't om meerdere kaarten gaat en weet dat 'ie naar rechts kan
+      // vegen. Voorkomt dat de eerste kaart als enige bron wordt
+      // gezien.
       sendSequence(userTextFromOpt(opt), [
         { kind: 'bot-text', text: microIntro },
+        { kind: 'bot-text', text: 'Ik laat je een paar kaarten zien met meer uitleg en de belangrijke aspecten van het project. Veeg naar rechts om ze allemaal te bekijken.' },
         { kind: 'usp-cards', payload: { cards } },
         { kind: 'bot-text', text: flow.questions.availabilityCheck.label },
       ])
@@ -629,7 +644,7 @@ function Demo() {
       const botMessages = []
       if (opt.id === 'ja') {
         botMessages.push(
-          { kind: 'bot-text', text: 'Hier zijn de 14 units met de actuele status. Tik op een unit voor de specs.' },
+          { kind: 'bot-text', text: 'Hier zijn de 14 units met de actuele status. Tik op een unit voor meer informatie over die unit.' },
           { kind: 'site-plan', payload: { sitePlan: project.sitePlan, units: project.units, persona } },
         )
       }
@@ -669,9 +684,11 @@ function Demo() {
       }
 
       dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: answerValue(opt), next: 'lead-email' })
+      // Privacy-claim is bewust verplaatst naar NA de email-input
+      // (zie handleLeadEmailText). Voor de input tonen voelt drempel-
+      // verhogend en is een afhaak-risico.
       sendSequence(userTextFromOpt(opt), [
         { kind: 'bot-text', text: 'Wat is je e-mailadres?' },
-        { kind: 'bot-text', text: 'We mailen je de brochure en bewaren je voorkeur. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).' },
       ])
       return
     }
@@ -1092,10 +1109,16 @@ function Demo() {
 
     trackNewLeadFields(state.leadDraft, draft)
 
+    // Privacy-claim staat NA de email-input, in dezelfde bubble-set als
+    // de bevestiging dat de brochure verstuurd wordt. Daarmee komt 'ie
+    // op een natuurlijk moment ipv als drempel ervoor.
+    const privacyClaim = 'We mailen je de brochure en bewaren je voorkeur. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).'
+
     if (draft.firstName) {
       dispatch({ type: 'LEAD_DRAFT', draft })
       sendSequence(text, [
-        { kind: 'bot-text', text: 'Dank. Ik zorg dat deze zo naar je toe komt.' },
+        { kind: 'bot-text', text: 'Dank. Ik zorg dat de brochure zo naar je toe komt.' },
+        { kind: 'bot-text', text: privacyClaim },
         { kind: 'bot-text', text: `Top, ${draft.firstName}.` },
         { kind: 'bot-text', text: 'We houden bij dit soort projecten vaak kort contact via WhatsApp, bijvoorbeeld over beschikbaarheid of als je nog vragen hebt. Vind je dat prettig?' },
       ])
@@ -1105,8 +1128,9 @@ function Demo() {
 
     dispatch({ type: 'LEAD_DRAFT', draft })
     sendSequence(text, [
-      { kind: 'bot-text', text: 'Dank. Ik zorg dat deze zo naar je toe komt.' },
-      { kind: 'bot-text', text: 'Oh wacht. Ook nog handig om je naam te weten, zodat we weten aan wie we het sturen.' },
+      { kind: 'bot-text', text: 'Dank. Ik zorg dat de brochure zo naar je toe komt.' },
+      { kind: 'bot-text', text: privacyClaim },
+      { kind: 'bot-text', text: 'Ook nog handig om je naam te weten, zodat we weten aan wie we het sturen.' },
       { kind: 'bot-text', text: 'Wat is je naam?' },
     ])
     dispatch({ type: 'SET_QUESTION', next: 'lead-name' })

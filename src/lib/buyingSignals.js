@@ -139,8 +139,10 @@ export function computeBuyingSignals(answers = {}, behaviors = EMPTY_BEHAVIORS) 
   }
 }
 
-// Time-of-day-aware terugbel-belofte. Stuurt zowel de copy ("vóór 17:00")
-// als de toon (urgent vs rustig) in de handoff bubble.
+// Time-of-day-aware terugbel-belofte. Bewust open gehouden ("zo snel
+// mogelijk") in plaats van een harde deadline. We willen geen belofte
+// doen die we niet kunnen waarmaken bij piek-aanvragen — beter een
+// realistisch verwachtings-frame dan een gemiste deadline.
 export function getTimeContext(now = new Date()) {
   const day = now.getDay()
   const hour = now.getHours()
@@ -153,11 +155,11 @@ export function getTimeContext(now = new Date()) {
 
 export function getCallbackPromise(timeContext) {
   switch (timeContext) {
-    case 'office_hours': return 'vandaag vóór 17:00'
-    case 'evening': return 'morgenochtend rond 10:00'
-    case 'weekend': return 'maandag rond 10:00'
-    case 'night': return 'morgenochtend rond 10:00'
-    default: return 'binnen kantooruren'
+    case 'office_hours': return 'zo snel mogelijk vandaag'
+    case 'evening':      return 'zo snel mogelijk, morgen tijdens kantooruren'
+    case 'weekend':      return 'zo snel mogelijk, maandag tijdens kantooruren'
+    case 'night':        return 'zo snel mogelijk, morgen tijdens kantooruren'
+    default:             return 'zo snel mogelijk binnen kantooruren'
   }
 }
 

@@ -22,7 +22,7 @@ export default function WarmHandoffBubble({
   const promise = getCallbackPromise(time)
   const repName = salesTeam?.rep?.name || 'een collega'
   const botOrg = salesTeam?.bot?.org || ''
-  const safeCopy = copy || { tag: 'Persoonlijk', headline: '', body: '', value: [], primaryCta: 'Laat mij bellen' }
+  const safeCopy = copy || { tag: 'Hulp op maat', headline: '', body: '', value: [], primaryCta: 'Laat mij bellen' }
 
   const primaryDone = outcome === 'callback' || outcome === 'phone' || outcome === 'whatsapp'
 

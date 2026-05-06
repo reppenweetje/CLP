@@ -37,13 +37,16 @@ export default function LocationBubble({ location, projectName }) {
           </div>
 
           <div className="px-4">
+            {/* Korter gelabelde tabs met sterkere klikbaarheid-cue.
+                Eerdere versie ("Bereikbaarheid"/"Omgeving"/"Op de kaart")
+                liep over op smal scherm en zag er niet als klikbaar uit. */}
             <SegmentControl
               value={tab}
               onChange={switchTab}
               options={[
-                { id: 'reach', label: 'Bereikbaarheid' },
+                { id: 'reach',  label: 'Reistijden' },
                 { id: 'around', label: 'Omgeving' },
-                { id: 'map', label: 'Op de kaart' },
+                { id: 'map',    label: 'Kaart' },
               ]}
             />
           </div>
@@ -70,16 +73,23 @@ export default function LocationBubble({ location, projectName }) {
 
 function SegmentControl({ value, onChange, options }) {
   return (
-    <div className="rounded-full bg-canvas-2 border border-mist-light p-0.5 flex">
+    // Sterke visuele cue: pill-buttons met duidelijke borders zodat user
+    // direct ziet dat 't klikbare tabs zijn (ipv platte tekst).
+    <div className="rounded-full bg-canvas-2 border border-mist-light p-1 flex gap-0.5">
       {options.map((opt) => {
         const active = opt.id === value
         return (
           <button
             key={opt.id}
             onClick={() => onChange(opt.id)}
-            className={`flex-1 text-[12px] py-1.5 rounded-full transition ${
-              active ? 'bg-paper text-ink font-medium shadow-sm' : 'text-ink-soft hover:text-ink'
-            }`}
+            type="button"
+            aria-pressed={active}
+            className={
+              'flex-1 text-[12.5px] py-2 px-2 rounded-full transition leading-none whitespace-nowrap ' +
+              (active
+                ? 'bg-paper text-midnite font-semibold shadow-sm border border-mist-light'
+                : 'text-ink-soft hover:text-ink hover:bg-paper/60 border border-transparent')
+            }
           >
             {opt.label}
           </button>
