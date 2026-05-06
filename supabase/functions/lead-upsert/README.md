@@ -1,6 +1,6 @@
 # Edge Function — `lead-upsert`
 
-Single write-path voor CLP leads + consent. Service-role-key leeft hier (server-side env), nooit in de browser bundle.
+Single write-path for CLP leads + consent. The service-role key lives here (server-side env), never in the browser bundle.
 
 ## Endpoint
 
@@ -11,11 +11,11 @@ Headers:
   Authorization: Bearer <SUPABASE_ANON_KEY>
 ```
 
-Authorization is een Supabase-eis voor function-invocation; de anon-key geeft géén database-toegang.
+The `Authorization` header is required by Supabase to invoke the function; the anon key does **not** grant database access on its own.
 
 ## Request body
 
-Zie de `LeadPayload` interface in [`index.ts`](./index.ts). Minimaal vereist:
+See the `LeadPayload` interface in [`index.ts`](./index.ts). Minimum required:
 
 ```json
 {
@@ -24,48 +24,48 @@ Zie de `LeadPayload` interface in [`index.ts`](./index.ts). Minimaal vereist:
 }
 ```
 
-Alle andere velden zijn optioneel. De Edge Function stuurt alleen velden die je meegeeft naar de DB — `undefined` velden raken bestaande waarden niet aan (geen NULL-overwrite).
+All other fields are optional. The Edge Function only forwards the fields you send to the database — `undefined` fields do not overwrite existing values (no NULL overwrite).
 
 ## Response
 
-| Status | Betekenis                                      | Body                                                                  |
-| ------ | ---------------------------------------------- | --------------------------------------------------------------------- |
-| 200    | Lead + consents oké                            | `{ ok:true, lead_id, consents_inserted }`                             |
-| 207    | Lead oké, consent fout — frontend mag retryen  | `{ ok:true, lead_id, consent_error, consents_inserted:0 }`            |
-| 400    | Bad payload — niet retryen, body bevat detail  | `{ error:'validation_failed', detail:'...' }`                         |
-| 405    | Geen POST                                      | `{ error:'method_not_allowed' }`                                      |
-| 500    | Server-fout (server_misconfigured of DB-write) | `{ error:'lead_upsert_failed', detail:'...' }`                        |
+| Status | Meaning                                              | Body                                                                  |
+| ------ | ---------------------------------------------------- | --------------------------------------------------------------------- |
+| 200    | Lead + consents OK                                   | `{ ok:true, lead_id, consents_inserted }`                             |
+| 207    | Lead OK, consent failed — frontend may retry consent | `{ ok:true, lead_id, consent_error, consents_inserted:0 }`            |
+| 400    | Bad payload — do not retry, body has detail          | `{ error:'validation_failed', detail:'...' }`                         |
+| 405    | Not POST                                             | `{ error:'method_not_allowed' }`                                      |
+| 500    | Server error (misconfigured or DB write failure)     | `{ error:'lead_upsert_failed', detail:'...' }`                        |
 
 ## Idempotency
 
-Upsert keyed op `(source, session_id)`. Meermalig posten van dezelfde sessie → één rij. Consent-rijen zijn append-only by design — bij een retry kunnen er duplicaat-consents komen voor dezelfde scope. Dat is AVG-acceptabel (over-recorden boven missen).
+Upsert keyed on `(source, session_id)`. Multiple calls with the same key → one row. Consent rows are append-only by design — on a retry you may get duplicate consent rows for the same scope. That is GDPR-acceptable (over-record beats miss).
 
-## Hot-lead Slack notificatie
+## Hot-lead Slack notification
 
-Als `temperature === 'hot'` en `SLACK_HOTLEADS_WEBHOOK_URL` is gezet → fire-and-forget POST naar Slack. Faalt nooit de hoofd-response.
+If `temperature === 'hot'` and `SLACK_HOTLEADS_WEBHOOK_URL` is set → fire-and-forget POST to Slack. Never blocks the main response.
 
 ## Env vars
 
-| Naam                          | Door wie       | Wat                                         |
+| Name                          | Set by         | Description                                 |
 | ----------------------------- | -------------- | ------------------------------------------- |
 | `SUPABASE_URL`                | Auto (Supabase) | Project URL                                 |
-| `SUPABASE_SERVICE_ROLE_KEY`   | Auto (Supabase) | Bypasst RLS, schrijft via Edge Function     |
-| `SLACK_HOTLEADS_WEBHOOK_URL`  | Wij            | Optioneel; zonder → Slack-stap is no-op     |
-| `ALLOWED_ORIGINS`             | Wij            | Comma-separated; default in `index.ts`      |
+| `SUPABASE_SERVICE_ROLE_KEY`   | Auto (Supabase) | Bypasses RLS, used by the Edge Function     |
+| `SLACK_HOTLEADS_WEBHOOK_URL`  | You            | Optional; if unset → Slack step is a no-op  |
+| `ALLOWED_ORIGINS`             | You            | Comma-separated; default in `index.ts`      |
 
-## Lokaal runnen
+## Local run
 
 ```bash
 supabase functions serve lead-upsert --env-file .env.local
 ```
 
-`.env.local` (niet committen):
+`.env.local` (do not commit):
 
 ```
 SLACK_HOTLEADS_WEBHOOK_URL=https://hooks.slack.com/...
 ```
 
-`SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` worden door `supabase functions serve` automatisch geïnjecteerd vanuit het gelinkte project.
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are auto-injected by `supabase functions serve` from the linked project.
 
 ## Deploy
 
