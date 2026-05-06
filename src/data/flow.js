@@ -30,6 +30,7 @@ export const flow = {
         { id: 'eigen_bedrijf', label: 'Voor mijn bedrijf', score: 12, persona: 'eigen_gebruiker' },
         { id: 'belegging', label: 'Als belegging', score: 15, persona: 'belegger' },
         { id: 'beide', label: 'Beide', score: 10, persona: 'beide' },
+        { id: 'huur', label: 'Te huur', score: 5, persona: 'huurder' },
         { id: 'weet_niet', label: 'Weet ik nog niet', score: 4, persona: 'onbekend' },
       ],
     },

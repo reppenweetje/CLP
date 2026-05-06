@@ -267,9 +267,9 @@ export const project = {
 
   planning: [
     { phase: 'Start verkoop', date: 'Gestart' },
-    { phase: 'Start bouw', date: 'December 2024' },
-    { phase: 'Bouwfase', date: '2025 tot 2026' },
-    { phase: 'Oplevering', date: 'Q1 2027 indicatief' },
+    { phase: 'Start bouw', date: 'December 2026' },
+    { phase: 'Bouwfase', date: '2027 tot 2028' },
+    { phase: 'Oplevering', date: 'Q4 2028 indicatief' },
   ],
 
   // m²-prijs vergelijking met andere bedrijfsunits in de Waarderpolder.

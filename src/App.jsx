@@ -554,9 +554,24 @@ function Demo() {
 
     if (q === 'intent') {
       const personaNext = opt.persona || 'onbekend'
+      trackEvent('intent:answered', { id: opt.id, label: opt.label, persona: personaNext })
+
+      // Huur-intentie: De Hofman is een koop-project, dus wij kanaliseren
+      // huur-interesse direct naar de rent-match queue. Geen availability,
+      // geen brochure-ja, geen size/timeline; meteen huurprijs-range vragen
+      // zodat we beleggers in De Hofman die hun unit willen verhuren later
+      // kunnen koppelen aan deze bezoeker.
+      if (opt.id === 'huur' || personaNext === 'huurder') {
+        dispatch({ type: 'ANSWER', key: 'intent', value: answerValue(opt), next: 'rentRange' })
+        sendSequence(userTextFromOpt(opt), [
+          { kind: 'bot-text', text: 'Helder. De Hofman is een koop-project, maar er zijn beleggers die hun unit verhuren. Met je voorkeur kunnen we je in de toekomst koppelen aan een belegger als er een match is.' },
+          { kind: 'bot-text', text: flow.questions.rentRange.label },
+        ])
+        return
+      }
+
       const microIntro = pickMicroIntro(personaNext)
       const cards = uspCardOrder(personaNext)
-      trackEvent('intent:answered', { id: opt.id, label: opt.label, persona: personaNext })
       dispatch({ type: 'ANSWER', key: 'intent', value: answerValue(opt), next: 'availabilityCheck' })
       sendSequence(userTextFromOpt(opt), [
         { kind: 'bot-text', text: microIntro },
