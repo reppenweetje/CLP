@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useState } from 'react'
 import { project, uspCardOrder } from './data/project.js'
-import { flow } from './data/flow.js'
+import { flow, getLabel } from './data/flow.js'
 import {
   computeScore,
   derivePersona,
@@ -40,7 +40,7 @@ import AdminScreen from './screens/AdminScreen.jsx'
 import SmartResumeBanner from './components/SmartResumeBanner.jsx'
 import RescueNudge from './components/RescueNudge.jsx'
 import ExitIntentPrompt from './components/ExitIntentPrompt.jsx'
-import { useSmartResume, useInactivityRescue, useExitIntent } from './lib/engagement.js'
+import { useSmartResume, useInactivityRescue, useExitIntent, getOrAssignVariant } from './lib/engagement.js'
 
 let _id = 0
 const nextId = () => ++_id
@@ -110,8 +110,10 @@ function downstreamKeys(fromKey) {
 function reducer(state, action) {
   switch (action.type) {
     case 'START_CHAT': {
-      const intentQ = flow.questions.intent
       const bot = action.bot || { name: 'Jesse', org: 'REPP' }
+      // Variant uit action gebruiken; default 'a' als afwezig (server-side
+      // render of pre-engagement init).
+      const copyVariant = action.copyVariant || 'a'
       // Eerste bubble direct in beeld (anders blijft het scherm leeg met
       // typing-indicator), de rest in de release-queue.
       return {
@@ -122,7 +124,7 @@ function reducer(state, action) {
         ],
         messageQueue: [
           { kind: 'bot-text', text: 'Om de juiste brochure en prijzen met je te delen heb ik een korte vraag.' },
-          { kind: 'bot-text', text: intentQ.label },
+          { kind: 'bot-text', text: getLabel('intent', copyVariant) },
         ],
         currentQuestion: 'intent',
       }
@@ -547,12 +549,17 @@ function Demo() {
     state.messageQueue?.length,
   ])
 
+  // Sticky copy-variant voor flow-questions (intent/brochureTrigger/timeline).
+  // Onafhankelijk van CTA-variant voor de IntroScreen-knop, zodat we
+  // beide A/B-experimenten orthogonaal kunnen analyseren in Plausible.
+  const copyVariant = getOrAssignVariant()
+
   const start = (variant) => {
     startNewSession()
-    trackEvent('session:start', { variant })
-    trackEvent('intro:cta-clicked', { variant })
+    trackEvent('session:start', { variant, copyVariant })
+    trackEvent('intro:cta-clicked', { variant, copyVariant })
     logSessionStartConsent()
-    dispatch({ type: 'START_CHAT', bot: project.salesTeam?.bot })
+    dispatch({ type: 'START_CHAT', bot: project.salesTeam?.bot, copyVariant })
   }
 
   // Helper: maakt een answer-value met _msgCountBefore zodat ROLLBACK
@@ -622,7 +629,7 @@ function Demo() {
           { kind: 'site-plan', payload: { sitePlan: project.sitePlan, units: project.units, persona } },
         )
       }
-      botMessages.push({ kind: 'bot-text', text: flow.questions.brochureTrigger.label })
+      botMessages.push({ kind: 'bot-text', text: getLabel('brochureTrigger', copyVariant) })
       dispatch({ type: 'ANSWER', key: 'availabilityCheck', value: answerValue(opt), next: 'brochureTrigger' })
       sendSequence(userTextFromOpt(opt), botMessages)
       return
@@ -745,7 +752,7 @@ function Demo() {
       trackEvent('size:answered', { id: opt.id, label: opt.label })
       dispatch({ type: 'ANSWER', key: 'size', value: answerValue(opt), next: 'timeline' })
       sendSequence(userTextFromOpt(opt), [
-        { kind: 'bot-text', text: flow.questions.timeline.label },
+        { kind: 'bot-text', text: getLabel('timeline', copyVariant) },
       ])
       return
     }

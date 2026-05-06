@@ -141,7 +141,13 @@ export function useExitIntent({ active }) {
 // Plak een sticky variant ('a' of 'b') aan de bezoeker en bewaar 'm in
 // localStorage zodat refresh hetzelfde resultaat geeft. Caller hangt copy
 // of UX-keuze aan deze variant.
-const VARIANT_KEY = 'clp-cta-variant'
+//
+// LET OP: bewust andere key dan 'clp-cta-variant' (= IntroScreen CTA-knop
+// rotatie A/B/C/D in src/lib/cta.js). Deze 'clp-variant' is binair a/b en
+// stuurt copy in flow.js (intent/brochureTrigger/timeline labels). Door
+// twee orthogonale dimensies te houden kunnen we beide experimenten
+// onafhankelijk meten in Plausible.
+const VARIANT_KEY = 'clp-variant'
 
 export function getOrAssignVariant() {
   if (typeof window === 'undefined') return 'a'

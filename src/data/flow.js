@@ -2,6 +2,15 @@
 // Volgorde: intent (persona) → microValue (USP cards) → brochureTrigger →
 // (ja: lead email → name → phoneAsk → phone | nee: afhaakReasons) →
 // size → timeline → recommendation → moreInfo → followup → thankyou
+//
+// A/B copy-experimenten: questions met labelVariants {a, b} worden via
+// getLabel(key, variant) opgehaald. App.jsx kent een sticky variant per
+// bezoeker (zie src/lib/engagement.js getOrAssignVariant) en logt 'm
+// in elk event als plausible custom prop. Drie experiments live:
+//   1. intent: rationeel ("Waarom") vs. warmer ("Wat brengt je")
+//   2. brochureTrigger: zachtere check vs. directe vraag
+//   3. timeline: open ("Wanneer hoop je") vs. gesloten ("Op welke termijn")
+// Voeg nieuwe experimenten toe door labelVariants te zetten op de question.
 export const flow = {
   steps: [
     'intro',
@@ -22,10 +31,14 @@ export const flow = {
   ],
 
   questions: {
-    // Eerste vraag is direct persona-select.
+    // Eerste vraag is direct persona-select. A/B test: rationeel vs. warm.
     intent: {
       key: 'intent',
       label: 'Waarom ben je op zoek naar een bedrijfsunit?',
+      labelVariants: {
+        a: 'Waarom ben je op zoek naar een bedrijfsunit?',
+        b: 'Wat brengt je vandaag naar De Hofman?',
+      },
       options: [
         { id: 'eigen_bedrijf', label: 'Voor mijn bedrijf', score: 12, persona: 'eigen_gebruiker' },
         { id: 'belegging', label: 'Als belegging', score: 15, persona: 'belegger' },
@@ -51,6 +64,10 @@ export const flow = {
     brochureTrigger: {
       key: 'brochureTrigger',
       label: 'Zou dit interessant voor je kunnen zijn? Dan kan ik je de brochure mailen.',
+      labelVariants: {
+        a: 'Zou dit interessant voor je kunnen zijn? Dan kan ik je de brochure mailen.',
+        b: 'Wil je de brochure met prijzen en plattegronden ontvangen?',
+      },
       options: [
         { id: 'ja', label: 'Ja, stuur maar', score: 20, intent: true },
         { id: 'nee', label: 'Nee, ik zoek iets anders', score: 0, afhaak: true },
@@ -102,6 +119,10 @@ export const flow = {
     timeline: {
       key: 'timeline',
       label: 'Om je op het juiste moment te benaderen: voor wanneer ben je op zoek?',
+      labelVariants: {
+        a: 'Om je op het juiste moment te benaderen: voor wanneer ben je op zoek?',
+        b: 'Op welke termijn wil je idealiter intrekken of investeren?',
+      },
       options: [
         { id: 'zsm', label: 'Zo snel mogelijk', score: 35 },
         { id: '3mnd', label: 'Binnen 3 maanden', score: 25 },
@@ -123,4 +144,31 @@ export const flow = {
       ],
     },
   },
+}
+
+// A/B variant-aware label resolver. Geeft labelVariants[variant] als die
+// gedefinieerd is op de question, anders de standaard label. Caller geeft
+// de sticky variant 'a' of 'b' mee (vanuit getOrAssignVariant() in
+// engagement.js). Zo blijft de bezoeker tijdens een sessie consistent
+// dezelfde copy zien.
+export function getLabel(questionKey, variant = 'a') {
+  const q = flow.questions[questionKey]
+  if (!q) return ''
+  return q.labelVariants?.[variant] ?? q.label
+}
+
+// Voor analytics-debug: lijst van actieve A/B-experimenten (vragen met
+// labelVariants). Drives "welke experimenten lopen er nu?" view in admin.
+export function listActiveExperiments() {
+  const out = []
+  for (const [key, q] of Object.entries(flow.questions)) {
+    if (q.labelVariants) {
+      out.push({
+        key,
+        variants: Object.keys(q.labelVariants),
+        labels: q.labelVariants,
+      })
+    }
+  }
+  return out
 }

@@ -19,7 +19,7 @@ const SAFE_PROP_KEYS = new Set([
   'stage',
   'temperature',
   'score',
-  'ctaVariant', 'cta_variant', 'variant',
+  'ctaVariant', 'cta_variant', 'variant', 'copyVariant',
   'label',
   'choice',
   'outcome',

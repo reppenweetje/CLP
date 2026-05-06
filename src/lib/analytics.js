@@ -43,14 +43,31 @@ export function getSessionId() {
   return safeRead(SESSION_KEY) || startNewSession()
 }
 
+// Auto-injecteert sessie-level props (copyVariant + ctaVariant) op elk
+// event zodat Plausible kan filteren zonder dat elke call-site die props
+// expliciet hoeft mee te geven. Variant-keys zijn sticky in localStorage,
+// dus dezelfde bezoeker → dezelfde variant in elke event.
+function autoSessionProps() {
+  if (typeof window === 'undefined') return {}
+  try {
+    const out = {}
+    const copy = window.localStorage.getItem('clp-variant')
+    if (copy === 'a' || copy === 'b') out.copyVariant = copy
+    const cta  = window.localStorage.getItem('clp-cta-variant')
+    if (cta) out.ctaVariant = cta
+    return out
+  } catch { return {} }
+}
+
 export function trackEvent(type, payload = {}) {
   const events = loadEvents()
+  const enriched = { ...autoSessionProps(), ...payload }
   const event = {
     id: uuid(),
     sessionId: getSessionId(),
     timestamp: Date.now(),
     type,
-    payload,
+    payload: enriched,
   }
   events.push(event)
   // cap op 5000 events om localStorage niet vol te laten lopen
@@ -58,7 +75,7 @@ export function trackEvent(type, payload = {}) {
   safeWrite(EVENTS_KEY, JSON.stringify(capped))
   // Forward naar Plausible voor cross-session funnel-analyse. PII wordt
   // weggefilterd in safeProps() — zie src/lib/plausible.js.
-  plausibleEvent(type, payload)
+  plausibleEvent(type, enriched)
   return event
 }
 
