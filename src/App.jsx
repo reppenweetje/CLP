@@ -37,6 +37,10 @@ import ChatInput from './components/ChatInput.jsx'
 import DebugPanel from './components/DebugPanel.jsx'
 import AnswersSheet from './components/AnswersSheet.jsx'
 import AdminScreen from './screens/AdminScreen.jsx'
+import SmartResumeBanner from './components/SmartResumeBanner.jsx'
+import RescueNudge from './components/RescueNudge.jsx'
+import ExitIntentPrompt from './components/ExitIntentPrompt.jsx'
+import { useSmartResume, useInactivityRescue, useExitIntent } from './lib/engagement.js'
 
 let _id = 0
 const nextId = () => ++_id
@@ -411,6 +415,25 @@ function Demo() {
     return init
   })
   const [answersOpen, setAnswersOpen] = useState(false)
+  const [showRescue, setShowRescue] = useState(false)
+  const chatActive = state.view === 'chat'
+  const flowComplete = state.messages.some((m) => m.kind === 'cta-card')
+
+  // Smart resume: bezoeker komt terug na ≥4u, heeft niet voltooid → banner.
+  const { offerResume, ageMs, dismissResume } = useSmartResume(chatActive && !flowComplete)
+
+  // Inactiviteit rescue: 30s niets gedaan → floating nudge.
+  useInactivityRescue({
+    active: chatActive && !flowComplete && !showRescue,
+    onTrigger: () => setShowRescue(true),
+  })
+
+  // Exit intent: cursor verlaat top of tab gaat hidden → why-leaving prompt.
+  // Alleen actief als bezoeker iets heeft gedaan en nog niet voltooid is —
+  // anders is het te invasief op een verse pageview.
+  const exitActive = chatActive && !flowComplete && Object.keys(state.answers).length >= 2
+  const { showPrompt: showExitPrompt, dismiss: dismissExitPrompt } = useExitIntent({ active: exitActive })
+
   // Bewaart de currentQuestion van vóór een lead-edit zodat we na het
   // bijwerken van email/naam/06 terug kunnen naar waar de bezoeker was.
   const [editReturnQuestion, setEditReturnQuestion] = useState(null)
@@ -1430,6 +1453,10 @@ function Demo() {
     >
       {state.view === 'intro' && <IntroScreen onStart={start} />}
 
+      {offerResume && (
+        <SmartResumeBanner ageMs={ageMs} onDismiss={dismissResume} />
+      )}
+
       {state.view === 'chat' && (
         <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-md">
           <ChatThread
@@ -1490,6 +1517,31 @@ function Demo() {
           dispatch({ type: 'RESET' })
         }}
       />
+
+      {showRescue && (
+        <RescueNudge
+          project={project}
+          onDismiss={() => setShowRescue(false)}
+          onContact={() => {
+            setShowRescue(false)
+            // Hergebruik de bestaande direct-contact-flow (dispatched
+            // 'flow:complete' met stage sales_ready). De bezoeker krijgt
+            // de service-card / handoff zonder extra UI te bouwen.
+            trackEvent('direct-contact:requested', { from: 'rescue-nudge' })
+            const lead = state.answers.lead || {}
+            if (project.phoneNumber) {
+              window.open(buildPhoneLink(project.phoneNumber), '_self')
+            } else {
+              const summary = buildCustomerWaSummary(state.answers, project)
+              window.open(whatsAppDeeplink(project, lead.firstName || '', summary), '_blank', 'noopener,noreferrer')
+            }
+          }}
+        />
+      )}
+
+      {showExitPrompt && (
+        <ExitIntentPrompt onDismiss={dismissExitPrompt} />
+      )}
     </AppShell>
   )
 }

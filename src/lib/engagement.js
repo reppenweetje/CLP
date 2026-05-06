@@ -1,0 +1,163 @@
+// Engagement-helpers voor smart resume, drop-off rescue en exit intent.
+// Pure logica + custom hooks zonder UI — UI zit in eigen components zodat
+// App.jsx slank blijft.
+
+import { useEffect, useRef, useState } from 'react'
+import { loadEvents, trackEvent } from './analytics.js'
+
+const RESUME_THRESHOLD_MS = 4 * 60 * 60 * 1000  // 4u
+const IDLE_THRESHOLD_MS   = 30 * 1000           // 30s
+
+// ── Smart Resume ────────────────────────────────────────────────────────────
+//
+// Detecteert of de bezoeker terugkomt na ≥4u afwezigheid in een onvoltooide
+// chat. Geeft caller een vlag terug om een resume-banner te tonen.
+//
+// `chatActive` = state.view === 'chat'  (chat is daadwerkelijk gestart)
+// Returnt:
+//   { offerResume, dismissResume, ageMs }
+//   - offerResume: true als banner getoond moet worden
+//   - dismissResume(): user kiest "Verder" of klikt sluit-knop
+//   - ageMs: hoe oud is de gepauzeerde sessie
+export function useSmartResume(chatActive) {
+  const [state, setState] = useState({ offerResume: false, ageMs: 0 })
+  const offeredRef = useRef(false)
+
+  useEffect(() => {
+    if (!chatActive) return
+    if (offeredRef.current) return
+    if (typeof window === 'undefined') return
+
+    const events = loadEvents()
+    if (events.length === 0) return
+
+    // Laatste echte event (geen typing/bubble:rendered).
+    const meaningfulEvents = events.filter((e) =>
+      e.type !== 'typing' && e.type !== 'bubble:rendered'
+    )
+    const lastEvent = meaningfulEvents[meaningfulEvents.length - 1]
+    if (!lastEvent) return
+
+    const completed = events.some((e) => e.type === 'flow:complete')
+    if (completed) return
+
+    const ageMs = Date.now() - lastEvent.timestamp
+    if (ageMs < RESUME_THRESHOLD_MS) return
+
+    offeredRef.current = true
+    setState({ offerResume: true, ageMs })
+    trackEvent('resume:offered', { ageHours: Math.round(ageMs / 3600000) })
+  }, [chatActive])
+
+  const dismissResume = () => {
+    setState((s) => ({ ...s, offerResume: false }))
+  }
+
+  return { ...state, dismissResume }
+}
+
+// ── Inactivity Rescue ────────────────────────────────────────────────────────
+//
+// Detecteert 30s zonder activiteit terwijl de bezoeker in chat-mode is en
+// niet voltooid. Roept onTrigger() aan om een nudge-bubble te tonen.
+// Vuurt maximaal één keer per sessie (per page-load) zodat we niet
+// pesten.
+export function useInactivityRescue({ active, onTrigger }) {
+  const triggeredRef = useRef(false)
+  const lastActivityRef = useRef(Date.now())
+  const timerRef = useRef(null)
+
+  useEffect(() => {
+    if (!active) return
+    if (typeof window === 'undefined') return
+
+    function bumpActivity() {
+      lastActivityRef.current = Date.now()
+      if (timerRef.current) clearTimeout(timerRef.current)
+      if (triggeredRef.current) return
+      timerRef.current = setTimeout(check, IDLE_THRESHOLD_MS + 100)
+    }
+    function check() {
+      if (triggeredRef.current) return
+      if (Date.now() - lastActivityRef.current >= IDLE_THRESHOLD_MS) {
+        triggeredRef.current = true
+        trackEvent('dropoff-rescue:shown', { idleMs: Date.now() - lastActivityRef.current })
+        onTrigger?.()
+      }
+    }
+
+    const evts = ['mousemove', 'keydown', 'click', 'touchstart', 'scroll']
+    for (const ev of evts) window.addEventListener(ev, bumpActivity, { passive: true })
+    bumpActivity()
+    return () => {
+      for (const ev of evts) window.removeEventListener(ev, bumpActivity)
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [active, onTrigger])
+}
+
+// ── Exit Intent ──────────────────────────────────────────────────────────────
+//
+// Detecteert wanneer de bezoeker op het punt staat de pagina te verlaten:
+//   - desktop: mouseleave bovenaan (Y <= 10)
+//   - alle platforms: visibilitychange naar hidden
+// Vuurt één keer per sessie. Geeft een setter voor de UI.
+export function useExitIntent({ active }) {
+  const [showPrompt, setShowPrompt] = useState(false)
+  const triggeredRef = useRef(false)
+
+  useEffect(() => {
+    if (!active) return
+    if (typeof window === 'undefined') return
+
+    function trigger(reason) {
+      if (triggeredRef.current) return
+      triggeredRef.current = true
+      trackEvent('why-leaving:shown', { reason })
+      setShowPrompt(true)
+    }
+
+    function onMouseLeave(e) {
+      if (e.clientY <= 10) trigger('mouse-top')
+    }
+    function onVisibilityChange() {
+      if (document.visibilityState === 'hidden') trigger('tab-hidden')
+    }
+
+    document.addEventListener('mouseleave', onMouseLeave)
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => {
+      document.removeEventListener('mouseleave', onMouseLeave)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+    }
+  }, [active])
+
+  const dismiss = () => setShowPrompt(false)
+  return { showPrompt, dismiss }
+}
+
+// ── A/B variant assignment ──────────────────────────────────────────────────
+//
+// Plak een sticky variant ('a' of 'b') aan de bezoeker en bewaar 'm in
+// localStorage zodat refresh hetzelfde resultaat geeft. Caller hangt copy
+// of UX-keuze aan deze variant.
+const VARIANT_KEY = 'clp-cta-variant'
+
+export function getOrAssignVariant() {
+  if (typeof window === 'undefined') return 'a'
+  try {
+    const existing = window.localStorage.getItem(VARIANT_KEY)
+    if (existing === 'a' || existing === 'b') return existing
+    const v = Math.random() < 0.5 ? 'a' : 'b'
+    window.localStorage.setItem(VARIANT_KEY, v)
+    return v
+  } catch {
+    return 'a'
+  }
+}
+
+// Gebruik in componentcode:
+//   const copy = pickByVariant(variant, { a: 'Variant A copy', b: 'Variant B copy' })
+export function pickByVariant(variant, options) {
+  return options[variant] ?? options.a ?? Object.values(options)[0]
+}
