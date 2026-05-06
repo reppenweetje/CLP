@@ -19,6 +19,12 @@ import {
 } from './lib/recommendation.js'
 import { parseLeadInput, mergeLead } from './lib/parseLead.js'
 import { startNewSession, trackEvent } from './lib/analytics.js'
+import {
+  logSessionStartConsent,
+  logBrochureConsent,
+  logCredionConsent,
+  logErasureRequest,
+} from './lib/consent.js'
 import { sendCredionLead } from './lib/credion.js'
 import { computeBuyingSignals, EMPTY_BEHAVIORS, getCallbackPromise, getTimeContext } from './lib/buyingSignals.js'
 import { buildHandoffCopy, resolveMicroIntro, resolveRecommendCopy } from './lib/handoffCopy.js'
@@ -522,6 +528,7 @@ function Demo() {
     startNewSession()
     trackEvent('session:start', { variant })
     trackEvent('intro:cta-clicked', { variant })
+    logSessionStartConsent()
     dispatch({ type: 'START_CHAT', bot: project.salesTeam?.bot })
   }
 
@@ -600,6 +607,13 @@ function Demo() {
 
     if (q === 'brochureTrigger') {
       trackEvent('brochure-trigger:answered', { id: opt.id, label: opt.label, isAfhaak: !!opt.afhaak })
+
+      // Bezoeker zegt ja tegen de brochure: dat is impliciete toestemming
+      // voor verwerking van zijn gegevens voor brochure-mailen plus
+      // sales-opvolging. Vastleggen ten behoeve van AVG-art 7 verantwoording.
+      if (!opt.afhaak) {
+        logBrochureConsent()
+      }
 
       if (opt.afhaak) {
         dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: answerValue(opt), next: 'afhaakReasons' })
@@ -879,6 +893,9 @@ function Demo() {
     }
 
     if (q === 'financingAsk') {
+      // Beide uitkomsten loggen we als consent-event: een 'nee' is ook een
+      // expliciete keuze die we moeten kunnen aantonen bij audit.
+      logCredionConsent(opt.id === 'yes')
       if (opt.id === 'yes') {
         trackEvent('financing:credion-shared', {})
         sendCredionLead(state.answers.lead, project, {
@@ -1310,6 +1327,9 @@ function Demo() {
 
   const onForgetLead = () => {
     trackEvent('answer:forget-lead', {})
+    // Het verzoek tot verwijdering ZELF eerst loggen voordat we de data
+    // wissen, anders verliezen we het bewijs van de uitvoering. AVG art 17.
+    logErasureRequest()
     dispatch({ type: 'FORGET_LEAD' })
   }
 
