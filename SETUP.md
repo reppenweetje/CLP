@@ -4,7 +4,12 @@ Deze repo is een GitHub-template. Eén keer klonen en je hebt een werkende CLP �
 
 ## Snelle versie (met Claude Code)
 
-Aanbevolen: open de gekloonde repo in Claude Code en zeg `nieuw project setup`. De wizard in `CLAUDE.md` loopt je door alle 9 stappen heen, stelt vragen, vult `src/data/project.js` in en valideert tussendoor.
+Aanbevolen: open de gekloonde repo in Claude Code en zeg `nieuw project setup`. De wizard in `CLAUDE.md` start met één basisvraag — *"is dit een bedrijfsunit-koop project zoals De Hofman, of iets anders?"* — en kiest op basis daarvan het juiste pad:
+
+- **Pad A — content-fill** voor projecten die qua structuur op De Hofman lijken: 9 stappen, gegidste vragen, alleen content invullen
+- **Pad B — co-design** voor afwijkende project-types (woningen / garageboxen / kavels / huur / iets anders): Claude Code ontwerpt samen met jou de aangepaste vragen, aanbeveling-logica en koop-signalen voor jouw archetype, en pas dáárna ga je over naar content-fill
+
+Beide paden eindigen op een werkende deploybare CLP. Pad B kost meer tijd (1.5-2u in plaats van 30-45 min) maar het resultaat is een volledig op jouw project afgestemde flow.
 
 ## Handmatige versie
 
