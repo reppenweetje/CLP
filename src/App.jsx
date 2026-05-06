@@ -432,8 +432,10 @@ function Demo() {
   const chatActive = state.view === 'chat'
   const flowComplete = state.messages.some((m) => m.kind === 'cta-card')
 
-  // Smart resume: bezoeker komt terug na ≥4u, heeft niet voltooid → banner.
-  const { offerResume, ageMs, dismissResume } = useSmartResume(chatActive && !flowComplete)
+  // Smart resume: bezoeker komt terug na ≥4u in onvoltooide chat MET
+  // progressie (≥1 beantwoorde vraag). Banner toont count zodat user
+  // weet wat er bewaard is — geen lege belofte bij nul antwoorden.
+  const { offerResume, ageMs, answersCount, dismissResume } = useSmartResume(chatActive && !flowComplete)
 
   // Inactiviteit rescue: 30s niets gedaan → floating nudge.
   useInactivityRescue({
@@ -1489,7 +1491,7 @@ function Demo() {
       {state.view === 'intro' && <IntroScreen onStart={start} />}
 
       {offerResume && (
-        <SmartResumeBanner ageMs={ageMs} onDismiss={dismissResume} />
+        <SmartResumeBanner ageMs={ageMs} answersCount={answersCount} onDismiss={dismissResume} />
       )}
 
       {state.view === 'chat' && (

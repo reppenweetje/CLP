@@ -54,6 +54,18 @@ input, textarea, button, select {
 .typing-dot:nth-child(2) { animation-delay: 0.16s; }
 .typing-dot:nth-child(3) { animation-delay: 0.32s; }
 
+/* Smart-resume "Verder" feedback: korte gold-pulse op het laatste
+   bericht zodat de bezoeker direct ziet waar 'ie gebleven was. */
+@keyframes clp-resume-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(201, 164, 92, 0.55); }
+  35%  { box-shadow: 0 0 0 12px rgba(201, 164, 92, 0.18); }
+  100% { box-shadow: 0 0 0 0 rgba(201, 164, 92, 0); }
+}
+.clp-resume-pulse > * {
+  animation: clp-resume-pulse 1.4s ease-out both;
+  border-radius: 1.25rem;
+}
+
 /* Onderstreping-only input style passend bij REPP brandbook */
 .repp-underline-input {
   background: transparent;

@@ -11,16 +11,37 @@ const IDLE_THRESHOLD_MS   = 30 * 1000           // 30s
 // ── Smart Resume ────────────────────────────────────────────────────────────
 //
 // Detecteert of de bezoeker terugkomt na ≥4u afwezigheid in een onvoltooide
-// chat. Geeft caller een vlag terug om een resume-banner te tonen.
+// chat *met daadwerkelijke progressie*. We tonen alleen de banner wanneer
+// er minstens één antwoord is gegeven — anders is er niets om te "verder
+// gaan" en zou de banner een lege belofte zijn.
 //
 // `chatActive` = state.view === 'chat'  (chat is daadwerkelijk gestart)
 // Returnt:
-//   { offerResume, dismissResume, ageMs }
-//   - offerResume: true als banner getoond moet worden
-//   - dismissResume(): user kiest "Verder" of klikt sluit-knop
-//   - ageMs: hoe oud is de gepauzeerde sessie
+//   { offerResume, dismissResume, ageMs, answersCount }
+//   - offerResume:   true als banner getoond moet worden
+//   - dismissResume: user kiest "Verder" of klikt sluit-knop
+//   - ageMs:         hoe oud is de gepauzeerde sessie
+//   - answersCount:  aantal beantwoorde vragen (voor copy in banner)
+// Welke events tellen als "echte progressie". Alle answered/submitted events
+// zijn user-acties; rest is bot-rendering of system. Als één van deze gefired
+// is heeft de bezoeker iets beantwoord en is er iets om naar terug te keren.
+const PROGRESS_EVENT_TYPES = new Set([
+  'intent:answered',
+  'availability-check:answered',
+  'brochure-trigger:answered',
+  'afhaak-reason:answered',
+  'lead-email:submitted',
+  'lead-name:submitted',
+  'lead-phone-ask:answered',
+  'lead-phone:submitted',
+  'size:answered',
+  'timeline:answered',
+  'followup:answered',
+  'rent-match:registered',
+])
+
 export function useSmartResume(chatActive) {
-  const [state, setState] = useState({ offerResume: false, ageMs: 0 })
+  const [state, setState] = useState({ offerResume: false, ageMs: 0, answersCount: 0 })
   const offeredRef = useRef(false)
 
   useEffect(() => {
@@ -31,13 +52,12 @@ export function useSmartResume(chatActive) {
     const events = loadEvents()
     if (events.length === 0) return
 
-    // Laatste echte event (geen typing/bubble:rendered).
-    const meaningfulEvents = events.filter((e) =>
-      e.type !== 'typing' && e.type !== 'bubble:rendered'
-    )
-    const lastEvent = meaningfulEvents[meaningfulEvents.length - 1]
-    if (!lastEvent) return
+    // Tellen alleen events die daadwerkelijke progressie betekenen.
+    // Geen progressie = niets om te resumen = geen banner.
+    const progressEvents = events.filter((e) => PROGRESS_EVENT_TYPES.has(e.type))
+    if (progressEvents.length === 0) return
 
+    const lastEvent = progressEvents[progressEvents.length - 1]
     const completed = events.some((e) => e.type === 'flow:complete')
     if (completed) return
 
@@ -45,8 +65,11 @@ export function useSmartResume(chatActive) {
     if (ageMs < RESUME_THRESHOLD_MS) return
 
     offeredRef.current = true
-    setState({ offerResume: true, ageMs })
-    trackEvent('resume:offered', { ageHours: Math.round(ageMs / 3600000) })
+    setState({ offerResume: true, ageMs, answersCount: progressEvents.length })
+    trackEvent('resume:offered', {
+      ageHours: Math.round(ageMs / 3600000),
+      answersCount: progressEvents.length,
+    })
   }, [chatActive])
 
   const dismissResume = () => {
