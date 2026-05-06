@@ -6,8 +6,11 @@ import {
   humanizePersona,
 } from '../../lib/analytics.js'
 
-// Tabel met alle sessies, klikbaar voor detail-timeline.
-export default function SessionsList({ sessions }) {
+// Tabel met alle sessies. Twee actie-modes:
+//  - inline expand (klassiek): klik op rij → korte timeline beneden in de rij
+//  - side-panel replay (nieuw): "Open" knop → opent SessionReplay overlay
+//    via onOpen-callback. SessionsList kan zonder onOpen blijven werken.
+export default function SessionsList({ sessions, onOpen }) {
   const [expanded, setExpanded] = useState(null)
 
   return (
@@ -17,7 +20,9 @@ export default function SessionsList({ sessions }) {
           <h2 className="text-[16px] font-semibold text-ink">Sessies</h2>
           <span className="text-[11px] text-ink-mute tabular-nums">{sessions.length} totaal</span>
         </div>
-        <p className="text-[12px] text-ink-soft mt-1">Tik op een sessie voor de event-timeline.</p>
+        <p className="text-[12px] text-ink-soft mt-1">
+          Tik voor inline timeline · {onOpen ? 'klik "Open" voor volledige replay' : 'volledige replay zit in admin-overlay'}.
+        </p>
       </div>
 
       {sessions.length === 0 ? (
@@ -50,7 +55,20 @@ export default function SessionsList({ sessions }) {
                       <span>{s.events.length} events</span>
                     </div>
                   </div>
-                  <div className="text-ink-mute text-[14px] shrink-0 transition" style={{ transform: isOpen ? 'rotate(90deg)' : 'none' }}>›</div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {onOpen && (
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => { e.stopPropagation(); onOpen(s) }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); onOpen(s) } }}
+                        className="text-[11px] text-midnite hover:text-midnite-soft border border-midnite/30 hover:border-midnite px-2.5 py-1 rounded-full transition"
+                      >
+                        Open
+                      </span>
+                    )}
+                    <div className="text-ink-mute text-[14px] transition" style={{ transform: isOpen ? 'rotate(90deg)' : 'none' }}>›</div>
+                  </div>
                 </button>
                 {isOpen && <SessionTimeline session={s} />}
               </div>

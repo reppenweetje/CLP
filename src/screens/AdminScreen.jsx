@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   buildAbandonByStep,
   buildAfhaakReasons,
@@ -9,6 +9,7 @@ import {
   buildVariantBreakdown,
   clearAllEvents,
   exportSessionsJson,
+  filterByDateRange,
   formatDuration,
   getSessions,
 } from '../lib/analytics.js'
@@ -19,6 +20,17 @@ import VariantBreakdown from '../components/admin/VariantBreakdown.jsx'
 import AfhaakBreakdown from '../components/admin/AfhaakBreakdown.jsx'
 import SessionsList from '../components/admin/SessionsList.jsx'
 import AdminPasswordGate from '../components/admin/AdminPasswordGate.jsx'
+import DateRangePicker from '../components/admin/DateRangePicker.jsx'
+import SankeyFlow from '../components/admin/SankeyFlow.jsx'
+import BubbleExposure from '../components/admin/BubbleExposure.jsx'
+import SessionReplay from '../components/admin/SessionReplay.jsx'
+import TimeToConversion from '../components/admin/TimeToConversion.jsx'
+import DropoffMatrix from '../components/admin/DropoffMatrix.jsx'
+import RealTimeTile from '../components/admin/RealTimeTile.jsx'
+import HotLeads from '../components/admin/HotLeads.jsx'
+import ABSignificance from '../components/admin/ABSignificance.jsx'
+import CohortHeatmap from '../components/admin/CohortHeatmap.jsx'
+import AIWeeklySummary from '../components/admin/AIWeeklySummary.jsx'
 
 export default function AdminScreen() {
   return (
@@ -29,17 +41,17 @@ export default function AdminScreen() {
 }
 
 function AdminScreenInner() {
-  const [sessions, setSessions] = useState(() => getSessions())
+  const [allSessions, setAllSessions] = useState(() => getSessions())
   const [, setTick] = useState(0)
+  const [dateRange, setDateRange] = useState('all')
+  const [replaySessionId, setReplaySessionId] = useState(null)
 
-  // Re-laad de sessies elke keer dat het admin venster focus krijgt
-  // zodat events die in een ander tab zijn gegenereerd zichtbaar worden.
+  // Re-laad sessies bij focus + bij localStorage changes (cross-tab updates).
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const onFocus = () => setSessions(getSessions())
-    const onStorage = (e) => {
-      if (e.key === 'clp-events-v1') setSessions(getSessions())
-    }
+    const refresh = () => setAllSessions(getSessions())
+    const onFocus = () => refresh()
+    const onStorage = (e) => { if (e.key === 'clp-events-v1') refresh() }
     window.addEventListener('focus', onFocus)
     window.addEventListener('storage', onStorage)
     return () => {
@@ -47,6 +59,15 @@ function AdminScreenInner() {
       window.removeEventListener('storage', onStorage)
     }
   }, [])
+
+  // Auto-refresh elke 15s zodat real-time tile en hot-leads vers blijven
+  // zonder de pagina handmatig te hoeven herladen.
+  useEffect(() => {
+    const id = setInterval(() => setAllSessions(getSessions()), 15000)
+    return () => clearInterval(id)
+  }, [])
+
+  const sessions = useMemo(() => filterByDateRange(allSessions, dateRange), [allSessions, dateRange])
 
   const total = sessions.length
   const completed = sessions.filter((s) => s.completed).length
@@ -56,18 +77,34 @@ function AdminScreenInner() {
   const avgDuration = total > 0 ? sessions.reduce((sum, s) => sum + s.duration, 0) / total : 0
   const afhakers = sessions.filter((s) => s.afhaakReason).length
 
-  const funnel = buildFunnel(sessions)
-  const persona = buildPersonaBreakdown(sessions)
-  const variants = buildVariantBreakdown(sessions)
-  const abandonByStep = buildAbandonByStep(sessions)
-  const reasons = buildAfhaakReasons(sessions)
-  const handoffStats = buildHandoffStats(sessions)
-  const handoffByPersona = buildHandoffByPersona(sessions)
+  const funnel = useMemo(() => buildFunnel(sessions), [sessions])
+  const persona = useMemo(() => buildPersonaBreakdown(sessions), [sessions])
+  const variants = useMemo(() => buildVariantBreakdown(sessions), [sessions])
+  const abandonByStep = useMemo(() => buildAbandonByStep(sessions), [sessions])
+  const reasons = useMemo(() => buildAfhaakReasons(sessions), [sessions])
+  const handoffStats = useMemo(() => buildHandoffStats(sessions), [sessions])
+  const handoffByPersona = useMemo(() => buildHandoffByPersona(sessions), [sessions])
+
+  const replaySession = sessions.find((s) => s.sessionId === replaySessionId) || null
+  const replayIndex = sessions.findIndex((s) => s.sessionId === replaySessionId)
+
+  function openReplay(s) { setReplaySessionId(s.sessionId) }
+  function closeReplay() { setReplaySessionId(null) }
+  function nextSession() {
+    if (replayIndex < 0) return
+    const next = sessions[(replayIndex + 1) % sessions.length]
+    if (next) setReplaySessionId(next.sessionId)
+  }
+  function prevSession() {
+    if (replayIndex < 0) return
+    const prev = sessions[(replayIndex - 1 + sessions.length) % sessions.length]
+    if (prev) setReplaySessionId(prev.sessionId)
+  }
 
   const onClear = () => {
     if (typeof window !== 'undefined' && window.confirm('Alle event-data wordt verwijderd. Doorgaan?')) {
       clearAllEvents()
-      setSessions([])
+      setAllSessions([])
       setTick((t) => t + 1)
     }
   }
@@ -85,7 +122,7 @@ function AdminScreenInner() {
 
   return (
     <div className="min-h-[100dvh] bg-canvas text-ink">
-      <header className="sticky top-0 z-10 bg-canvas/90 backdrop-blur-md border-b border-mist-light">
+      <header className="sticky top-0 z-30 bg-canvas/90 backdrop-blur-md border-b border-mist-light">
         <div className="mx-auto max-w-6xl px-5 sm:px-8 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-9 h-9 rounded-full bg-midnite flex items-center justify-center shrink-0">
@@ -96,7 +133,8 @@ function AdminScreenInner() {
               <h1 className="text-[18px] font-semibold text-ink mt-1 leading-tight whitespace-nowrap">De Hofman dashboard</h1>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            <DateRangePicker value={dateRange} onChange={setDateRange} />
             <a
               href="/"
               className="text-[12px] text-ink-soft hover:text-ink border border-mist hover:border-midnite px-3 py-1.5 rounded-full transition whitespace-nowrap"
@@ -121,37 +159,74 @@ function AdminScreenInner() {
       </header>
 
       <main className="mx-auto max-w-6xl px-5 sm:px-8 py-8 space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <KpiCard label="Sessies" value={total} subtext={`${avgSessionsPerDay(sessions)} per dag`} />
-          <KpiCard
-            label="Voltooid"
-            value={`${completionRate.toFixed(0)}%`}
-            subtext={`${completed} van ${total}`}
-            accent={completionRate >= 50}
-          />
-          <KpiCard label="Leads" value={leads} subtext={`waarvan ${phoneShares} met 06`} />
-          <KpiCard label="Gem. duur" value={formatDuration(avgDuration)} subtext={`${afhakers} afgehaakt`} />
+        {/* Top KPIs + Real-time tile */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <KpiCard label="Sessies" value={total} subtext={avgPerDayLabel(sessions)} />
+            <KpiCard
+              label="Voltooid"
+              value={`${completionRate.toFixed(0)}%`}
+              subtext={`${completed} van ${total}`}
+              accent={completionRate >= 50}
+            />
+            <KpiCard label="Leads" value={leads} subtext={`waarvan ${phoneShares} met 06`} />
+            <KpiCard label="Gem. duur" value={formatDuration(avgDuration)} subtext={`${afhakers} afgehaakt`} />
+          </div>
+          <RealTimeTile onOpenSession={openReplay} />
         </div>
 
+        {/* Auto-insights */}
+        <AIWeeklySummary sessions={sessions} />
+
+        {/* Sankey flow — main story */}
+        <SankeyFlow sessions={sessions} />
+
+        {/* Bubble exposure + Hot leads */}
+        <div className="grid lg:grid-cols-2 gap-5">
+          <BubbleExposure sessions={sessions} />
+          <HotLeads sessions={sessions} onOpenSession={openReplay} />
+        </div>
+
+        {/* Time-to-conversion + Cohort heatmap */}
+        <div className="grid lg:grid-cols-2 gap-5">
+          <TimeToConversion sessions={sessions} />
+          <CohortHeatmap sessions={sessions} />
+        </div>
+
+        {/* Drop-off matrix — full width */}
+        <DropoffMatrix sessions={sessions} />
+
+        {/* Funnel + persona + A/B */}
         <div className="grid lg:grid-cols-2 gap-5">
           <FunnelChart funnel={funnel} />
           <div className="space-y-5">
             <PersonaBreakdown data={persona} />
+            <ABSignificance sessions={sessions} />
             <VariantBreakdown data={variants} sessions={sessions} />
           </div>
         </div>
 
+        {/* Handoff + afhaak — bestaande blokken */}
         <HandoffBlock stats={handoffStats} byPersona={handoffByPersona} />
-
         <AfhaakBreakdown byStep={abandonByStep} byReason={reasons} />
 
-        <SessionsList sessions={sessions} />
+        {/* Sessions list — onderaan, click → replay */}
+        <SessionsList sessions={sessions} onOpen={openReplay} />
 
         <footer className="pt-4 text-[11px] text-ink-mute leading-relaxed">
-          Events worden lokaal in localStorage opgeslagen onder <code className="bg-canvas-2 px-1.5 py-0.5 rounded">clp-events-v1</code>.
-          Voor productie vervang je <code className="bg-canvas-2 px-1.5 py-0.5 rounded">trackEvent()</code> in <code className="bg-canvas-2 px-1.5 py-0.5 rounded">src/lib/analytics.js</code> door een POST naar een backend of een service als PostHog.
+          Events lokaal in localStorage onder <code className="bg-canvas-2 px-1.5 py-0.5 rounded">clp-events-v1</code>.
+          {' '}Plausible Pro forwardt non-PII custom events; de admin hier draait volledig op de localStorage van dit apparaat.
+          {' '}Voor cross-device populatie-cijfers: open Plausible.
         </footer>
       </main>
+
+      {/* Side-panel replay */}
+      <SessionReplay
+        session={replaySession}
+        onClose={closeReplay}
+        onPrev={prevSession}
+        onNext={nextSession}
+      />
     </div>
   )
 }
@@ -214,9 +289,9 @@ function HandoffBlock({ stats, byPersona }) {
   )
 }
 
-function avgSessionsPerDay(sessions) {
-  if (sessions.length === 0) return '0'
+function avgPerDayLabel(sessions) {
+  if (sessions.length === 0) return '0 per dag'
   const oldest = sessions[sessions.length - 1].startedAt
   const days = Math.max(1, (Date.now() - oldest) / 86400000)
-  return (sessions.length / days).toFixed(1)
+  return `${(sessions.length / days).toFixed(1)} per dag`
 }

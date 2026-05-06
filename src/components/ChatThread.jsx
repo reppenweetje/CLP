@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { trackEvent } from '../lib/analytics.js'
 import BotMessage from './BotMessage.jsx'
 import UserMessage from './UserMessage.jsx'
 import TypingIndicator from './TypingIndicator.jsx'
@@ -19,12 +20,40 @@ import BrochureBubble from './BrochureBubble.jsx'
 import WarmHandoffBubble from './WarmHandoffBubble.jsx'
 import ServiceCardBubble from './ServiceCardBubble.jsx'
 
+// Bubble-kinds die we tracken voor exposure-analyse. Komt overeen met
+// de switch-cases in renderMessage(). Bot-text/user-text/typing tellen
+// niet als "bubble" want dat zijn loutere chat-tekens, geen content-units.
+const TRACKABLE_BUBBLE_KINDS = new Set([
+  'content-card', 'unit-card', 'gallery', 'usp-cards', 'location',
+  'site-plan', 'highlights', 'process', 'planning', 'investor',
+  'price', 'price-compare', 'brochure', 'cta-card', 'warm-handoff',
+  'service-card',
+])
+
 // Scrollable chat thread. Bij nieuwe messages scrollen we zo dat
 // het laatste user-bubble bovenaan komt te staan; de bot-replies daaronder
 // blijven leesbaar zonder dat de bezoeker handmatig terug moet scrollen.
 export default function ChatThread({ messages, showTyping = false, onBrochure, onReset, onUnitView, onCalcInteract, onHandoffAction, onServiceCardAction, onServiceCardSubmitPhone, onWaRequest }) {
   const containerRef = useRef(null)
   const prevLengthRef = useRef(0)
+  const trackedIdsRef = useRef(new Set())
+
+  // Track elke nieuwe bubble auto-magisch via bubble:rendered events.
+  // Dedupe op message-id zodat re-renders geen duplicate events genereren.
+  useEffect(() => {
+    for (const m of messages) {
+      if (!m.kind || !TRACKABLE_BUBBLE_KINDS.has(m.kind)) continue
+      if (trackedIdsRef.current.has(m.id)) continue
+      trackedIdsRef.current.add(m.id)
+      trackEvent('bubble:rendered', {
+        kind: m.kind,
+        messageId: m.id,
+        // Lichtgewicht payload-summary — geen volledige content om
+        // localStorage niet te bombarderen.
+        summary: bubbleSummary(m),
+      })
+    }
+  }, [messages])
 
   useEffect(() => {
     const container = containerRef.current
@@ -159,5 +188,23 @@ function renderMessage(m, { onBrochure, onReset, onUnitView, onCalcInteract, onH
       )
     default:
       return null
+  }
+}
+
+// Lichtgewicht summary van een bubble voor analytics-payload.
+// Houdt event-grootte klein (geen full content/images), wel genoeg
+// signaal om in admin te kunnen sorteren/groeperen.
+function bubbleSummary(m) {
+  const p = m.payload || {}
+  switch (m.kind) {
+    case 'unit-card':     return { unitId: p?.id, unitType: p?.type }
+    case 'gallery':       return { count: Array.isArray(p?.images) ? p.images.length : 0 }
+    case 'usp-cards':     return { count: Array.isArray(p?.cards) ? p.cards.length : 0 }
+    case 'site-plan':     return { persona: p?.persona }
+    case 'price':         return { count: Array.isArray(p?.units) ? p.units.length : 0 }
+    case 'warm-handoff':  return { hasPhone: !!p?.hasPhone }
+    case 'service-card':  return { unitId: p?.unit?.id, hasPhone: !!p?.hasPhone }
+    case 'content-card':  return { tag: p?.tag }
+    default:              return {}
   }
 }
