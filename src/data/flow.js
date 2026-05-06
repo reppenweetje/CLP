@@ -36,8 +36,13 @@ export const flow = {
       key: 'intent',
       label: 'Waarom ben je op zoek naar een bedrijfsunit?',
       labelVariants: {
+        // A: rationeel/uitleggend, behoudt context "bedrijfsunit"
         a: 'Waarom ben je op zoek naar een bedrijfsunit?',
-        b: 'Wat brengt je vandaag naar De Hofman?',
+        // B: directe binaire frame-shift. Test of pre-framing op
+        //    de twee dominante personae (eigen-gebruiker + belegger)
+        //    de qualificatie sneller laat klikken zonder dat de 5
+        //    chip-opties (incl. beide/huur/weet niet) verwarren.
+        b: 'Eigen gebruik of belegging?',
       },
       options: [
         { id: 'eigen_bedrijf', label: 'Voor mijn bedrijf', score: 12, persona: 'eigen_gebruiker' },
