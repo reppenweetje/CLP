@@ -41,6 +41,7 @@ import SmartResumeBanner from './components/SmartResumeBanner.jsx'
 import RescueNudge from './components/RescueNudge.jsx'
 import ExitIntentPrompt from './components/ExitIntentPrompt.jsx'
 import { useSmartResume, useInactivityRescue, useExitIntent, getOrAssignVariant } from './lib/engagement.js'
+import { detectCurrentIp } from './lib/ipExclusion.js'
 
 let _id = 0
 const nextId = () => ++_id
@@ -465,6 +466,9 @@ function Demo() {
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
     if (params.get('debug') === '1') dispatch({ type: 'TOGGLE_DEBUG' })
+    // IP-detectie zodat eventuele uitsluiting van team-traffic werkt.
+    // Faalt-soft als netwerk weigert; gewoon doorgaan met tracking aan.
+    detectCurrentIp().catch(() => {})
   }, [])
 
   const persona = derivePersona(state.answers)

@@ -31,6 +31,25 @@ import HotLeads from '../components/admin/HotLeads.jsx'
 import ABSignificance from '../components/admin/ABSignificance.jsx'
 import CohortHeatmap from '../components/admin/CohortHeatmap.jsx'
 import AIWeeklySummary from '../components/admin/AIWeeklySummary.jsx'
+import AdminSidebar, { useActiveSection } from '../components/admin/AdminSidebar.jsx'
+import AdminSettings from '../components/admin/AdminSettings.jsx'
+
+// Sectie-definities. id matcht het DOM-element-id van de wrapper, label is
+// wat de sidebar laat zien. Labels zijn kort gehouden (≤14 chars) zodat
+// ze niet truncaten in de 200px brede sidebar.
+const SECTIONS = [
+  { id: 'overview', label: 'Overzicht' },
+  { id: 'insights', label: 'Insights' },
+  { id: 'route',    label: 'Route' },
+  { id: 'bubbles',  label: 'Bubbles + leads' },
+  { id: 'tempo',    label: 'Tempo + tijd' },
+  { id: 'dropoff',  label: 'Drop-off' },
+  { id: 'funnel',   label: 'Funnel + A/B' },
+  { id: 'handoff',  label: 'Warm handoff' },
+  { id: 'afhaak',   label: 'Afhaak' },
+  { id: 'sessies',  label: 'Sessies' },
+  { id: 'settings', label: 'Settings' },
+]
 
 export default function AdminScreen() {
   return (
@@ -46,7 +65,6 @@ function AdminScreenInner() {
   const [dateRange, setDateRange] = useState('all')
   const [replaySessionId, setReplaySessionId] = useState(null)
 
-  // Re-laad sessies bij focus + bij localStorage changes (cross-tab updates).
   useEffect(() => {
     if (typeof window === 'undefined') return
     const refresh = () => setAllSessions(getSessions())
@@ -60,14 +78,23 @@ function AdminScreenInner() {
     }
   }, [])
 
-  // Auto-refresh elke 15s zodat real-time tile en hot-leads vers blijven
-  // zonder de pagina handmatig te hoeven herladen.
   useEffect(() => {
     const id = setInterval(() => setAllSessions(getSessions()), 15000)
     return () => clearInterval(id)
   }, [])
 
   const sessions = useMemo(() => filterByDateRange(allSessions, dateRange), [allSessions, dateRange])
+  const sectionIds = useMemo(() => SECTIONS.map((s) => s.id), [])
+  const observedSection = useActiveSection(sectionIds)
+  // Optimistic override: na een sidebar-click highlighten we direct de
+  // doel-sectie. Scroll-driven detectie neemt 't 600ms later weer over,
+  // zodat user-scrolling alsnog accuraat is.
+  const [pinnedSection, setPinnedSection] = useState(null)
+  const activeSection = pinnedSection || observedSection
+  function onNavigate(id) {
+    setPinnedSection(id)
+    setTimeout(() => setPinnedSection(null), 700)
+  }
 
   const total = sessions.length
   const completed = sessions.filter((s) => s.completed).length
@@ -123,7 +150,7 @@ function AdminScreenInner() {
   return (
     <div className="min-h-[100dvh] bg-canvas text-ink">
       <header className="sticky top-0 z-30 bg-canvas/90 backdrop-blur-md border-b border-mist-light">
-        <div className="mx-auto max-w-6xl px-5 sm:px-8 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="mx-auto max-w-[1280px] px-5 sm:px-8 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-9 h-9 rounded-full bg-midnite flex items-center justify-center shrink-0">
               <img src="/images/repp-mark.svg" alt="" aria-hidden="true" className="w-[22px]" />
@@ -158,69 +185,89 @@ function AdminScreenInner() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-5 sm:px-8 py-8 space-y-6">
-        {/* Top KPIs + Real-time tile */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <KpiCard label="Sessies" value={total} subtext={avgPerDayLabel(sessions)} />
-            <KpiCard
-              label="Voltooid"
-              value={`${completionRate.toFixed(0)}%`}
-              subtext={`${completed} van ${total}`}
-              accent={completionRate >= 50}
-            />
-            <KpiCard label="Leads" value={leads} subtext={`waarvan ${phoneShares} met 06`} />
-            <KpiCard label="Gem. duur" value={formatDuration(avgDuration)} subtext={`${afhakers} afgehaakt`} />
-          </div>
-          <RealTimeTile onOpenSession={openReplay} />
-        </div>
+      <div className="mx-auto max-w-[1280px] px-5 sm:px-8 py-6 grid lg:grid-cols-[200px_minmax(0,1fr)] gap-6 lg:gap-8">
+        <AdminSidebar sections={SECTIONS} activeId={activeSection} onNavigate={onNavigate} />
 
-        {/* Auto-insights */}
-        <AIWeeklySummary sessions={sessions} />
+        <main className="space-y-6 min-w-0">
+          {/* Overview */}
+          <section id="overview" className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5 scroll-mt-24">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <KpiCard label="Sessies" value={total} subtext={avgPerDayLabel(sessions)} />
+              <KpiCard
+                label="Voltooid"
+                value={`${completionRate.toFixed(0)}%`}
+                subtext={`${completed} van ${total}`}
+                accent={completionRate >= 50}
+              />
+              <KpiCard label="Leads" value={leads} subtext={`waarvan ${phoneShares} met 06`} />
+              <KpiCard label="Gem. duur" value={formatDuration(avgDuration)} subtext={`${afhakers} afgehaakt`} />
+            </div>
+            <RealTimeTile onOpenSession={openReplay} />
+          </section>
 
-        {/* Sankey flow — main story */}
-        <SankeyFlow sessions={sessions} />
+          {/* Insights */}
+          <section id="insights" className="scroll-mt-24">
+            <AIWeeklySummary sessions={sessions} />
+          </section>
 
-        {/* Bubble exposure + Hot leads */}
-        <div className="grid lg:grid-cols-2 gap-5">
-          <BubbleExposure sessions={sessions} />
-          <HotLeads sessions={sessions} onOpenSession={openReplay} />
-        </div>
+          {/* Route */}
+          <section id="route" className="scroll-mt-24">
+            <SankeyFlow sessions={sessions} />
+          </section>
 
-        {/* Time-to-conversion + Cohort heatmap */}
-        <div className="grid lg:grid-cols-2 gap-5">
-          <TimeToConversion sessions={sessions} />
-          <CohortHeatmap sessions={sessions} />
-        </div>
+          {/* Bubbles + Hot leads */}
+          <section id="bubbles" className="grid lg:grid-cols-2 gap-5 scroll-mt-24">
+            <BubbleExposure sessions={sessions} />
+            <HotLeads sessions={sessions} onOpenSession={openReplay} />
+          </section>
 
-        {/* Drop-off matrix — full width */}
-        <DropoffMatrix sessions={sessions} />
+          {/* Tempo + Activity */}
+          <section id="tempo" className="grid lg:grid-cols-2 gap-5 scroll-mt-24">
+            <TimeToConversion sessions={sessions} />
+            <CohortHeatmap sessions={sessions} />
+          </section>
 
-        {/* Funnel + persona + A/B */}
-        <div className="grid lg:grid-cols-2 gap-5">
-          <FunnelChart funnel={funnel} />
-          <div className="space-y-5">
-            <PersonaBreakdown data={persona} />
-            <ABSignificance sessions={sessions} />
-            <VariantBreakdown data={variants} sessions={sessions} />
-          </div>
-        </div>
+          {/* Drop-off matrix */}
+          <section id="dropoff" className="scroll-mt-24">
+            <DropoffMatrix sessions={sessions} />
+          </section>
 
-        {/* Handoff + afhaak — bestaande blokken */}
-        <HandoffBlock stats={handoffStats} byPersona={handoffByPersona} />
-        <AfhaakBreakdown byStep={abandonByStep} byReason={reasons} />
+          {/* Funnel + persona + A/B */}
+          <section id="funnel" className="grid lg:grid-cols-2 gap-5 scroll-mt-24">
+            <FunnelChart funnel={funnel} />
+            <div className="space-y-5">
+              <PersonaBreakdown data={persona} />
+              <ABSignificance sessions={sessions} />
+              <VariantBreakdown data={variants} sessions={sessions} />
+            </div>
+          </section>
 
-        {/* Sessions list — onderaan, click → replay */}
-        <SessionsList sessions={sessions} onOpen={openReplay} />
+          {/* Warm handoff */}
+          <section id="handoff" className="scroll-mt-24">
+            <HandoffBlock stats={handoffStats} byPersona={handoffByPersona} />
+          </section>
 
-        <footer className="pt-4 text-[11px] text-ink-mute leading-relaxed">
-          Events lokaal in localStorage onder <code className="bg-canvas-2 px-1.5 py-0.5 rounded">clp-events-v1</code>.
-          {' '}Plausible Pro forwardt non-PII custom events; de admin hier draait volledig op de localStorage van dit apparaat.
-          {' '}Voor cross-device populatie-cijfers: open Plausible.
-        </footer>
-      </main>
+          {/* Afhaak */}
+          <section id="afhaak" className="scroll-mt-24">
+            <AfhaakBreakdown byStep={abandonByStep} byReason={reasons} />
+          </section>
 
-      {/* Side-panel replay */}
+          {/* Sessies list */}
+          <section id="sessies" className="scroll-mt-24">
+            <SessionsList sessions={sessions} onOpen={openReplay} />
+          </section>
+
+          {/* Settings */}
+          <AdminSettings />
+
+          <footer className="pt-4 text-[11px] text-ink-mute leading-relaxed">
+            Events lokaal in localStorage onder <code className="bg-canvas-2 px-1.5 py-0.5 rounded">clp-events-v1</code>.
+            {' '}Plausible Pro forwardt non-PII custom events; de admin hier draait volledig op de localStorage van dit apparaat.
+            {' '}Voor cross-device populatie-cijfers: open Plausible.
+          </footer>
+        </main>
+      </div>
+
       <SessionReplay
         session={replaySession}
         onClose={closeReplay}

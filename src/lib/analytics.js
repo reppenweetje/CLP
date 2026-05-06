@@ -9,6 +9,7 @@
 // temperature, score, ctaVariant, label, choice, outcome) doorgaan.
 
 import { plausibleEvent } from './plausible.js'
+import { isTrackingSuppressed } from './ipExclusion.js'
 
 const EVENTS_KEY = 'clp-events-v1'
 const SESSION_KEY = 'clp-session-id'
@@ -60,6 +61,10 @@ function autoSessionProps() {
 }
 
 export function trackEvent(type, payload = {}) {
+  // IP-uitsluiting: REPP-team-traffic mag analytics niet vervuilen.
+  // Skip ALLES — geen localStorage write, geen Plausible forward.
+  if (isTrackingSuppressed()) return null
+
   const events = loadEvents()
   const enriched = { ...autoSessionProps(), ...payload }
   const event = {
