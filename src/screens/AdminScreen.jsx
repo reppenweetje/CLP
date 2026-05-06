@@ -18,8 +18,17 @@ import PersonaBreakdown from '../components/admin/PersonaBreakdown.jsx'
 import VariantBreakdown from '../components/admin/VariantBreakdown.jsx'
 import AfhaakBreakdown from '../components/admin/AfhaakBreakdown.jsx'
 import SessionsList from '../components/admin/SessionsList.jsx'
+import AdminPasswordGate from '../components/admin/AdminPasswordGate.jsx'
 
 export default function AdminScreen() {
+  return (
+    <AdminPasswordGate>
+      <AdminScreenInner />
+    </AdminPasswordGate>
+  )
+}
+
+function AdminScreenInner() {
   const [sessions, setSessions] = useState(() => getSessions())
   const [, setTick] = useState(0)
 

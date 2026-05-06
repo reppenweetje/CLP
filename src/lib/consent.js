@@ -25,7 +25,11 @@ const STORAGE_KEY = 'clp-consent-log-v1'
 // Versienummer van het privacystatement. Bump bij elke substantiele wijziging
 // van public/privacy.html zodat we kunnen aantonen onder welke voorwaarden
 // een bezoeker zijn toestemming heeft gegeven.
-export const PRIVACY_STATEMENT_VERSION = '2026-05-06'
+//
+// Wijzigingsgeschiedenis:
+//   2026-05-06   initial — privacystatement live met 60mnd retentie
+//   2026-05-06b  Plausible Analytics toegevoegd in sectie 4 + 9
+export const PRIVACY_STATEMENT_VERSION = '2026-05-06b'
 
 function readLog() {
   if (typeof window === 'undefined') return []

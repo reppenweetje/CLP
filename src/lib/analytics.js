@@ -2,8 +2,13 @@
 // onder clp-events-v1. Een sessie krijgt een uuid bij start van een chat
 // en wordt geclearet als de demo opnieuw begint.
 //
-// Voor productie vervang trackEvent door een POST naar een serverless function
-// of een third-party service zoals PostHog. Aggregatie-functies blijven gelijk.
+// Productie-flow: trackEvent schrijft naar localStorage (eigen admin/funnel)
+// EN forwardt naar Plausible Pro voor cross-session populatie-analyse. PII
+// wordt door safeProps() in plausible.js weggefilterd zodat alleen veilige
+// flow-attributen (persona, intent_id, size_id, timeline_id, stage,
+// temperature, score, ctaVariant, label, choice, outcome) doorgaan.
+
+import { plausibleEvent } from './plausible.js'
 
 const EVENTS_KEY = 'clp-events-v1'
 const SESSION_KEY = 'clp-session-id'
@@ -51,6 +56,9 @@ export function trackEvent(type, payload = {}) {
   // cap op 5000 events om localStorage niet vol te laten lopen
   const capped = events.length > 5000 ? events.slice(-5000) : events
   safeWrite(EVENTS_KEY, JSON.stringify(capped))
+  // Forward naar Plausible voor cross-session funnel-analyse. PII wordt
+  // weggefilterd in safeProps() — zie src/lib/plausible.js.
+  plausibleEvent(type, payload)
   return event
 }
 
