@@ -42,34 +42,34 @@ export default function WarmHandoffBubble({
       <div className="flex-1 min-w-0">
         <div className="rounded-3xl rounded-tl-md bg-paper border border-mist-light overflow-hidden">
           <div className="px-4 pt-3.5 pb-3 border-b border-mist-light bg-canvas-2/50">
-            <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium">
+            <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium">
               {safeCopy.tag}
             </div>
-            <div className="text-[15px] font-semibold text-ink mt-1 leading-snug">
+            <div className="text-[16px] font-semibold text-ink mt-1 leading-snug">
               {safeCopy.headline}
             </div>
           </div>
           <div className="px-4 py-3.5 space-y-3">
-            <p className="text-[13.5px] text-ink leading-relaxed">{safeCopy.body}</p>
+            <p className="text-[14.5px] text-ink leading-relaxed">{safeCopy.body}</p>
 
             {/* Commitment-strip: vertel vooraf wat de bezoeker krijgt als hij
                 klikt. Zo heeft de "Bel me" CTA al een verwachting voor de klik
                 ipv pas na de klik in een outcome-strip. */}
             <div className="rounded-xl bg-paper border border-mist-light px-3 py-2.5">
-              <div className="text-[10px] tracking-[0.16em] text-ink-mute uppercase mb-1">
+              <div className="text-[11px] tracking-[0.16em] text-ink-mute uppercase mb-1">
                 Wat je krijgt
               </div>
-              <div className="text-[12.5px] text-ink-soft leading-relaxed">
+              <div className="text-[13.5px] text-ink-soft leading-relaxed">
                 Ik bel je {promise}, meestal een korte call van tien minuten. Geen verkoop­praatje, gewoon je vragen doornemen.
               </div>
             </div>
 
             {safeCopy.value && safeCopy.value.length > 0 && (
               <div className="rounded-xl bg-canvas-2 border border-mist-light px-3 py-2.5">
-                <div className="text-[10px] tracking-[0.16em] text-ink-mute uppercase mb-1">
+                <div className="text-[11px] tracking-[0.16em] text-ink-mute uppercase mb-1">
                   Wat we kort kunnen doornemen
                 </div>
-                <ul className="text-[12.5px] text-ink-soft leading-relaxed space-y-0.5">
+                <ul className="text-[13.5px] text-ink-soft leading-relaxed space-y-0.5">
                   {safeCopy.value.map((v) => (
                     <li key={v} className="flex gap-2">
                       <span className="text-midnite mt-1.5 shrink-0 w-1 h-1 rounded-full bg-midnite" />
@@ -82,21 +82,21 @@ export default function WarmHandoffBubble({
 
             {outcome === 'callback' && (
               <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2.5">
-                <div className="text-[12.5px] text-emerald-900 leading-relaxed">
+                <div className="text-[13.5px] text-emerald-900 leading-relaxed">
                   Genoteerd. Ik bel je {promise}.
                 </div>
               </div>
             )}
             {outcome === 'whatsapp' && (
               <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2.5">
-                <div className="text-[12.5px] text-emerald-900 leading-relaxed">
+                <div className="text-[13.5px] text-emerald-900 leading-relaxed">
                   WhatsApp opent in een nieuw venster.
                 </div>
               </div>
             )}
             {outcome === 'dismissed' && (
               <div className="rounded-xl bg-canvas-2 border border-mist-light px-3 py-2.5">
-                <div className="text-[12.5px] text-ink-soft leading-relaxed">
+                <div className="text-[13.5px] text-ink-soft leading-relaxed">
                   Geen probleem. Je kunt altijd terugkomen op deze stap.
                 </div>
               </div>
@@ -106,7 +106,7 @@ export default function WarmHandoffBubble({
               <div className="space-y-2 pt-1">
                 <button
                   onClick={onCallback}
-                  className="w-full bg-midnite hover:bg-midnite-soft text-paper text-[13px] font-medium py-3 rounded-full transition flex items-center justify-center gap-2"
+                  className="w-full bg-midnite hover:bg-midnite-soft text-paper text-[14px] font-medium py-3 rounded-full transition flex items-center justify-center gap-2"
                 >
                   <PhoneIcon />
                   <span>{safeCopy.primaryCta}</span>
@@ -117,7 +117,7 @@ export default function WarmHandoffBubble({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={onWhatsapp}
-                    className="flex-1 border border-mist hover:border-midnite text-ink hover:text-midnite text-[12.5px] py-2.5 rounded-full transition flex items-center justify-center gap-1.5"
+                    className="flex-1 border border-mist hover:border-midnite text-ink hover:text-midnite text-[13.5px] py-2.5 rounded-full transition flex items-center justify-center gap-1.5"
                   >
                     <WaIcon />
                     <span>WhatsApp {botOrg || 'ons'}</span>
@@ -125,7 +125,7 @@ export default function WarmHandoffBubble({
                   <a
                     href={phoneLink}
                     onClick={onPhone}
-                    className="flex-1 border border-mist hover:border-midnite text-ink hover:text-midnite text-[12.5px] py-2.5 rounded-full transition flex items-center justify-center"
+                    className="flex-1 border border-mist hover:border-midnite text-ink hover:text-midnite text-[13.5px] py-2.5 rounded-full transition flex items-center justify-center"
                   >
                     {phoneDisplay || 'Bel zelf'}
                   </a>
@@ -135,7 +135,7 @@ export default function WarmHandoffBubble({
                     tekstlink — visueel 3 vs 1 — wat als drammerig aanvoelde. */}
                 <button
                   onClick={onDismiss}
-                  className="w-full border border-mist hover:border-midnite text-ink-soft hover:text-midnite text-[12.5px] py-2.5 rounded-full transition flex items-center justify-center"
+                  className="w-full border border-mist hover:border-midnite text-ink-soft hover:text-midnite text-[13.5px] py-2.5 rounded-full transition flex items-center justify-center"
                 >
                   Ik kijk eerst zelf verder
                 </button>

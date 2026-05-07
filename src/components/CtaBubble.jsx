@@ -20,23 +20,23 @@ export default function CtaBubble({
         <div className="rounded-3xl rounded-tl-md bg-paper border border-mist-light p-4 space-y-3">
           {summary && (
             <div className="rounded-2xl bg-canvas-2 border border-mist-light p-3.5">
-              <div className="text-[10px] tracking-[0.18em] text-ink-mute uppercase">Jouw interesse</div>
-              <div className="text-[13px] text-ink leading-relaxed mt-1.5">{summary}</div>
+              <div className="text-[11px] tracking-[0.18em] text-ink-mute uppercase">Jouw interesse</div>
+              <div className="text-[14px] text-ink leading-relaxed mt-1.5">{summary}</div>
             </div>
           )}
           {intro && (
-            <div className="text-[13px] text-ink-soft leading-relaxed">{intro}</div>
+            <div className="text-[14px] text-ink-soft leading-relaxed">{intro}</div>
           )}
           {/* Subtle attribution: bezoeker kent op dit moment al de bot-stem
               ("Jesse van REPP") maar de CTA-card is het belangrijkste contact-
               moment. Hier maken we expliciet wie achter de knoppen staat. */}
-          <div className="text-[11px] text-ink-mute leading-relaxed">
+          <div className="text-[12px] text-ink-mute leading-relaxed">
             REPP is verkopend makelaar van De Hofman.
           </div>
           {phoneLink && (
             <a
               href={phoneLink}
-              className="block w-full text-center rounded-full bg-midnite text-paper font-semibold py-3.5 text-[14px] hover:bg-midnite-soft active:scale-[0.99] transition"
+              className="block w-full text-center rounded-full bg-midnite text-paper font-semibold py-3.5 text-[15px] hover:bg-midnite-soft active:scale-[0.99] transition"
             >
               Bel direct{phoneDisplay ? ` ${phoneDisplay}` : ''}
             </a>
@@ -47,7 +47,7 @@ export default function CtaBubble({
               target="_blank"
               rel="noreferrer"
               onClick={onWhatsapp}
-              className="block w-full text-center rounded-full bg-neon text-midnite font-semibold py-3.5 text-[14px] hover:brightness-95 active:scale-[0.99] transition"
+              className="block w-full text-center rounded-full bg-neon text-midnite font-semibold py-3.5 text-[15px] hover:brightness-95 active:scale-[0.99] transition"
             >
               Open WhatsApp met REPP
             </a>
@@ -56,7 +56,7 @@ export default function CtaBubble({
             <button
               type="button"
               onClick={onBrochure}
-              className="block w-full text-center rounded-full border border-midnite/40 bg-paper text-midnite font-medium py-3.5 text-[14px] hover:bg-canvas-2 transition"
+              className="block w-full text-center rounded-full border border-midnite/40 bg-paper text-midnite font-medium py-3.5 text-[15px] hover:bg-canvas-2 transition"
             >
               Bekijk brochure
             </button>
@@ -70,7 +70,7 @@ export default function CtaBubble({
                 }
                 onReset()
               }}
-              className="block w-full text-[12px] text-ink-mute hover:text-ink py-2 text-center transition"
+              className="block w-full text-[13px] text-ink-mute hover:text-ink py-2 text-center transition"
             >
               Start opnieuw
             </button>

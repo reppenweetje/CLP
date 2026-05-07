@@ -36,19 +36,19 @@ export default function AnswersSheet({ open, answers, onClose, onEdit, onEditLea
             </svg>
           </button>
         </div>
-        <p className="text-[12px] text-ink-soft mb-4">
+        <p className="text-[13px] text-ink-soft mb-4">
           Tik op "Wijzig" om een antwoord aan te passen. We gaan dan vanaf dat punt verder.
         </p>
 
         {(lead?.email || lead?.firstName || lead?.phone) && (
           <div className="rounded-2xl bg-canvas-2 border border-mist-light p-3.5 mb-3">
             <div className="flex items-baseline justify-between gap-3 mb-2">
-              <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium">
+              <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium">
                 Jouw gegevens
               </div>
               <button
                 onClick={onForgetLead}
-                className="text-[11px] text-rose-700 hover:text-rose-900"
+                className="text-[12px] text-rose-700 hover:text-rose-900"
               >
                 Alles vergeten
               </button>
@@ -97,14 +97,14 @@ export default function AnswersSheet({ open, answers, onClose, onEdit, onEditLea
                 />
               )}
             </div>
-            <p className="text-[11px] text-ink-mute leading-snug mt-2">
+            <p className="text-[12px] text-ink-mute leading-snug mt-2">
               We vragen deze niet opnieuw, tenzij je ze aanpast of vergeet.
             </p>
           </div>
         )}
 
         {rows.length === 0 ? (
-          <div className="rounded-2xl border border-mist-light bg-canvas-2 p-4 text-[13px] text-ink-soft text-center">
+          <div className="rounded-2xl border border-mist-light bg-canvas-2 p-4 text-[14px] text-ink-soft text-center">
             Nog geen antwoorden om aan te passen.
           </div>
         ) : (
@@ -115,17 +115,17 @@ export default function AnswersSheet({ open, answers, onClose, onEdit, onEditLea
                 className={`flex items-center gap-3 px-3.5 py-3 ${i > 0 ? 'border-t border-mist-light' : ''}`}
               >
                 <div className="flex-1 min-w-0">
-                  <div className="text-[10px] tracking-[0.18em] text-ink-mute uppercase mb-0.5">
+                  <div className="text-[11px] tracking-[0.18em] text-ink-mute uppercase mb-0.5">
                     {row.label}
                   </div>
-                  <div className="text-[13px] text-ink truncate">{row.value}</div>
+                  <div className="text-[14px] text-ink truncate">{row.value}</div>
                 </div>
                 <button
                   onClick={() => {
                     onEdit(row.key)
                     onClose()
                   }}
-                  className="text-[12px] text-midnite hover:text-midnite-soft border border-mist hover:border-midnite px-3 py-1.5 rounded-full transition shrink-0"
+                  className="text-[13px] text-midnite hover:text-midnite-soft border border-mist hover:border-midnite px-3 py-1.5 rounded-full transition shrink-0"
                 >
                   Wijzig
                 </button>
@@ -136,7 +136,7 @@ export default function AnswersSheet({ open, answers, onClose, onEdit, onEditLea
 
         <button
           onClick={onClose}
-          className="mt-4 w-full text-[13px] text-ink-soft hover:text-ink border border-mist hover:border-midnite py-2.5 rounded-full transition"
+          className="mt-4 w-full text-[14px] text-ink-soft hover:text-ink border border-mist hover:border-midnite py-2.5 rounded-full transition"
         >
           Terug
         </button>
@@ -150,13 +150,13 @@ export default function AnswersSheet({ open, answers, onClose, onEdit, onEditLea
               onReset()
               onClose()
             }}
-            className="mt-2 w-full text-[12px] text-ink-mute hover:text-rose-700 py-2 text-center transition"
+            className="mt-2 w-full text-[13px] text-ink-mute hover:text-rose-700 py-2 text-center transition"
           >
             Opnieuw beginnen
           </button>
         )}
 
-        <div className="mt-4 pt-3 border-t border-mist-light text-[11px] text-ink-mute leading-relaxed text-center">
+        <div className="mt-4 pt-3 border-t border-mist-light text-[12px] text-ink-mute leading-relaxed text-center">
           We bewaren deze antwoorden lokaal in jouw browser.{' '}
           <a
             href="/privacy.html"
@@ -177,14 +177,14 @@ function LeadRow({ label, value, onEdit, muted, editLabel = 'Aanpassen' }) {
   return (
     <div className="flex items-center gap-3 px-3.5 py-2.5 border-b border-mist-light last:border-b-0">
       <div className="flex-1 min-w-0">
-        <div className="text-[10px] tracking-[0.16em] text-ink-mute uppercase">{label}</div>
-        <div className={`text-[13px] truncate ${muted ? 'text-ink-mute italic' : 'text-ink'}`}>
+        <div className="text-[11px] tracking-[0.16em] text-ink-mute uppercase">{label}</div>
+        <div className={`text-[14px] truncate ${muted ? 'text-ink-mute italic' : 'text-ink'}`}>
           {value}
         </div>
       </div>
       <button
         onClick={onEdit}
-        className="text-[11px] text-midnite hover:text-midnite-soft border border-mist hover:border-midnite px-2.5 py-1 rounded-full transition shrink-0"
+        className="text-[12px] text-midnite hover:text-midnite-soft border border-mist hover:border-midnite px-2.5 py-1 rounded-full transition shrink-0"
       >
         {editLabel}
       </button>

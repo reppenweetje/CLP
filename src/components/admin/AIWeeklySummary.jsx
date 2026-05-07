@@ -23,13 +23,13 @@ export default function AIWeeklySummary({ sessions }) {
     <section className="rounded-2xl border border-mist-light bg-paper p-5 col-span-full">
       <header className="flex items-baseline justify-between gap-3 mb-4">
         <div>
-          <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium mb-1">Auto-insights</div>
-          <h2 className="text-[14px] font-semibold text-ink">Wat zegt deze data?</h2>
-          <p className="text-[12px] text-ink-soft leading-relaxed mt-1">
+          <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium mb-1">Auto-insights</div>
+          <h2 className="text-[15px] font-semibold text-ink">Wat zegt deze data?</h2>
+          <p className="text-[13px] text-ink-soft leading-relaxed mt-1">
             Rule-based samenvatting van conversie, drop-off en bubble-effectiviteit. Geen LLM, alle data blijft lokaal.
           </p>
         </div>
-        <div className="text-[11px] text-ink-mute tabular-nums">{sessions.length} sessies</div>
+        <div className="text-[12px] text-ink-mute tabular-nums">{sessions.length} sessies</div>
       </header>
       {insights.length === 0 ? (
         <EmptyState />
@@ -65,14 +65,14 @@ function Insight({ ins }) {
   }[ins.tone]
   return (
     <li className={'rounded-xl border px-4 py-3 flex gap-3 items-start ' + tone}>
-      <span className={'shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-semibold ' + iconColor}>
+      <span className={'shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[13px] font-semibold ' + iconColor}>
         {icon}
       </span>
       <div className="min-w-0 flex-1">
-        <div className="text-[13px] font-semibold text-ink">{ins.title}</div>
-        <div className="text-[12px] text-ink-soft leading-relaxed mt-0.5">{ins.body}</div>
+        <div className="text-[14px] font-semibold text-ink">{ins.title}</div>
+        <div className="text-[13px] text-ink-soft leading-relaxed mt-0.5">{ins.body}</div>
         {ins.action && (
-          <div className="text-[11.5px] text-midnite font-medium mt-1.5">→ {ins.action}</div>
+          <div className="text-[12.5px] text-midnite font-medium mt-1.5">→ {ins.action}</div>
         )}
       </div>
     </li>
@@ -81,7 +81,7 @@ function Insight({ ins }) {
 
 function EmptyState() {
   return (
-    <div className="rounded-xl border border-dashed border-mist-light bg-canvas px-6 py-8 text-center text-[13px] text-ink-soft">
+    <div className="rounded-xl border border-dashed border-mist-light bg-canvas px-6 py-8 text-center text-[14px] text-ink-soft">
       Te weinig data voor automatische insights. Vanaf ~10 sessies vullen ze hier.
     </div>
   )

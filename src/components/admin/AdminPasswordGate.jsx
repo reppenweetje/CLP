@@ -59,7 +59,7 @@ export default function AdminPasswordGate({ children }) {
         onSubmit={onSubmit}
         className={`w-full max-w-sm rounded-2xl border border-mist-light bg-paper px-6 py-8 shadow-sm ${shake ? 'animate-[shake_0.3s_linear]' : ''}`}
       >
-        <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-midnite">REPP intern</div>
+        <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-midnite">REPP intern</div>
         <h1 className="mb-4 text-xl font-bold">Admin</h1>
         <label className="block text-sm text-ink-soft mb-2" htmlFor="admin-pwd">
           Wachtwoord

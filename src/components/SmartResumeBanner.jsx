@@ -70,10 +70,10 @@ export default function SmartResumeBanner({ ageMs, answersCount = 0, onDismiss }
   return (
     <div className="px-4 pt-3 pb-1 sticky top-0 z-20">
       <div className="rounded-2xl border border-gold/40 bg-paper shadow-sm px-4 py-3 flex items-center gap-3">
-        <span className="w-7 h-7 rounded-full bg-gold/20 flex items-center justify-center shrink-0 text-gold text-[14px]" aria-hidden>↻</span>
+        <span className="w-7 h-7 rounded-full bg-gold/20 flex items-center justify-center shrink-0 text-gold text-[15px]" aria-hidden>↻</span>
         <div className="min-w-0 flex-1">
-          <div className="text-[13px] font-semibold text-ink">Je was ~{ageLabel} geleden bezig</div>
-          <div className="text-[11.5px] text-ink-soft mt-0.5 leading-snug">
+          <div className="text-[14px] font-semibold text-ink">Je was ~{ageLabel} geleden bezig</div>
+          <div className="text-[12.5px] text-ink-soft mt-0.5 leading-snug">
             {savedCopy} Verder waar je gebleven was, of opnieuw beginnen?
           </div>
         </div>
@@ -81,14 +81,14 @@ export default function SmartResumeBanner({ ageMs, answersCount = 0, onDismiss }
           <button
             type="button"
             onClick={onRestart}
-            className="text-[11.5px] text-ink-soft hover:text-ink border border-mist hover:border-midnite px-2.5 py-1 rounded-full transition whitespace-nowrap"
+            className="text-[12.5px] text-ink-soft hover:text-ink border border-mist hover:border-midnite px-2.5 py-1 rounded-full transition whitespace-nowrap"
           >
             Opnieuw
           </button>
           <button
             type="button"
             onClick={onContinue}
-            className="text-[11.5px] text-paper bg-midnite hover:bg-midnite-soft px-3 py-1 rounded-full transition whitespace-nowrap"
+            className="text-[12.5px] text-paper bg-midnite hover:bg-midnite-soft px-3 py-1 rounded-full transition whitespace-nowrap"
           >
             Verder
           </button>

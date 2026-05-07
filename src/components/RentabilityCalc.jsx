@@ -25,17 +25,17 @@ export default function RentabilityCalc({ price, size, indicative = false, onInt
   return (
     <div className="rounded-2xl bg-paper border border-mist-light p-3.5">
       <div className="flex items-baseline justify-between gap-3 mb-3">
-        <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium">Rendement indicatie</div>
-        <div className="text-[10px] text-ink-mute uppercase tracking-wider">BAR bruto</div>
+        <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium">Rendement indicatie</div>
+        <div className="text-[11px] text-ink-mute uppercase tracking-wider">BAR bruto</div>
       </div>
 
       <div className="flex items-baseline gap-2 mb-1">
         <div className="text-[28px] font-semibold text-ink leading-none tabular-nums">
           {bar.toFixed(1)}%
         </div>
-        <div className="text-[12px] text-ink-soft">per jaar</div>
+        <div className="text-[13px] text-ink-soft">per jaar</div>
       </div>
-      <div className="text-[11px] text-ink-mute leading-snug">
+      <div className="text-[12px] text-ink-mute leading-snug">
         Jaarhuur €{formatEuro(yearlyRent)} bij koopsom €{formatEuro(price)}{indicative ? ' indicatief' : ''}
       </div>
 
@@ -59,7 +59,7 @@ export default function RentabilityCalc({ price, size, indicative = false, onInt
         />
       </div>
 
-      <div className="mt-3 pt-3 border-t border-mist-light text-[11px] text-ink-mute leading-snug">
+      <div className="mt-3 pt-3 border-t border-mist-light text-[12px] text-ink-mute leading-snug">
         Indicatief, geen prognose. Exclusief VvE-lasten, onderhoud, leegstand en fiscale invloed. Range markthuur Waarderpolder ligt doorgaans €150 tot €200 per m² per jaar.
       </div>
       {onCredionRequest && (
@@ -70,9 +70,9 @@ export default function RentabilityCalc({ price, size, indicative = false, onInt
         >
           <div className="flex flex-col items-start min-w-0 text-left">
             <span className="text-[9px] tracking-[0.18em] uppercase text-midnite font-medium">Partner Credion</span>
-            <span className="text-[12.5px] text-ink leading-tight mt-0.5">Vrijblijvende financieringsscan</span>
+            <span className="text-[13.5px] text-ink leading-tight mt-0.5">Vrijblijvende financieringsscan</span>
           </div>
-          <span className="text-[14px] text-ink-mute group-hover:text-midnite shrink-0 ml-2 leading-none" aria-hidden>→</span>
+          <span className="text-[15px] text-ink-mute group-hover:text-midnite shrink-0 ml-2 leading-none" aria-hidden>→</span>
         </button>
       )}
     </div>
@@ -82,12 +82,12 @@ export default function RentabilityCalc({ price, size, indicative = false, onInt
 function SliderRow({ label, mainValue, subValue, input }) {
   return (
     <div>
-      <div className="flex items-baseline justify-between text-[12px] mb-1 gap-2">
+      <div className="flex items-baseline justify-between text-[13px] mb-1 gap-2">
         <span className="text-ink-soft">{label}</span>
         <div className="text-right">
           <span className="font-semibold text-ink tabular-nums">{mainValue}</span>
           {subValue && (
-            <span className="text-ink-mute tabular-nums ml-1.5 text-[11px]">{subValue}</span>
+            <span className="text-ink-mute tabular-nums ml-1.5 text-[12px]">{subValue}</span>
           )}
         </div>
       </div>

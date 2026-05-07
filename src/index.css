@@ -24,8 +24,22 @@ html, body, #root {
   background: var(--color-canvas);
 }
 
+html {
+  /* Browser-zoom en iOS "Larger Text" respect: laat de root-font-size de
+     user-instelling volgen ipv 'em hard te negeren. text-size-adjust voorkomt
+     dat iOS Safari onze pixel-fonts auto-vergroot in landscape mode (zonder
+     dat we 'm helemaal vastpinnen op 100%, want dat blokkeert accessibility). */
+  font-size: 100%;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   font-family: var(--font-sans);
+  /* Body-baseline op 16px (matches WhatsApp + iOS body). Onze Tailwind
+     [Xpx]-utilities zijn absoluut, maar key-elementen die we straks naar rem
+     migreren respecteren via deze baseline de root-zoom. */
+  font-size: 16px;
   color: var(--color-ink);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;

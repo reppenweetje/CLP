@@ -21,8 +21,8 @@ export default function IntroScreen({ onStart }) {
         <div className="absolute bottom-0 left-0 right-0 pb-5 lg:pb-8">
           <div className="mx-auto w-full max-w-md lg:max-w-2xl px-4 lg:px-6">
             <div className="text-[28px] lg:text-[44px] font-semibold text-ink leading-tight">{project.displayName}</div>
-            <div className="text-[13px] lg:text-[16px] text-ink-soft mt-0.5 lg:mt-1">{project.tagline}</div>
-            <div className="text-[10px] lg:text-[12px] tracking-[0.16em] text-ink-mute uppercase mt-1.5 lg:mt-2">exclusief in verkoop bij REPP</div>
+            <div className="text-[14px] lg:text-[16px] text-ink-soft mt-0.5 lg:mt-1">{project.tagline}</div>
+            <div className="text-[11px] lg:text-[13px] tracking-[0.16em] text-ink-mute uppercase mt-1.5 lg:mt-2">exclusief in verkoop bij REPP</div>
           </div>
         </div>
       </div>
@@ -44,14 +44,14 @@ export default function IntroScreen({ onStart }) {
           <button
             onClick={() => onStart(ctaVariant)}
             data-cta-variant={ctaVariant}
-            className="w-full lg:max-w-md lg:mx-auto block rounded-full bg-neon text-midnite font-semibold py-4 lg:py-5 text-[15px] lg:text-[17px] hover:brightness-95 active:scale-[0.99] transition"
+            className="w-full lg:max-w-md lg:mx-auto block rounded-full bg-neon text-midnite font-semibold py-4 lg:py-5 text-[16px] lg:text-[17px] hover:brightness-95 active:scale-[0.99] transition"
           >
             {CTA_VARIANTS[ctaVariant]}
           </button>
-          <div className="text-[11px] lg:text-[12px] text-ink-mute text-center">
+          <div className="text-[12px] lg:text-[13px] text-ink-mute text-center">
             Geen spam, alleen relevante info over De Hofman.
           </div>
-          <div className="text-[10px] lg:text-[11px] text-ink-mute italic text-center leading-snug">
+          <div className="text-[11px] lg:text-[12px] text-ink-mute italic text-center leading-snug">
             Sfeerimpressies. Inrichting, beplanting en materialen kunnen afwijken. Geen rechten te ontlenen.
           </div>
         </div>
@@ -63,7 +63,7 @@ export default function IntroScreen({ onStart }) {
 function Stat({ label, value }) {
   return (
     <div className="rounded-2xl border border-mist-light bg-paper px-3 py-2.5 lg:px-4 lg:py-3">
-      <div className="text-[10px] lg:text-[11px] tracking-[0.16em] text-ink-mute uppercase">{label}</div>
+      <div className="text-[11px] lg:text-[12px] tracking-[0.16em] text-ink-mute uppercase">{label}</div>
       <div className="text-[16px] lg:text-[20px] font-semibold text-ink mt-0.5">{value}</div>
     </div>
   )

@@ -19,13 +19,13 @@ export default function SankeyFlow({ sessions }) {
     <section className="rounded-2xl border border-mist-light bg-paper p-5 col-span-full">
       <header className="flex items-baseline justify-between gap-3 mb-4">
         <div>
-          <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium mb-1">Gebruikersroute</div>
-          <h2 className="text-[14px] font-semibold text-ink">Sankey-stroom door de chat</h2>
-          <p className="text-[12px] text-ink-soft leading-relaxed mt-1">
+          <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium mb-1">Gebruikersroute</div>
+          <h2 className="text-[15px] font-semibold text-ink">Sankey-stroom door de chat</h2>
+          <p className="text-[13px] text-ink-soft leading-relaxed mt-1">
             Bredere banden = meer mensen die dit pad volgden. Hover voor exacte aantallen.
           </p>
         </div>
-        <label className="flex items-center gap-2 text-[12px] text-ink-soft cursor-pointer select-none">
+        <label className="flex items-center gap-2 text-[13px] text-ink-soft cursor-pointer select-none">
           <input
             type="checkbox"
             checked={branchOnPersona}
@@ -83,8 +83,8 @@ export default function SankeyFlow({ sessions }) {
 function EmptyState() {
   return (
     <div className="rounded-xl border border-dashed border-mist-light bg-canvas px-6 py-10 text-center">
-      <div className="text-[14px] font-semibold text-ink">Nog te weinig data om paden te tekenen</div>
-      <div className="text-[12px] text-ink-soft mt-1.5 leading-relaxed max-w-md mx-auto">
+      <div className="text-[15px] font-semibold text-ink">Nog te weinig data om paden te tekenen</div>
+      <div className="text-[13px] text-ink-soft mt-1.5 leading-relaxed max-w-md mx-auto">
         Zodra een paar bezoekers de flow doorlopen verschijnen hier de werkelijke routes met breedtes per pad.
       </div>
     </div>

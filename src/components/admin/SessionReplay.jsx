@@ -59,11 +59,11 @@ export default function SessionReplay({ session, onClose, onPrev, onNext }) {
       >
         <div className="sticky top-0 bg-paper/95 backdrop-blur-sm border-b border-mist-light px-5 py-4 flex items-start justify-between gap-3 z-10">
           <div className="min-w-0">
-            <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium">Sessie-replay</div>
-            <div className="text-[15px] font-semibold text-ink truncate mt-0.5">
+            <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium">Sessie-replay</div>
+            <div className="text-[16px] font-semibold text-ink truncate mt-0.5">
               {humanizePersona(session.persona)}
             </div>
-            <div className="text-[11.5px] text-ink-mute tabular-nums mt-0.5">
+            <div className="text-[12.5px] text-ink-mute tabular-nums mt-0.5">
               {formatTimestamp(session.startedAt)} · {formatDuration(session.duration)} · {session.events.length} events
             </div>
           </div>
@@ -124,7 +124,7 @@ function Badge({ label, value, tone }) {
   return (
     <div className={'rounded-xl border px-3 py-2 ' + (toneClasses[tone || 'none'])}>
       <div className="text-[9px] tracking-[0.16em] uppercase opacity-70">{label}</div>
-      <div className="text-[13px] font-semibold tabular-nums mt-0.5">{value}</div>
+      <div className="text-[14px] font-semibold tabular-nums mt-0.5">{value}</div>
     </div>
   )
 }
@@ -154,15 +154,15 @@ function humanizeStage(s) {
 function LeadCard({ lead }) {
   if (!lead.email && !lead.firstName && !lead.phone) {
     return (
-      <div className="rounded-xl border border-dashed border-mist-light bg-canvas px-4 py-3 text-[12px] text-ink-mute">
+      <div className="rounded-xl border border-dashed border-mist-light bg-canvas px-4 py-3 text-[13px] text-ink-mute">
         Nog geen lead-gegevens achtergelaten
       </div>
     )
   }
   return (
     <div className="rounded-xl border border-mist-light bg-canvas px-4 py-3">
-      <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium mb-2">Lead-gegevens</div>
-      <dl className="text-[13px] grid grid-cols-[80px_1fr] gap-y-1 gap-x-3">
+      <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium mb-2">Lead-gegevens</div>
+      <dl className="text-[14px] grid grid-cols-[80px_1fr] gap-y-1 gap-x-3">
         {lead.firstName && <><dt className="text-ink-mute">Naam</dt><dd className="text-ink truncate">{lead.firstName}</dd></>}
         {lead.email     && <><dt className="text-ink-mute">E-mail</dt><dd className="text-ink truncate">{lead.email}</dd></>}
         {lead.phone     && <><dt className="text-ink-mute">06</dt><dd className="text-ink tabular-nums">{lead.phone}</dd></>}
@@ -176,7 +176,7 @@ function Timeline({ events, stepTimes }) {
   const maxDur = Math.max(1, ...stepTimes.map((s) => s.durationMs))
   return (
     <div>
-      <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium mb-3">Event-timeline</div>
+      <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium mb-3">Event-timeline</div>
       <ol className="relative pl-6 space-y-3">
         <span className="absolute left-2 top-1 bottom-1 w-px bg-mist-light" aria-hidden />
         {events.map((ev, i) => {
@@ -191,18 +191,18 @@ function Timeline({ events, stepTimes }) {
                 }
                 aria-hidden
               />
-              <div className="text-[12px] flex items-baseline justify-between gap-2">
+              <div className="text-[13px] flex items-baseline justify-between gap-2">
                 <span className={'font-medium ' + (isBubble ? 'text-ink-soft italic' : 'text-ink')}>
                   {isBubble
                     ? `${humanizeBubble(ev.payload?.kind)} bubble`
                     : humanizeEventType(ev.type)}
                 </span>
-                <span className="text-[10px] text-ink-mute tabular-nums">
+                <span className="text-[11px] text-ink-mute tabular-nums">
                   {formatTimestamp(ev.timestamp)}
                 </span>
               </div>
               {ev.payload?.label && !isBubble && (
-                <div className="text-[11.5px] text-ink-soft mt-0.5">"{ev.payload.label}"</div>
+                <div className="text-[12.5px] text-ink-soft mt-0.5">"{ev.payload.label}"</div>
               )}
               {after && i < events.length - 1 && after.durationMs > 200 && (
                 <div className="mt-1.5 h-1 rounded bg-canvas-2 overflow-hidden">
@@ -213,7 +213,7 @@ function Timeline({ events, stepTimes }) {
                 </div>
               )}
               {after && i < events.length - 1 && (
-                <div className="text-[10px] text-ink-mute mt-0.5 tabular-nums">
+                <div className="text-[11px] text-ink-mute mt-0.5 tabular-nums">
                   {formatDuration(after.durationMs)} tot volgende
                 </div>
               )}
@@ -237,13 +237,13 @@ function ExportRow({ session }) {
   }
   return (
     <div className="pt-3 border-t border-mist-light flex items-center justify-between gap-3">
-      <div className="text-[10px] text-ink-mute tabular-nums truncate">
+      <div className="text-[11px] text-ink-mute tabular-nums truncate">
         ID {session.sessionId.slice(0, 12)}…
       </div>
       <button
         type="button"
         onClick={exportJson}
-        className="text-[11px] text-ink-soft hover:text-ink border border-mist-light hover:border-midnite px-3 py-1 rounded-full transition"
+        className="text-[12px] text-ink-soft hover:text-ink border border-mist-light hover:border-midnite px-3 py-1 rounded-full transition"
       >
         Export JSON
       </button>

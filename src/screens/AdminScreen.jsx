@@ -156,7 +156,7 @@ function AdminScreenInner() {
               <img src="/images/repp-mark.svg" alt="" aria-hidden="true" className="w-[22px]" />
             </div>
             <div className="min-w-0">
-              <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium leading-none whitespace-nowrap">REPP CLP analytics</div>
+              <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium leading-none whitespace-nowrap">REPP CLP analytics</div>
               <h1 className="text-[18px] font-semibold text-ink mt-1 leading-tight whitespace-nowrap">De Hofman dashboard</h1>
             </div>
           </div>
@@ -164,20 +164,20 @@ function AdminScreenInner() {
             <DateRangePicker value={dateRange} onChange={setDateRange} />
             <a
               href="/"
-              className="text-[12px] text-ink-soft hover:text-ink border border-mist hover:border-midnite px-3 py-1.5 rounded-full transition whitespace-nowrap"
+              className="text-[13px] text-ink-soft hover:text-ink border border-mist hover:border-midnite px-3 py-1.5 rounded-full transition whitespace-nowrap"
               title="Terug naar demo"
             >
               ← Demo
             </a>
             <button
               onClick={onExport}
-              className="text-[12px] text-ink-soft hover:text-ink border border-mist hover:border-midnite px-3 py-1.5 rounded-full transition whitespace-nowrap"
+              className="text-[13px] text-ink-soft hover:text-ink border border-mist hover:border-midnite px-3 py-1.5 rounded-full transition whitespace-nowrap"
             >
               Export
             </button>
             <button
               onClick={onClear}
-              className="text-[12px] text-rose-700 hover:text-rose-900 border border-rose-300 hover:bg-rose-50 px-3 py-1.5 rounded-full transition whitespace-nowrap"
+              className="text-[13px] text-rose-700 hover:text-rose-900 border border-rose-300 hover:bg-rose-50 px-3 py-1.5 rounded-full transition whitespace-nowrap"
             >
               Wissen
             </button>
@@ -260,7 +260,7 @@ function AdminScreenInner() {
           {/* Settings */}
           <AdminSettings />
 
-          <footer className="pt-4 text-[11px] text-ink-mute leading-relaxed">
+          <footer className="pt-4 text-[12px] text-ink-mute leading-relaxed">
             Events lokaal in localStorage onder <code className="bg-canvas-2 px-1.5 py-0.5 rounded">clp-events-v1</code>.
             {' '}Plausible Pro forwardt non-PII custom events; de admin hier draait volledig op de localStorage van dit apparaat.
             {' '}Voor cross-device populatie-cijfers: open Plausible.
@@ -282,11 +282,11 @@ function HandoffBlock({ stats, byPersona }) {
   if (!stats || stats.shown === 0) {
     return (
       <section className="rounded-2xl border border-mist-light bg-paper p-5">
-        <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium mb-1">
+        <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium mb-1">
           Warm-handoff
         </div>
-        <div className="text-[14px] font-semibold text-ink">Nog geen hot signalen gedetecteerd</div>
-        <div className="text-[12px] text-ink-soft leading-relaxed mt-1">
+        <div className="text-[15px] font-semibold text-ink">Nog geen hot signalen gedetecteerd</div>
+        <div className="text-[13px] text-ink-soft leading-relaxed mt-1">
           Zodra een sessie genoeg koopsignalen geeft (unit-detail twee keer, calc-interactie, korte timeline) verschijnt hier de conversie van de warm-handoff bubble.
         </div>
       </section>
@@ -297,12 +297,12 @@ function HandoffBlock({ stats, byPersona }) {
     <section className="rounded-2xl border border-mist-light bg-paper p-5">
       <div className="flex items-baseline justify-between gap-3 mb-3">
         <div>
-          <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium mb-1">
+          <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium mb-1">
             Warm-handoff
           </div>
-          <div className="text-[14px] font-semibold text-ink">Hot signalen en accept-rate</div>
+          <div className="text-[15px] font-semibold text-ink">Hot signalen en accept-rate</div>
         </div>
-        <div className="text-[11px] text-ink-mute">
+        <div className="text-[12px] text-ink-mute">
           {stats.shown} {stats.shown === 1 ? 'sessie' : 'sessies'} hot
         </div>
       </div>
@@ -314,12 +314,12 @@ function HandoffBlock({ stats, byPersona }) {
       </div>
       {byPersona.length > 0 && (
         <div className="mt-4 pt-4 border-t border-mist-light">
-          <div className="text-[10px] tracking-[0.16em] text-ink-mute uppercase mb-2">Per persona</div>
+          <div className="text-[11px] tracking-[0.16em] text-ink-mute uppercase mb-2">Per persona</div>
           <div className="space-y-1.5">
             {byPersona.map((row) => {
               const rate = row.shown > 0 ? Math.round((row.accepted / row.shown) * 100) : 0
               return (
-                <div key={row.persona} className="flex items-baseline justify-between gap-3 text-[12.5px]">
+                <div key={row.persona} className="flex items-baseline justify-between gap-3 text-[13.5px]">
                   <span className="text-ink-soft capitalize">{row.persona.replace('_', ' ')}</span>
                   <span className="text-ink tabular-nums">
                     <span className="font-semibold">{row.accepted}</span>

@@ -20,7 +20,7 @@ export default function DebugPanel({ open, state, score, persona, stage, tempera
       <div className="pointer-events-auto relative w-full max-w-md max-h-[85vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-paper border border-mist-light p-5 m-0 sm:m-4 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium">demo interne view</div>
+            <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium">demo interne view</div>
             <div className="text-[18px] font-semibold text-ink mt-0.5">wat ziet sales</div>
           </div>
           <button onClick={onClose} className="text-ink-soft hover:text-ink p-2 -mr-2">
@@ -51,10 +51,10 @@ export default function DebugPanel({ open, state, score, persona, stage, tempera
         <Section title="aanbevolen content">
           <div className="flex flex-wrap gap-1.5">
             {cards.length === 0 ? (
-              <span className="text-[12px] text-ink-mute">nog niet beschikbaar</span>
+              <span className="text-[13px] text-ink-mute">nog niet beschikbaar</span>
             ) : (
               cards.map((c) => (
-                <span key={c.id} className="text-[11px] px-2 py-1 rounded-full bg-canvas-2 text-ink-soft">
+                <span key={c.id} className="text-[12px] px-2 py-1 rounded-full bg-canvas-2 text-ink-soft">
                   {c.title}
                 </span>
               ))
@@ -65,20 +65,20 @@ export default function DebugPanel({ open, state, score, persona, stage, tempera
         <Section title="aanbevolen unit">
           <Row k="primair" v={`unit ${unit.primary?.type?.toLowerCase() || 'nog niet'}  ${unit.primary?.stateLabel || ''}`} />
           {unit.fallback && <Row k="alternatief" v={`unit ${unit.fallback.type?.toLowerCase()}`} />}
-          {unit.note && <div className="text-[12px] text-ink-soft leading-relaxed mt-2">{unit.note}</div>}
+          {unit.note && <div className="text-[13px] text-ink-soft leading-relaxed mt-2">{unit.note}</div>}
         </Section>
 
         <Section title="aanbevolen salesactie">
-          <div className="text-[13px] text-ink leading-relaxed">{action}</div>
+          <div className="text-[14px] text-ink leading-relaxed">{action}</div>
         </Section>
 
         <Section title="risico afhaken">
-          <div className="text-[12px] text-ink-soft leading-relaxed">{riskCopy(state, answers)}</div>
+          <div className="text-[13px] text-ink-soft leading-relaxed">{riskCopy(state, answers)}</div>
         </Section>
 
         <button
           onClick={onReset}
-          className="mt-4 w-full text-[12px] text-rose-700 border border-rose-300 bg-rose-50 hover:bg-rose-100 rounded-full py-2.5"
+          className="mt-4 w-full text-[13px] text-rose-700 border border-rose-300 bg-rose-50 hover:bg-rose-100 rounded-full py-2.5"
         >
           reset demo
         </button>
@@ -101,8 +101,8 @@ function temperatureBg(t) {
 function Stat({ label, value, highlight }) {
   return (
     <div className={`rounded-2xl border px-3 py-2 ${highlight || 'border-mist-light bg-canvas-2'}`}>
-      <div className="text-[10px] tracking-[0.16em] uppercase opacity-70">{label}</div>
-      <div className="text-[14px] font-semibold mt-0.5">{value}</div>
+      <div className="text-[11px] tracking-[0.16em] uppercase opacity-70">{label}</div>
+      <div className="text-[15px] font-semibold mt-0.5">{value}</div>
     </div>
   )
 }
@@ -110,7 +110,7 @@ function Stat({ label, value, highlight }) {
 function Section({ title, children }) {
   return (
     <div className="border-t border-mist-light pt-3 mt-3">
-      <div className="text-[10px] tracking-[0.18em] text-ink-mute uppercase mb-2 font-medium">{title}</div>
+      <div className="text-[11px] tracking-[0.18em] text-ink-mute uppercase mb-2 font-medium">{title}</div>
       {children}
     </div>
   )
@@ -118,7 +118,7 @@ function Section({ title, children }) {
 
 function Row({ k, v }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 py-1 text-[13px]">
+    <div className="flex items-baseline justify-between gap-3 py-1 text-[14px]">
       <span className="text-ink-mute shrink-0">{k}</span>
       <span className="text-ink text-right truncate">{v}</span>
     </div>

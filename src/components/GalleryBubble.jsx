@@ -9,7 +9,7 @@ export default function GalleryBubble({ images, intro }) {
       <div className="flex-1 min-w-0">
         <div className="rounded-3xl rounded-tl-md bg-paper border border-mist-light overflow-hidden">
           {intro && (
-            <div className="px-4 pt-3.5 text-[15px] text-ink leading-relaxed">{intro}</div>
+            <div className="px-4 pt-3.5 text-[16px] text-ink leading-relaxed">{intro}</div>
           )}
           <div className="overflow-x-auto snap-x snap-mandatory flex gap-2 px-3 py-3 scroll-px-3" style={{ scrollbarWidth: 'none' }}>
             {images.map((img, i) => (
@@ -25,7 +25,7 @@ export default function GalleryBubble({ images, intro }) {
             {images.map((_, i) => (
               <span key={i} className="h-1 w-3 rounded-full bg-mist" />
             ))}
-            <span className="text-[10px] tracking-widest text-ink-mute uppercase ml-2">veeg</span>
+            <span className="text-[11px] tracking-widest text-ink-mute uppercase ml-2">veeg</span>
           </div>
           <ImpressionNote className="px-4 pb-3" />
         </div>

@@ -67,7 +67,7 @@ export default function ChatInput({ placeholder, inputMode, validate, onSend, se
           </svg>
         </button>
       </div>
-      <div className="text-[10.5px] text-ink-mute text-center mt-2 leading-tight">
+      <div className="text-[11.5px] text-ink-mute text-center mt-2 leading-tight">
         We bewaren je antwoorden om je goed te helpen.{' '}
         <a
           href="/privacy.html"
@@ -79,7 +79,7 @@ export default function ChatInput({ placeholder, inputMode, validate, onSend, se
         </a>
         .
       </div>
-      <div className="text-[10.5px] text-ink-mute text-center mt-1 leading-tight">
+      <div className="text-[11.5px] text-ink-mute text-center mt-1 leading-tight">
         <a
           href="https://repp.nl"
           target="_blank"

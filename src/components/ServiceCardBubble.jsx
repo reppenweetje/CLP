@@ -67,10 +67,10 @@ export default function ServiceCardBubble({
             <div>
               <div className="relative aspect-[16/10] overflow-hidden bg-canvas-2">
                 <img src={u.image} alt="" className="w-full h-full object-cover" />
-                <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-paper/95 backdrop-blur text-[10px] tracking-[0.18em] text-midnite uppercase font-medium border border-mist">
+                <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-paper/95 backdrop-blur text-[11px] tracking-[0.18em] text-midnite uppercase font-medium border border-mist">
                   aanbevolen
                 </div>
-                <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-paper/95 backdrop-blur text-[10px] text-ink uppercase tracking-wider font-medium border border-mist">
+                <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-paper/95 backdrop-blur text-[11px] text-ink uppercase tracking-wider font-medium border border-mist">
                   {u.stateLabel}
                 </div>
               </div>
@@ -78,21 +78,21 @@ export default function ServiceCardBubble({
                 <div className="flex items-baseline justify-between gap-3">
                   <div>
                     <div className="text-[20px] font-semibold text-ink leading-tight">unit {u.type}</div>
-                    <div className="text-[12px] text-ink-soft mt-0.5">
+                    <div className="text-[13px] text-ink-soft mt-0.5">
                       ≈ {String(u.size).replace('.', ',')} m² {u.levels} laags
                     </div>
                   </div>
                   {u.priceFrom && (
                     <div className="text-right">
-                      <div className="text-[10px] tracking-widest text-ink-mute uppercase">vanaf</div>
+                      <div className="text-[11px] tracking-widest text-ink-mute uppercase">vanaf</div>
                       <div className="text-[16px] font-semibold text-ink">€{Math.floor(u.priceFrom / 1000)}k</div>
-                      <div className="text-[10px] text-ink-mute">excl btw</div>
+                      <div className="text-[11px] text-ink-mute">excl btw</div>
                     </div>
                   )}
                 </div>
-                <div className="text-[13px] text-ink-soft leading-relaxed mt-3">{u.pitch}</div>
+                <div className="text-[14px] text-ink-soft leading-relaxed mt-3">{u.pitch}</div>
                 {unit?.note && (
-                  <div className="text-[12px] text-midnite leading-relaxed mt-3">
+                  <div className="text-[13px] text-midnite leading-relaxed mt-3">
                     {unit.note}
                   </div>
                 )}
@@ -107,15 +107,15 @@ export default function ServiceCardBubble({
           {/* Persoonlijk service-aanbod */}
           <div className="px-4 pt-4 pb-4 space-y-3 bg-canvas-2/40">
             <div>
-              <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium">
+              <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium">
                 {safeCopy.tag}
               </div>
-              <div className="text-[15px] font-semibold text-ink mt-1 leading-snug">
+              <div className="text-[16px] font-semibold text-ink mt-1 leading-snug">
                 {safeCopy.headline}
               </div>
             </div>
 
-            <p className="text-[13.5px] text-ink leading-relaxed">{safeCopy.body}</p>
+            <p className="text-[14.5px] text-ink leading-relaxed">{safeCopy.body}</p>
 
             {/* Uitklapbaar: wat we kort kunnen doornemen */}
             {safeCopy.value && safeCopy.value.length > 0 && (
@@ -126,13 +126,13 @@ export default function ServiceCardBubble({
                   className="w-full px-3 py-2.5 flex items-center justify-between text-left hover:bg-canvas-2/50 transition"
                   aria-expanded={expanded}
                 >
-                  <span className="text-[10px] tracking-[0.16em] text-ink-soft uppercase">
+                  <span className="text-[11px] tracking-[0.16em] text-ink-soft uppercase">
                     Wat we kort kunnen doornemen
                   </span>
                   <Chevron open={expanded} />
                 </button>
                 {expanded && (
-                  <ul className="text-[12.5px] text-ink-soft leading-relaxed space-y-1 px-3 pb-3 pt-1">
+                  <ul className="text-[13.5px] text-ink-soft leading-relaxed space-y-1 px-3 pb-3 pt-1">
                     {safeCopy.value.map((v) => (
                       <li key={v} className="flex gap-2">
                         <span className="text-midnite mt-1.5 shrink-0 w-1 h-1 rounded-full bg-midnite" />
@@ -147,21 +147,21 @@ export default function ServiceCardBubble({
             {/* Outcome-strips */}
             {outcome === 'callback' && (
               <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2.5">
-                <div className="text-[12.5px] text-emerald-900 leading-relaxed">
+                <div className="text-[13.5px] text-emerald-900 leading-relaxed">
                   Genoteerd. {repName} belt je {promise}{phoneFormatted ? ` op ${phoneFormatted}` : ''}.
                 </div>
               </div>
             )}
             {outcome === 'whatsapp' && (
               <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2.5">
-                <div className="text-[12.5px] text-emerald-900 leading-relaxed">
+                <div className="text-[13.5px] text-emerald-900 leading-relaxed">
                   WhatsApp opent in een nieuw venster.
                 </div>
               </div>
             )}
             {outcome === 'dismissed' && (
               <div className="rounded-xl bg-paper border border-mist-light px-3 py-2.5">
-                <div className="text-[12.5px] text-ink-soft leading-relaxed">
+                <div className="text-[13.5px] text-ink-soft leading-relaxed">
                   Geen probleem. Je kunt later altijd nog bellen of WhatsApp'en.
                 </div>
               </div>
@@ -170,7 +170,7 @@ export default function ServiceCardBubble({
             {/* Inline 06-input wanneer bezoeker callback wil maar nog geen 06 heeft gedeeld */}
             {isInteractive && phoneAsk && !hasPhone && (
               <div className="rounded-xl bg-paper border border-mist-light px-3 py-3 space-y-2">
-                <div className="text-[12.5px] text-ink leading-relaxed">
+                <div className="text-[13.5px] text-ink leading-relaxed">
                   Op welk 06-nummer mag {repName} je bellen?
                 </div>
                 <div className="flex items-center gap-2">
@@ -218,7 +218,7 @@ export default function ServiceCardBubble({
               <div className="space-y-2 pt-1">
                 <button
                   onClick={handlePrimaryClick}
-                  className="w-full bg-midnite hover:bg-midnite-soft text-paper text-[13px] font-medium py-3 rounded-full transition flex items-center justify-center gap-2"
+                  className="w-full bg-midnite hover:bg-midnite-soft text-paper text-[14px] font-medium py-3 rounded-full transition flex items-center justify-center gap-2"
                 >
                   <PhoneIcon />
                   <span>{safeCopy.primaryCta}</span>
@@ -229,7 +229,7 @@ export default function ServiceCardBubble({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={onWhatsapp}
-                    className="flex-1 border border-mist hover:border-midnite text-ink hover:text-midnite text-[12.5px] py-2.5 rounded-full transition flex items-center justify-center gap-1.5"
+                    className="flex-1 border border-mist hover:border-midnite text-ink hover:text-midnite text-[13.5px] py-2.5 rounded-full transition flex items-center justify-center gap-1.5"
                   >
                     <WaIcon />
                     <span>WhatsApp {botOrg || 'ons'}</span>
@@ -237,14 +237,14 @@ export default function ServiceCardBubble({
                   <a
                     href={phoneLink}
                     onClick={onPhone}
-                    className="flex-1 border border-mist hover:border-midnite text-ink hover:text-midnite text-[12.5px] py-2.5 rounded-full transition flex items-center justify-center"
+                    className="flex-1 border border-mist hover:border-midnite text-ink hover:text-midnite text-[13.5px] py-2.5 rounded-full transition flex items-center justify-center"
                   >
                     {phoneTextDisplay || 'Bel zelf'}
                   </a>
                 </div>
                 <button
                   onClick={onMoreInfo}
-                  className="w-full text-[11.5px] text-ink-mute hover:text-ink-soft py-1.5 transition"
+                  className="w-full text-[12.5px] text-ink-mute hover:text-ink-soft py-1.5 transition"
                 >
                   Liever zelf eerst meer info zoeken
                 </button>

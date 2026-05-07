@@ -15,12 +15,12 @@ export default function ContentBubble({ tag, title, body, image }) {
           )}
           <div className="p-4">
             {tag && (
-              <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium">
+              <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium">
                 {tag}
               </div>
             )}
-            <div className="text-[15px] font-semibold text-ink leading-snug mt-1.5">{title}</div>
-            <div className="text-[13px] text-ink-soft leading-relaxed mt-1.5">{body}</div>
+            <div className="text-[16px] font-semibold text-ink leading-snug mt-1.5">{title}</div>
+            <div className="text-[14px] text-ink-soft leading-relaxed mt-1.5">{body}</div>
             {image && <ImpressionNote variant="short" className="mt-3" />}
           </div>
         </div>

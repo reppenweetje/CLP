@@ -10,7 +10,7 @@ export default function UspCardsBubble({ cards, intro }) {
       <div className="flex-1 min-w-0">
         <div className="rounded-3xl rounded-tl-md bg-paper border border-mist-light overflow-hidden">
           {intro && (
-            <div className="px-4 pt-3.5 text-[15px] text-ink leading-relaxed">{intro}</div>
+            <div className="px-4 pt-3.5 text-[16px] text-ink leading-relaxed">{intro}</div>
           )}
           <div
             className="overflow-x-auto snap-x snap-mandatory flex gap-2.5 px-3 py-3 scroll-px-3"
@@ -30,9 +30,9 @@ export default function UspCardsBubble({ cards, intro }) {
                   />
                 </div>
                 <div className="p-4">
-                  <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium">{card.tag}</div>
+                  <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium">{card.tag}</div>
                   <h3 className="text-[16px] font-semibold text-ink leading-tight mt-1.5">{card.title}</h3>
-                  <p className="text-[12px] text-ink-soft leading-relaxed mt-1.5">{card.body}</p>
+                  <p className="text-[13px] text-ink-soft leading-relaxed mt-1.5">{card.body}</p>
                 </div>
               </article>
             ))}
@@ -41,7 +41,7 @@ export default function UspCardsBubble({ cards, intro }) {
             {cards.map((_, i) => (
               <span key={i} className="h-1 w-3 rounded-full bg-mist" />
             ))}
-            <span className="text-[10px] tracking-widest text-ink-mute uppercase ml-2">Veeg</span>
+            <span className="text-[11px] tracking-widest text-ink-mute uppercase ml-2">Veeg</span>
           </div>
           <ImpressionNote className="px-4 pb-3" />
         </div>

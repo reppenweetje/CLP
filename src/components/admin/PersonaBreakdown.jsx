@@ -4,9 +4,9 @@ export default function PersonaBreakdown({ data }) {
   return (
     <section className="rounded-2xl border border-mist-light bg-paper p-5">
       <h2 className="text-[16px] font-semibold text-ink mb-1">Persona</h2>
-      <p className="text-[12px] text-ink-soft mb-4">Voor wie kijkt men.</p>
+      <p className="text-[13px] text-ink-soft mb-4">Voor wie kijkt men.</p>
       {total === 0 ? (
-        <div className="text-[13px] text-ink-mute py-6 text-center">Nog geen data.</div>
+        <div className="text-[14px] text-ink-mute py-6 text-center">Nog geen data.</div>
       ) : (
         <div className="space-y-2">
           {data.map((row) => {
@@ -14,8 +14,8 @@ export default function PersonaBreakdown({ data }) {
             return (
               <div key={row.key}>
                 <div className="flex items-baseline justify-between mb-1">
-                  <span className="text-[12px] text-ink">{row.label}</span>
-                  <span className="text-[12px] text-ink-mute tabular-nums">
+                  <span className="text-[13px] text-ink">{row.label}</span>
+                  <span className="text-[13px] text-ink-mute tabular-nums">
                     {row.count} <span className="text-ink-mute/70">{pct.toFixed(0)}%</span>
                   </span>
                 </div>

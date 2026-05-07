@@ -10,6 +10,6 @@ export default function ImpressionNote({ variant = 'default', className = '' }) 
       : 'Sfeerimpressie. Inrichting, beplanting en materialen kunnen afwijken. Geen rechten te ontlenen.'
 
   return (
-    <p className={`text-[10px] text-ink-mute italic leading-snug ${className}`}>{text}</p>
+    <p className={`text-[11px] text-ink-mute italic leading-snug ${className}`}>{text}</p>
   )
 }

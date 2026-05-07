@@ -28,9 +28,9 @@ export default function LocationBubble({ location, projectName }) {
             <PinMarker />
           </div>
           <div className="p-4 pb-3">
-            <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium">Locatie</div>
-            <div className="text-[15px] font-semibold text-ink mt-1.5">{location.address}</div>
-            <div className="text-[12.5px] text-ink-soft leading-relaxed mt-1">
+            <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium">Locatie</div>
+            <div className="text-[16px] font-semibold text-ink mt-1.5">{location.address}</div>
+            <div className="text-[13.5px] text-ink-soft leading-relaxed mt-1">
               {projectName ? `${projectName} ligt op een gevestigde bedrijvenlocatie in Haarlem, in de Metropoolregio Amsterdam.` : 'Gevestigde bedrijvenlocatie in Haarlem, in de Metropoolregio Amsterdam.'}
             </div>
             <ImpressionNote variant="aerial" className="mt-2" />
@@ -59,10 +59,10 @@ export default function LocationBubble({ location, projectName }) {
 
           {location.scarcityNote && (
             <div className="mx-4 mb-4 rounded-2xl bg-canvas-2 border border-mist-light px-3.5 py-2.5">
-              <div className="text-[10px] tracking-[0.16em] text-midnite uppercase font-medium mb-1">
+              <div className="text-[11px] tracking-[0.16em] text-midnite uppercase font-medium mb-1">
                 Waarom hier
               </div>
-              <div className="text-[12.5px] text-ink leading-relaxed">{location.scarcityNote}</div>
+              <div className="text-[13.5px] text-ink leading-relaxed">{location.scarcityNote}</div>
             </div>
           )}
         </div>
@@ -85,7 +85,7 @@ function SegmentControl({ value, onChange, options }) {
             type="button"
             aria-pressed={active}
             className={
-              'flex-1 text-[12.5px] py-2 px-2 rounded-full transition leading-none whitespace-nowrap ' +
+              'flex-1 text-[13.5px] py-2 px-2 rounded-full transition leading-none whitespace-nowrap ' +
               (active
                 ? 'bg-paper text-midnite font-semibold shadow-sm border border-mist-light'
                 : 'text-ink-soft hover:text-ink hover:bg-paper/60 border border-transparent')
@@ -109,16 +109,16 @@ function ReachPanel({ travelTimes }) {
             className="rounded-xl bg-canvas-2 border border-mist-light px-3 py-2.5 flex items-baseline justify-between gap-2"
           >
             <div className="min-w-0">
-              <div className="text-[10px] tracking-wider text-ink-mute uppercase">
+              <div className="text-[11px] tracking-wider text-ink-mute uppercase">
                 {modeLabel(t.mode)}
               </div>
-              <div className="text-[12.5px] text-ink truncate">{t.to}</div>
+              <div className="text-[13.5px] text-ink truncate">{t.to}</div>
             </div>
-            <div className="text-[14px] font-semibold text-ink shrink-0 tabular-nums">{t.value}</div>
+            <div className="text-[15px] font-semibold text-ink shrink-0 tabular-nums">{t.value}</div>
           </div>
         ))}
       </div>
-      <p className="text-[11px] text-ink-mute leading-snug mt-3">
+      <p className="text-[12px] text-ink-mute leading-snug mt-3">
         Reistijden gemeten vanaf A. Hofmanweg buiten spits.
       </p>
     </div>
@@ -133,7 +133,7 @@ function SurroundingsPanel({ surroundings = [] }) {
           <div className="shrink-0 w-7 h-7 rounded-full bg-paper border border-mist-light flex items-center justify-center text-midnite">
             <SurroundingIcon name={s.icon} />
           </div>
-          <span className="text-[12.5px] text-ink leading-relaxed pt-1">{s.text}</span>
+          <span className="text-[13.5px] text-ink leading-relaxed pt-1">{s.text}</span>
         </li>
       ))}
     </ul>
@@ -160,7 +160,7 @@ function MapPanel({ mapsQuery, mapsLink }) {
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => trackEvent('location:maps-opened', {})}
-          className="mt-2.5 block text-center text-[12px] text-midnite hover:text-midnite-soft border border-mist hover:border-midnite py-2 rounded-full transition"
+          className="mt-2.5 block text-center text-[13px] text-midnite hover:text-midnite-soft border border-mist hover:border-midnite py-2 rounded-full transition"
         >
           Open in Google Maps
         </a>

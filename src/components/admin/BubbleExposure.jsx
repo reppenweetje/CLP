@@ -23,13 +23,13 @@ export default function BubbleExposure({ sessions }) {
     <section className="rounded-2xl border border-mist-light bg-paper p-5">
       <header className="flex items-baseline justify-between gap-3 mb-4">
         <div>
-          <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium mb-1">Vertoonde bubbles</div>
-          <h2 className="text-[14px] font-semibold text-ink">Welke content sturen conversie?</h2>
-          <p className="text-[12px] text-ink-soft leading-relaxed mt-1">
+          <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium mb-1">Vertoonde bubbles</div>
+          <h2 className="text-[15px] font-semibold text-ink">Welke content sturen conversie?</h2>
+          <p className="text-[13px] text-ink-soft leading-relaxed mt-1">
             Conversion-lift = % voltooid mét bubble − % voltooid zonder bubble.
           </p>
         </div>
-        <div className="inline-flex items-center rounded-full border border-mist-light bg-canvas p-0.5 text-[11px]">
+        <div className="inline-flex items-center rounded-full border border-mist-light bg-canvas p-0.5 text-[12px]">
           <button
             type="button"
             onClick={() => setSortBy('exposure')}
@@ -73,8 +73,8 @@ function BubbleRow({ row }) {
   return (
     <div className="grid grid-cols-[1fr_auto_120px] items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-canvas-2 transition">
       <div className="min-w-0">
-        <div className="text-[13px] font-medium text-ink truncate">{row.label}</div>
-        <div className="text-[11px] text-ink-mute mt-0.5">
+        <div className="text-[14px] font-medium text-ink truncate">{row.label}</div>
+        <div className="text-[12px] text-ink-mute mt-0.5">
           <span className="tabular-nums">{row.uniqueSessions}</span> sessies
           {' · '}
           <span className="tabular-nums">{row.exposureCount}</span>× vertoond
@@ -82,12 +82,12 @@ function BubbleRow({ row }) {
       </div>
       <div className="text-right">
         <div className={
-          'text-[13px] font-semibold tabular-nums ' +
+          'text-[14px] font-semibold tabular-nums ' +
           (liftPositive ? 'text-emerald-700' : liftNegative ? 'text-rose-700' : 'text-ink-soft')
         }>
           {liftPositive ? '+' : ''}{liftPct}%
         </div>
-        <div className="text-[10px] text-ink-mute mt-0.5">conv-lift</div>
+        <div className="text-[11px] text-ink-mute mt-0.5">conv-lift</div>
       </div>
       <Sparkline values={row.sparkline} max={sparkMax} />
     </div>
@@ -114,8 +114,8 @@ function Sparkline({ values, max }) {
 function EmptyState() {
   return (
     <div className="rounded-xl border border-dashed border-mist-light bg-canvas px-6 py-8 text-center">
-      <div className="text-[13px] font-semibold text-ink">Nog geen bubble-vertoningen geregistreerd</div>
-      <div className="text-[11.5px] text-ink-soft mt-1 leading-relaxed">
+      <div className="text-[14px] font-semibold text-ink">Nog geen bubble-vertoningen geregistreerd</div>
+      <div className="text-[12.5px] text-ink-soft mt-1 leading-relaxed">
         Bubble-tracking is geactiveerd via <code className="bg-canvas-2 px-1 py-0.5 rounded">bubble:rendered</code> events.
         Zodra bezoekers de chat doorlopen vullen deze rijen zich.
       </div>

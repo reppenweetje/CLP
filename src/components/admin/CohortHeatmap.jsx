@@ -12,10 +12,10 @@ export default function CohortHeatmap({ sessions }) {
     <section className="rounded-2xl border border-mist-light bg-paper p-5">
       <header className="flex items-baseline justify-between gap-3 mb-4">
         <div>
-          <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium mb-1">Wanneer kijken ze?</div>
-          <h2 className="text-[14px] font-semibold text-ink">Activity-heatmap</h2>
+          <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium mb-1">Wanneer kijken ze?</div>
+          <h2 className="text-[15px] font-semibold text-ink">Activity-heatmap</h2>
         </div>
-        <div className="text-[11px] text-ink-mute tabular-nums">{totalSessies} sessies</div>
+        <div className="text-[12px] text-ink-mute tabular-nums">{totalSessies} sessies</div>
       </header>
       <div className="overflow-x-auto -mx-2 px-2">
         <div className="inline-grid gap-[3px]" style={{ gridTemplateColumns: '20px repeat(24, minmax(14px, 1fr))' }}>
@@ -30,7 +30,7 @@ export default function CohortHeatmap({ sessions }) {
           ))}
         </div>
       </div>
-      <div className="mt-3 flex items-center gap-2 text-[10px] text-ink-mute">
+      <div className="mt-3 flex items-center gap-2 text-[11px] text-ink-mute">
         <span>minder</span>
         {[0.1, 0.3, 0.55, 0.8, 1].map((o) => (
           <span key={o} className="w-3.5 h-3.5 rounded-sm" style={{ background: `rgba(15,15,112,${o})` }} />
@@ -44,7 +44,7 @@ export default function CohortHeatmap({ sessions }) {
 function DayRow({ day, label, grid, max }) {
   return (
     <>
-      <div className="text-[10px] text-ink-mute self-center text-right pr-1">{label}</div>
+      <div className="text-[11px] text-ink-mute self-center text-right pr-1">{label}</div>
       {Array.from({ length: 24 }).map((_, h) => {
         const cell = grid.find((c) => c.day === day && c.hour === h)
         const count = cell?.count || 0

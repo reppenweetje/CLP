@@ -53,10 +53,10 @@ export default function ExitIntentPrompt({ onDismiss }) {
         {!submitted ? (
           <>
             <div className="flex items-start gap-3 mb-3">
-              <div className="w-8 h-8 rounded-full bg-gold/20 flex items-center justify-center shrink-0 text-gold text-[14px]" aria-hidden>?</div>
+              <div className="w-8 h-8 rounded-full bg-gold/20 flex items-center justify-center shrink-0 text-gold text-[15px]" aria-hidden>?</div>
               <div className="min-w-0 flex-1">
-                <div className="text-[14px] font-semibold text-ink">Voor je verder gaat</div>
-                <div className="text-[12px] text-ink-soft leading-snug mt-0.5">
+                <div className="text-[15px] font-semibold text-ink">Voor je verder gaat</div>
+                <div className="text-[13px] text-ink-soft leading-snug mt-0.5">
                   Je bent al even niet actief of lijkt weg te klikken. Help ons even leren wat je miste, dan kunnen we de chat voor anderen verbeteren. We onthouden niets persoonlijks, alleen je antwoord.
                 </div>
               </div>
@@ -76,7 +76,7 @@ export default function ExitIntentPrompt({ onDismiss }) {
                     type="button"
                     onClick={() => pick(r)}
                     className={
-                      'text-[12px] rounded-full border px-3 py-1.5 transition ' +
+                      'text-[13px] rounded-full border px-3 py-1.5 transition ' +
                       (active
                         ? 'bg-midnite text-paper border-midnite'
                         : 'border-mist hover:border-midnite text-ink')
@@ -88,20 +88,20 @@ export default function ExitIntentPrompt({ onDismiss }) {
               })}
             </div>
             <div className="mt-3.5">
-              <label className="block text-[11px] text-ink-mute mb-1">Of vertel het in eigen woorden</label>
+              <label className="block text-[12px] text-ink-mute mb-1">Of vertel het in eigen woorden</label>
               <textarea
                 value={extra}
                 onChange={(e) => setExtra(e.target.value)}
                 placeholder="Optioneel — wat zoek je echt?"
                 rows={2}
-                className="w-full rounded-lg border border-mist bg-canvas focus:border-midnite outline-none text-[13px] px-3 py-2 resize-none"
+                className="w-full rounded-lg border border-mist bg-canvas focus:border-midnite outline-none text-[14px] px-3 py-2 resize-none"
               />
             </div>
             <div className="mt-4 flex items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={close}
-                className="text-[12px] text-ink-mute hover:text-ink px-3 py-1.5 transition"
+                className="text-[13px] text-ink-mute hover:text-ink px-3 py-1.5 transition"
               >
                 Sluit
               </button>
@@ -109,7 +109,7 @@ export default function ExitIntentPrompt({ onDismiss }) {
                 type="button"
                 onClick={submitExtra}
                 disabled={!picked && !extra.trim()}
-                className="text-[12px] text-paper bg-midnite hover:bg-midnite-soft disabled:opacity-50 disabled:cursor-not-allowed px-3.5 py-1.5 rounded-full transition"
+                className="text-[13px] text-paper bg-midnite hover:bg-midnite-soft disabled:opacity-50 disabled:cursor-not-allowed px-3.5 py-1.5 rounded-full transition"
               >
                 Verstuur
               </button>
@@ -117,8 +117,8 @@ export default function ExitIntentPrompt({ onDismiss }) {
           </>
         ) : (
           <div className="py-2 text-center">
-            <div className="text-[14px] font-semibold text-ink">Dank je</div>
-            <div className="text-[12px] text-ink-soft mt-1">We gebruiken dit om de chat beter te maken.</div>
+            <div className="text-[15px] font-semibold text-ink">Dank je</div>
+            <div className="text-[13px] text-ink-soft mt-1">We gebruiken dit om de chat beter te maken.</div>
           </div>
         )}
       </div>

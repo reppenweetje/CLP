@@ -80,7 +80,7 @@ export default function AdminSidebar({ sections, activeId, onNavigate }) {
         }
       >
         <div className="px-4 py-4 lg:py-2 lg:pl-0 lg:pr-3">
-          <div className="text-[10px] tracking-[0.18em] text-midnite uppercase font-medium mb-3 px-2">Navigatie</div>
+          <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium mb-3 px-2">Navigatie</div>
           <nav className="space-y-0.5">
             {sections.map((s) => {
               const active = activeId === s.id
@@ -90,7 +90,7 @@ export default function AdminSidebar({ sections, activeId, onNavigate }) {
                   type="button"
                   onClick={() => handleClick(s.id)}
                   className={
-                    'w-full text-left px-2.5 py-2 rounded-lg text-[12.5px] flex items-center gap-2.5 transition relative ' +
+                    'w-full text-left px-2.5 py-2 rounded-lg text-[13.5px] flex items-center gap-2.5 transition relative ' +
                     (active
                       ? 'bg-midnite/8 text-midnite font-semibold'
                       : 'text-ink-soft hover:text-ink hover:bg-canvas-2')

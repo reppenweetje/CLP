@@ -5,7 +5,7 @@ import { DATE_RANGES } from '../../lib/analytics.js'
 // state en alle visualisaties refilteren.
 export default function DateRangePicker({ value, onChange }) {
   return (
-    <div className="inline-flex items-center rounded-full border border-mist-light bg-paper p-0.5 text-[12px]">
+    <div className="inline-flex items-center rounded-full border border-mist-light bg-paper p-0.5 text-[13px]">
       {DATE_RANGES.map((r) => {
         const active = value === r.id
         return (
