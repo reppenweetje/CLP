@@ -70,8 +70,50 @@ export function logConsent(scope, granted, detail = {}) {
     privacyStatementVersion: PRIVACY_STATEMENT_VERSION,
     ...detail,
   })
-  // sendToBackend(entry) — geactiveerd zodra backend live is
+  // Server-side audit-trail. App.jsx::pushSnapshot bevat al de standaard
+  // consents in zijn payload; deze achtergrond-push is een extra vangnet
+  // voor consent-momenten die niet samenvallen met een lead-snapshot
+  // (bv. logErasureRequest na flow-completion). Achter feature-flag,
+  // best-effort, geen impact op de chat-flow bij failure.
+  sendConsentToBackend(entry).catch((err) => {
+    console.warn('[consent] backend push failed', err?.message || err)
+  })
   return entry
+}
+
+// Asynchrone push van een single consent-entry naar het lead-upsert
+// endpoint. Bewust geen lead-data meegestuurd — alleen de consent-rij —
+// zodat een orphan consent (bv. voor verwijdering) ook in de DB komt
+// zonder een lead-rij te overschrijven met partial data.
+//
+// Dynamische import voorkomt een circulaire dep met api.js (api.js
+// importeert uit consent.js voor PRIVACY_STATEMENT_VERSION).
+async function sendConsentToBackend(entry) {
+  // Lazy import om module-graph clean te houden en SSR-veilig te zijn.
+  const { pushLead, isApiConfigured } = await import('./api.js')
+  const { getSessionId } = await import('./analytics.js')
+  if (!isApiConfigured()) return
+
+  const sessionId = getSessionId()
+  if (!sessionId) return
+
+  // Minimale payload: alleen session_id + source + één consent. De Edge
+  // Function upsert't de leads-rij (geen overwrite van bestaande velden
+  // omdat ze allemaal undefined zijn) en append't de consent_log-rij.
+  const source = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_CLP_SOURCE) || 'clp_dehofman'
+  await pushLead({
+    session_id: sessionId,
+    source,
+    privacy_statement_version: entry.privacyStatementVersion,
+    last_event_at: entry.timestamp,
+    consents: [{
+      scope:   entry.scope,
+      granted: entry.granted,
+      privacy_statement_version: entry.privacyStatementVersion,
+      user_agent: entry.userAgent,
+      detail:  entry.detail || {},
+    }],
+  })
 }
 
 // Sessie-start consent voor sessie-state-opslag in localStorage. Strikt

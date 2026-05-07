@@ -20,6 +20,7 @@ import {
 import { parseLeadInput, mergeLead } from './lib/parseLead.js'
 import { startNewSession, trackEvent, getSessionId } from './lib/analytics.js'
 import { notifyHotLead } from './lib/slack.js'
+import { pushLead, flushPending, isApiConfigured } from './lib/api.js'
 import {
   logSessionStartConsent,
   logBrochureConsent,
@@ -624,6 +625,76 @@ function Demo() {
   // beide A/B-experimenten orthogonaal kunnen analyseren in Plausible.
   const copyVariant = getOrAssignVariant()
 
+  // Supabase lead-upsert: synchroniseert de actuele state als één snapshot
+  // naar de Edge Function. Idempotent dankzij upsert op (source, session_id),
+  // dus we mogen dit meerdere keren in de flow aanroepen — elke call upsert
+  // de meest recente snapshot. Achter een feature-flag (VITE_SUPABASE_ENABLED);
+  // zolang die op false staat is dit een no-op en wordt geen fetch gedaan.
+  //
+  // Wordt aangeroepen op de natuurlijke checkpoints:
+  //  - finishLead (lead-gegevens binnen)
+  //  - timeline-answer (qualification compleet)
+  //  - flow:complete momenten (followup-keuze, all-seen wrap-up, rent-match)
+  function pushSnapshot(extraConsents = []) {
+    if (!isApiConfigured()) return // master-switch uit of env-vars ontbreken
+    const lead = state.answers.lead || {}
+    const session = {
+      sessionId:    getSessionId(),
+      events:       [],
+      startedAt:    null,
+      lastEventAt:  Date.now(),
+      completed:    !!state.answers.followup,
+      persona,
+      lead: {
+        firstName: lead.firstName ?? null,
+        email:     lead.email ?? null,
+        phone:     lead.phone ?? null,
+      },
+      ctaVariant:         null,
+      stage,
+      followup:           state.answers.followup?.label ?? null,
+      afhaakReason:       state.answers.afhaakReason?.label ?? null,
+      handoffShown:       !!state.behaviors?.warmHandoffShown,
+      handoffOutcome:     state.behaviors?.warmHandoffOutcome ?? null,
+      handoffTemperature: temperature,
+      handoffPersona:     buying.inferredPersona,
+    }
+    pushLead(session, {
+      score:       buying.score,
+      temperature: buying.temperature,
+      intent_id:   state.answers.intent?.id ?? null,
+      size_id:     state.answers.size?.id ?? null,
+      timeline_id: state.answers.timeline?.id ?? null,
+      attributes: {
+        buyingSignals: buying.signals.map((s) => s.id),
+        moreInfoSeen:  state.moreInfoSeen,
+        rentRange:     state.answers.rentRange?.id ?? null,
+        flags: {
+          credionRequested:   !!state.behaviors?.credionRequested,
+          rentMatchRequested: !!state.behaviors?.rentMatchRequested,
+          rendementInfoShown: !!state.behaviors?.rendementInfoShown,
+        },
+      },
+      consents: extraConsents,
+    }).catch((err) => {
+      // pushLead vangt zelf 4xx/5xx + queue af; eventuele uncaught errors
+      // mogen de chat-flow niet onderbreken. Log voor debugging.
+      console.warn('[pushSnapshot] failed', err)
+    })
+  }
+
+  // Bij app-mount + zodra het netwerk weer up is: probeer de localStorage
+  // retry-queue te legen. Werkt alleen als de feature-flag aan staat (anders
+  // skipt flushPending zelf). Geen useEffect-deps nodig — de helpers zijn
+  // pure functies die de queue-state uit localStorage halen.
+  useEffect(() => {
+    flushPending().catch(() => {})
+    if (typeof window === 'undefined') return
+    const onOnline = () => { flushPending().catch(() => {}) }
+    window.addEventListener('online', onOnline)
+    return () => window.removeEventListener('online', onOnline)
+  }, [])
+
   const start = (variant) => {
     startNewSession()
     trackEvent('session:start', { variant, copyVariant })
@@ -797,6 +868,7 @@ function Demo() {
       const customerSummary = customerAfhaakSummary(opt.id)
       const wa = whatsAppDeeplink(project, state.answers.lead?.firstName || '', customerSummary)
       dispatch({ type: 'ANSWER', key: 'afhaakReason', value: answerValue(opt), next: null })
+      pushSnapshot()
       sendSequence(userTextFromOpt(opt), [
         { kind: 'bot-text', text: 'Dank voor je eerlijkheid.' },
         { kind: 'bot-text', text: 'Misschien kunnen we via WhatsApp samen kijken naar wat wel past. Sommige projecten staan nog niet online en we denken graag mee.' },
@@ -910,6 +982,10 @@ function Demo() {
       )
       dispatch({ type: 'ANSWER', key: 'timeline', value: answerValue(opt), next: 'moreInfo' })
       sendSequence(userTextFromOpt(opt), botMessages)
+      // Qualification-snapshot: persona + size + timeline + recommendation zijn
+      // nu compleet. Goed moment om de Supabase-rij te updaten met het volledige
+      // beeld (CRM ziet hierdoor eerder rich data dan alleen email-only).
+      pushSnapshot()
       return
     }
 
@@ -995,6 +1071,7 @@ function Demo() {
             },
           },
         ])
+        pushSnapshot()
         return
       }
       if (opt.id === '__done') {
@@ -1030,6 +1107,7 @@ function Demo() {
             },
           },
         ])
+        pushSnapshot()
         return
       }
       if (opt.id === 'financing') {
@@ -1103,6 +1181,7 @@ function Demo() {
           value: { ...answerValue({ id: 'self-paced', label: 'Alles bekeken', score: 0 }) },
           next: null,
         })
+        pushSnapshot()
       } else if (seenCountAfter >= 2 && seenCountAfter % 2 === 0) {
         // Discovery-fase nudge: na elke 2 chips een korte conversational
         // zin om de keuze open te houden. Niet bij chip 1 (te vroeg) en
@@ -1150,6 +1229,7 @@ function Demo() {
       trackEvent('followup:answered', { id: opt.id, label: opt.label })
       trackEvent('flow:complete', { stage: stageNext, persona: personaNext })
       dispatch({ type: 'ANSWER', key: 'followup', value: answerValue(opt), next: null })
+      pushSnapshot()
       sendSequence(userTextFromOpt(opt), [
         { kind: 'bot-text', text: tc.lead },
         { kind: 'bot-text', text: tc.body },
@@ -1442,6 +1522,14 @@ function Demo() {
     else if (sizeDone && timelineDone && followupDone) next = null
 
     dispatch({ type: 'ANSWER', key: 'lead', value: lead, next })
+
+    // Eerste Supabase-push: lead is nu compleet (e-mail + naam + evt. 06).
+    // Inclusief alle tot dusver geregistreerde consent-momenten zodat de
+    // server-side audit-trail meteen vol is. State.leadDraft is hier de
+    // bron van waarheid. Achter feature-flag — no-op tot Edge Function live.
+    pushSnapshot([
+      { scope: 'brochure-en-opvolging', granted: true, detail: { from: 'finishLead' } },
+    ])
 
     // prependMessages bevat user-text + eventueel een bot-bevestiging.
     // Splits: user-text direct, bot-bubbles in de queue.

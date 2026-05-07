@@ -52,8 +52,20 @@ function source() {
   return readEnv('VITE_CLP_SOURCE', 'clp_dehofman')
 }
 
+// Master-switch om de Supabase-koppeling per Vercel-environment te kunnen
+// flippen zonder rebuild. Gebruik:
+//   VITE_SUPABASE_ENABLED=false → calls worden geskipped, retourneert
+//                                  { ok: true, queued: false, skipped: true }
+//   VITE_SUPABASE_ENABLED=true  → normale push naar Edge Function
+//
+// Standaard 'false' zodat een nieuwe deploy nooit per ongeluk lead-data naar
+// een mis-geconfigureerde Supabase stuurt. Activeren is een bewuste keuze.
+function isEnabled() {
+  return readEnv('VITE_SUPABASE_ENABLED', 'false') === 'true'
+}
+
 export function isApiConfigured() {
-  return !!endpoint() && !!anonKey()
+  return isEnabled() && !!endpoint() && !!anonKey()
 }
 
 // ── Payload-builder ─────────────────────────────────────────────────────────
@@ -152,6 +164,12 @@ async function postRaw(payload, signal) {
 // Probeert direct te pushen. Bij netwerkfout of 5xx → fallback naar queue.
 // Bij 4xx → niet retryen (slechte payload), gooi error door.
 export async function pushLead(payloadOrSession, extras) {
+  // Feature-flag uit: doe niets, retourneer skipped. Frontend ziet dit als
+  // succes (geen error-state) — chat-ervaring blijft identiek aan localStorage-
+  // only mode. Wordt geskipped zonder ook maar een fetch te doen.
+  if (!isEnabled()) {
+    return { ok: true, queued: false, skipped: true }
+  }
   const payload = payloadOrSession?.session_id
     ? payloadOrSession
     : buildLeadPayload(payloadOrSession, extras)
@@ -199,6 +217,10 @@ export function pendingCount() {
 // Retry alle items in de queue. Returnt aantal succesvol geflushte items.
 // Aanroepen bij: app-mount, na window 'online' event, na succesvolle push.
 export async function flushPending() {
+  // Feature-flag uit: queue wordt niet leeggetrokken want de Edge Function
+  // is sowieso niet beschikbaar. Bij later-flippen van de flag kan een
+  // achterstand alsnog worden opgehaald — items blijven in localStorage.
+  if (!isEnabled()) return { flushed: 0, remaining: readQueue().length, skipped: true }
   const items = readQueue()
   if (items.length === 0) return { flushed: 0, remaining: 0 }
   const remaining = []
