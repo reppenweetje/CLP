@@ -667,35 +667,40 @@ function Demo() {
   // bij replay. Nieuwe sessies maken geen service-cards meer aan.
   const serviceCardActive = state.messages.some((m) => m.kind === 'service-card' && !m.payload?.outcome)
 
-  // Slack hot-lead notificatie — onafhankelijk van de warm-handoff-bubble
-  // zodat sales ook gepingd wordt op momenten waarop de handoff niet kan
-  // landen (bv. tijdens lead-capture). Triggert zodra temperature hot is en
-  // we minimaal een e-mailadres hebben zodat sales daadwerkelijk iets om
-  // mee aan de slag kan. Slack-helper dedupet zelf op sessionId.
+  // Slack hot-lead notificatie. Triggert alleen bij een expliciete callback-
+  // aanvraag, niet meer op behavioral score-thresholds. Bron: bezoeker heeft
+  // op de "Laat de makelaar mij bellen" chip of op de callback-knop in de
+  // warm-handoff-bubble gedrukt, waardoor warmHandoffOutcome op 'callback'
+  // staat. Eis 06 zodat sales daadwerkelijk kan bellen. Slack-helper dedupet
+  // op sessionId via localStorage zodat een page-reload niet herfire't.
+  //
+  // De buying.score blijft in de payload meegestuurd zodat sales context
+  // heeft over hoe gekwalificeerd de aanvraag is, maar de score zelf is geen
+  // trigger meer. Dit voorkomt false-positives uit slider-tikkers en
+  // speed-clickers die nooit om contact vragen.
   useEffect(() => {
     if (state.view !== 'chat') return
-    if (buying.temperature !== 'hot') return
+    if (state.behaviors?.warmHandoffOutcome !== 'callback') return
     const lead = state.answers.lead || {}
-    if (!lead.email) return
+    if (!lead.phone) return
     notifyHotLead({
       sessionId: getSessionId(),
       firstName: lead.firstName,
       email: lead.email,
       phone: lead.phone,
       persona: buying.inferredPersona !== 'onbekend' ? buying.inferredPersona : persona,
-      temperature: buying.temperature,
+      temperature: 'hot',
       score: buying.score,
       signals: buying.signals.map((s) => s.id),
       intent: state.answers.intent?.label,
       size: state.answers.size?.label,
       timeline: state.answers.timeline?.label,
+      trigger: 'callback-requested',
       source: 'clp-de-hofman',
     })
   }, [
     state.view,
-    buying.temperature,
-    buying.score,
-    state.answers.lead?.email,
+    state.behaviors?.warmHandoffOutcome,
     state.answers.lead?.phone,
   ])
 

@@ -2,9 +2,13 @@
 // Webhook-URL staat in env (SLACK_WEBHOOK_URL) zodat het secret niet client-
 // side leakt. Slack-app heet "Hothothot" en post in #hot-clp-leads.
 //
+// Trigger sinds mei 2026: alleen expliciete callback-aanvragen (bezoeker
+// klikt "Laat de makelaar mij bellen"). De `trigger`-payload-key bevat
+// 'callback-requested', score+signals dienen als context voor sales.
+//
 // Body schema, alle velden optioneel behalve persona/temperature/score:
 //   { firstName, email, phone, persona, temperature, score, signals,
-//     intent, size, timeline, units, behaviors, sessionId, source }
+//     intent, size, timeline, trigger, units, behaviors, sessionId, source }
 //
 // Best-effort: API geeft 204 bij succes, 502 als Slack faalt, 4xx bij invalid
 // payload. Frontend negeert failures zodat een Slack-uitval de chat-flow niet
@@ -63,7 +67,7 @@ export default async function handler(req, res) {
 function formatSlackText(p) {
   const name = p.firstName || 'Onbekende lead'
   const score = typeof p.score === 'number' ? ` (score ${p.score})` : ''
-  const persona = p.persona ? ` — ${labelForPersona(p.persona)}` : ''
+  const persona = p.persona ? `, ${labelForPersona(p.persona)}` : ''
   return `Hot lead${persona}${score}: ${name}`
 }
 
@@ -71,17 +75,33 @@ function formatSlackText(p) {
 // hier doorklikken naar het CLP-admin-paneel voor de full session-replay.
 function formatSlackBlocks(p) {
   const lines = []
-  const name = p.firstName || '—'
-  const email = p.email || '—'
-  const phone = p.phone || '—'
+  const name = p.firstName || 'Nog niet'
+  const email = p.email || 'Nog niet'
+  const phone = p.phone || 'Nog niet'
   const persona = labelForPersona(p.persona)
-  const score = typeof p.score === 'number' ? `${p.score}` : '—'
+  const score = typeof p.score === 'number' ? `${p.score}` : 'Nog niet'
   const signals = Array.isArray(p.signals) ? p.signals : []
 
+  // Header expliciet de aanleiding noemen zodat sales bij het zien van de
+  // notificatie meteen weet dat dit geen achtergrond-score-trigger is maar
+  // een directe terugbel-aanvraag waar binnen kantooruren op gereageerd
+  // moet worden.
+  const isCallback = p.trigger === 'callback-requested'
   lines.push({
     type: 'header',
-    text: { type: 'plain_text', text: '🔥 Hot lead op CLP', emoji: true },
+    text: {
+      type: 'plain_text',
+      text: isCallback ? '📞 Callback verzocht op CLP' : '🔥 Hot lead op CLP',
+      emoji: true,
+    },
   })
+
+  if (isCallback) {
+    lines.push({
+      type: 'context',
+      elements: [{ type: 'mrkdwn', text: 'Bezoeker vroeg expliciet om teruggebeld te worden.' }],
+    })
+  }
 
   lines.push({
     type: 'section',
@@ -105,7 +125,7 @@ function formatSlackBlocks(p) {
     if (timeline) ctxParts.push(`Timeline: ${timeline}`)
     lines.push({
       type: 'context',
-      elements: [{ type: 'mrkdwn', text: ctxParts.map(escapeMrkdwn).join(' · ') }],
+      elements: [{ type: 'mrkdwn', text: ctxParts.map(escapeMrkdwn).join('  |  ') }],
     })
   }
 
@@ -138,7 +158,7 @@ function labelForPersona(p) {
   }
 }
 
-// Slack mrkdwn escape — voornamelijk om `<` `>` `&` te ontsnappen die anders
+// Slack mrkdwn escape, voornamelijk om `<` `>` `&` te ontsnappen die anders
 // als Slack-formatting worden geinterpreteerd. We strippen ook controle-chars
 // zodat een lead-veld de markdown niet kapot kan maken.
 function escapeMrkdwn(s) {
