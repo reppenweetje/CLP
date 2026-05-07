@@ -691,7 +691,7 @@ function Demo() {
       persona: buying.inferredPersona !== 'onbekend' ? buying.inferredPersona : persona,
       temperature: 'hot',
       score: buying.score,
-      signals: buying.signals.map((s) => s.id),
+      signals: buying.signals.map((s) => ({ id: s.id, label: s.label, weight: s.weight })),
       intent: state.answers.intent?.label,
       size: state.answers.size?.label,
       timeline: state.answers.timeline?.label,
