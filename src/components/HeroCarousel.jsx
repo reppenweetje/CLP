@@ -4,8 +4,17 @@ import { useEffect, useState } from 'react'
 // Elke 4.5 seconden faden we naar de volgende afbeelding met een
 // lichte Ken-Burns-zoom op de actieve. Eerste image is direct zichtbaar;
 // reduced-motion respecteren we door de rotatie te bevriezen.
+//
+// Random start-index: elke bezoeker landt op een ander beeld, zodat
+// terugkomers en bezoekers die meerdere CLPs zien niet steeds dezelfde
+// hero-foto krijgen. Combinatie met de carousel die toch elke 4.5s
+// roteert geeft natuurlijke variatie zonder de eerste indruk vast te
+// pinnen.
 export default function HeroCarousel({ images, interval = 4500 }) {
-  const [active, setActive] = useState(0)
+  const [active, setActive] = useState(() => {
+    if (!images || images.length <= 1) return 0
+    return Math.floor(Math.random() * images.length)
+  })
 
   useEffect(() => {
     if (typeof window === 'undefined') return

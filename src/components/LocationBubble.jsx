@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import Avatar from './Avatar.jsx'
-import ImpressionNote from './ImpressionNote.jsx'
 import { trackEvent } from '../lib/analytics.js'
 
 // Locatie-bubble v2. Drie perspectieven via segment-control:
@@ -22,10 +21,20 @@ export default function LocationBubble({ location, projectName }) {
       <Avatar />
       <div className="flex-1 min-w-0">
         <div className="rounded-3xl rounded-tl-md bg-paper border border-mist-light overflow-hidden">
+          {/* Hero: live Google Maps embed met automatische pin op de query-
+              locatie. Vervangt de eerdere aerial-foto omdat de bezoeker bij
+              een locatie-card vooral wíl weten waar het ligt — niet hoe het
+              eruit ziet. Geen API key nodig: Google's gratis embed-endpoint.
+              Lazy-loading zodat 'em pas laadt als de bubble in beeld komt. */}
           <div className="relative aspect-[16/9] bg-canvas-2 overflow-hidden">
-            <img src={location.aerialImage} alt="" className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-paper/40 via-transparent to-transparent" />
-            <PinMarker />
+            <iframe
+              src={`https://maps.google.com/maps?q=${location.mapsQuery}&t=m&z=15&output=embed`}
+              title={`Locatie ${location.address}`}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              className="w-full h-full"
+              style={{ border: 0 }}
+            />
           </div>
           <div className="p-4 pb-3">
             <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium">Locatie</div>
@@ -33,20 +42,17 @@ export default function LocationBubble({ location, projectName }) {
             <div className="text-[13.5px] text-ink-soft leading-relaxed mt-1">
               {projectName ? `${projectName} ligt op een gevestigde bedrijvenlocatie in Haarlem, in de Metropoolregio Amsterdam.` : 'Gevestigde bedrijvenlocatie in Haarlem, in de Metropoolregio Amsterdam.'}
             </div>
-            <ImpressionNote variant="aerial" className="mt-2" />
           </div>
 
           <div className="px-4">
-            {/* Korter gelabelde tabs met sterkere klikbaarheid-cue.
-                Eerdere versie ("Bereikbaarheid"/"Omgeving"/"Op de kaart")
-                liep over op smal scherm en zag er niet als klikbaar uit. */}
+            {/* Tabs zonder Kaart-optie — de hero IS al de kaart. Tabs voor
+                inhoudelijke perspectieven (reistijden, omgeving). */}
             <SegmentControl
               value={tab}
               onChange={switchTab}
               options={[
                 { id: 'reach',  label: 'Reistijden' },
                 { id: 'around', label: 'Omgeving' },
-                { id: 'map',    label: 'Kaart' },
               ]}
             />
           </div>
@@ -54,7 +60,24 @@ export default function LocationBubble({ location, projectName }) {
           <div className="p-4 pt-3">
             {tab === 'reach' && <ReachPanel travelTimes={location.travelTimes} />}
             {tab === 'around' && <SurroundingsPanel surroundings={location.surroundings} />}
-            {tab === 'map' && <MapPanel mapsQuery={location.mapsQuery} mapsLink={location.mapsLink} />}
+            {/* Open in Google Maps onder de tabs — universele actie ongeacht
+                welke tab actief is. Bezoeker kan vanaf hier route plannen of
+                zelf inzoomen. */}
+            {location.mapsLink && (
+              <a
+                href={location.mapsLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => trackEvent('location:maps-opened', {})}
+                className="mt-3 flex items-center justify-center gap-2 text-[13.5px] text-midnite hover:text-midnite-soft border border-mist hover:border-midnite py-2.5 rounded-full transition"
+              >
+                <span>Open in Google Maps</span>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M7 17 17 7" />
+                  <path d="M8 7h9v9" />
+                </svg>
+              </a>
+            )}
           </div>
 
           {location.scarcityNote && (
@@ -140,35 +163,6 @@ function SurroundingsPanel({ surroundings = [] }) {
   )
 }
 
-function MapPanel({ mapsQuery, mapsLink }) {
-  const embedUrl = `https://maps.google.com/maps?q=${mapsQuery}&t=k&z=16&output=embed`
-  return (
-    <div>
-      <div className="rounded-2xl overflow-hidden border border-mist-light bg-canvas-2 aspect-[4/3]">
-        <iframe
-          src={embedUrl}
-          title="Kaart van A. Hofmanweg, Haarlem"
-          loading="lazy"
-          referrerPolicy="no-referrer-when-downgrade"
-          className="w-full h-full"
-          style={{ border: 0 }}
-        />
-      </div>
-      {mapsLink && (
-        <a
-          href={mapsLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => trackEvent('location:maps-opened', {})}
-          className="mt-2.5 block text-center text-[13px] text-midnite hover:text-midnite-soft border border-mist hover:border-midnite py-2 rounded-full transition"
-        >
-          Open in Google Maps
-        </a>
-      )}
-    </div>
-  )
-}
-
 function modeLabel(mode) {
   switch (mode) {
     case 'car': return 'Auto'
@@ -228,13 +222,3 @@ function SurroundingIcon({ name }) {
   }
 }
 
-function PinMarker() {
-  return (
-    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-      <div className="relative">
-        <div className="absolute -top-1 -left-1 w-7 h-7 rounded-full bg-midnite/30 animate-ping" />
-        <div className="w-5 h-5 rounded-full bg-midnite border-2 border-paper shadow-lg" />
-      </div>
-    </div>
-  )
-}

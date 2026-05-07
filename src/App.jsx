@@ -416,7 +416,11 @@ function buildMoreInfoMessages(id, persona) {
       return [{
         kind: 'gallery',
         payload: {
-          images: project.gallery,
+          // Persona-aware ordering: belegger ziet eerst exterieur (vastgoed-
+          // perspectief), eigen-gebruiker eerst interieur (functioneel
+          // perspectief). Elke bezoeker krijgt zo een eerste foto die
+          // resoneert met z'n eigen reden van zoeken.
+          images: orderGalleryForPersona(project.gallery, persona),
           intro: 'Sfeerbeelden van de buitenkant en mogelijke inrichtingen.',
         },
       }]
@@ -492,6 +496,34 @@ function hashString(s) {
   let h = 5381
   for (let i = 0; i < s.length; i++) h = ((h << 5) + h) ^ s.charCodeAt(i)
   return h | 0
+}
+
+// Persona-aware sortering van de gallery. Belegger ziet eerst exterieur
+// (vastgoed-perspectief: hoe ziet het pand er uit, ligging), eigen-gebruiker
+// eerst interieur (hoe gebruik ik dit als bedrijfsruimte). Voorkomt dat
+// elke bezoeker steeds dezelfde eerste foto ziet en sluit aan bij waarom
+// ze hier zijn. Onbekende persona valt terug op originele volgorde.
+function orderGalleryForPersona(gallery, persona) {
+  if (!Array.isArray(gallery) || gallery.length === 0) return gallery
+  const isExterior = (img) => /hero|exterieur/i.test(img.src || '')
+  const isInterior = (img) => /unit|werkplaats|showroom|studio/i.test(img.src || '')
+  const exteriors = gallery.filter(isExterior)
+  const interiors = gallery.filter(isInterior)
+  const others = gallery.filter((g) => !isExterior(g) && !isInterior(g))
+  if (persona === 'belegger') return [...exteriors, ...interiors, ...others]
+  if (persona === 'eigen_gebruiker') return [...interiors, ...exteriors, ...others]
+  // beide / onbekend / huurder: alterneer (interleave) zodat elke veeg
+  // afwisselt tussen exterieur en interieur — meeste visuele variatie.
+  if (persona === 'beide') {
+    const mixed = []
+    const max = Math.max(interiors.length, exteriors.length)
+    for (let i = 0; i < max; i++) {
+      if (interiors[i]) mixed.push(interiors[i])
+      if (exteriors[i]) mixed.push(exteriors[i])
+    }
+    return [...mixed, ...others]
+  }
+  return gallery
 }
 
 // Hoe lang we wachten voordat de volgende bot-bubble verschijnt. Korter voor
