@@ -1,10 +1,18 @@
 import Avatar from './Avatar.jsx'
 import { getTimeContext, getCallbackPromise } from '../lib/buyingSignals.js'
 
-// Persoonlijke nudge richting telefonisch contact wanneer een bezoeker
-// gedrag laat zien dat 'm hot maakt. Copy wordt door App.jsx via
-// buildHandoffCopy() opgebouwd uit project.personaCopy en als prop
-// meegegeven. Component is puur presentationaal.
+// Persoonlijke nudge richting telefonisch contact. Wordt nu uitsluitend
+// getoond op expliciete chip-keuze van de bezoeker, niet meer op een
+// achtergrond-score-trigger. Copy wordt door App.jsx via buildHandoffCopy()
+// opgebouwd uit project.personaCopy en als prop meegegeven.
+//
+// Layout-keuzes:
+// - Tag is neutraal ("Kort overleg") in plaats van marketing-claim
+// - Callback-belofte staat vooraf in een commitment-strip zodat de bezoeker
+//   weet wat hij koopt voor hij klikt — geen verrassingen pas na klik
+// - 4 gelijkwaardige opties: primair Bel, secundair WhatsApp + Bel zelf,
+//   en tertiair "Ik kijk eerst zelf verder" als volwaardige knop ipv
+//   matte tekstlink. Bezoeker voelt geen drempel om uit de bubble te stappen.
 export default function WarmHandoffBubble({
   copy,
   salesTeam,
@@ -22,7 +30,7 @@ export default function WarmHandoffBubble({
   const promise = getCallbackPromise(time)
   const repName = salesTeam?.rep?.name || 'een collega'
   const botOrg = salesTeam?.bot?.org || ''
-  const safeCopy = copy || { tag: 'Hulp op maat', headline: '', body: '', value: [], primaryCta: 'Laat mij bellen' }
+  const safeCopy = copy || { tag: 'Kort overleg', headline: '', body: '', value: [], primaryCta: 'Laat mij bellen' }
 
   const primaryDone = outcome === 'callback' || outcome === 'phone' || outcome === 'whatsapp'
 
@@ -42,7 +50,19 @@ export default function WarmHandoffBubble({
           <div className="px-4 py-3.5 space-y-3">
             <p className="text-[13.5px] text-ink leading-relaxed">{safeCopy.body}</p>
 
-            {safeCopy.value && (
+            {/* Commitment-strip: vertel vooraf wat de bezoeker krijgt als hij
+                klikt. Zo heeft de "Bel me" CTA al een verwachting voor de klik
+                ipv pas na de klik in een outcome-strip. */}
+            <div className="rounded-xl bg-paper border border-mist-light px-3 py-2.5">
+              <div className="text-[10px] tracking-[0.16em] text-ink-mute uppercase mb-1">
+                Wat je krijgt
+              </div>
+              <div className="text-[12.5px] text-ink-soft leading-relaxed">
+                {repName} belt {promise}, meestal een korte call van tien minuten. Geen verkoop­praatje, gewoon je vragen doornemen.
+              </div>
+            </div>
+
+            {safeCopy.value && safeCopy.value.length > 0 && (
               <div className="rounded-xl bg-canvas-2 border border-mist-light px-3 py-2.5">
                 <div className="text-[10px] tracking-[0.16em] text-ink-mute uppercase mb-1">
                   Wat we kort kunnen doornemen
@@ -75,7 +95,7 @@ export default function WarmHandoffBubble({
             {outcome === 'dismissed' && (
               <div className="rounded-xl bg-canvas-2 border border-mist-light px-3 py-2.5">
                 <div className="text-[12.5px] text-ink-soft leading-relaxed">
-                  Geen probleem. Je kunt later altijd nog bellen of WhatsApp'en.
+                  Geen probleem. Je kunt altijd terugkomen op deze stap.
                 </div>
               </div>
             )}
@@ -108,11 +128,14 @@ export default function WarmHandoffBubble({
                     {phoneDisplay || 'Bel zelf'}
                   </a>
                 </div>
+                {/* Vierde, gelijkwaardige optie: bezoeker mag zonder drempel
+                    terug naar zelf rondkijken. Voorheen was dit een matte
+                    tekstlink — visueel 3 vs 1 — wat als drammerig aanvoelde. */}
                 <button
                   onClick={onDismiss}
-                  className="w-full text-[11.5px] text-ink-mute hover:text-ink-soft py-1.5 transition"
+                  className="w-full border border-mist hover:border-midnite text-ink-soft hover:text-midnite text-[12.5px] py-2.5 rounded-full transition flex items-center justify-center"
                 >
-                  Liever later
+                  Ik kijk eerst zelf verder
                 </button>
               </div>
             )}

@@ -28,7 +28,7 @@ export function buildHandoffCopy(persona, project, { signals = [], name = '', ha
     ? `${greet}${handoff.shortTimelineHeadline}`
     : observation
     ? `${greet}${observation}`
-    : greet.trim() || 'Hulp op maat'
+    : greet.trim() || 'Even kort schakelen'
 
   const primaryCta = hasPhone
     ? `Laat ${repName} mij bellen`
@@ -37,12 +37,46 @@ export function buildHandoffCopy(persona, project, { signals = [], name = '', ha
     : `Laat ${repName} mij bellen`
 
   return {
-    tag: 'Hulp op maat',
+    // Tag is bewust een neutrale "wat is dit"-marker, niet een marketing-claim.
+    // De warm-handoff bubble moet aanvoelen als logische voortzetting van het
+    // gesprek. Marketing-tags ("hulp op maat") triggeren wantrouwen.
+    tag: 'Kort overleg',
     headline,
     body: handoff.body || '',
     value: handoff.valueBullets || [],
     primaryCta,
   }
+}
+
+// Brug-zin die VOOR de warm-handoff bubble verschijnt om de overgang van
+// "vragen stellen" naar "wil je gebeld worden" zacht te maken. Persoonlijk
+// gemaakt door observatie van het sterkste signaal, met optionele naam-aanhef.
+//
+// Doel: bezoeker voelt herkenning ("ze zien wat ik doe") in plaats van een
+// abrupte verkoop-pop-up. Dit maakt het verschil tussen "marketing-bubble"
+// en "logische volgende stap".
+export function buildHandoffBridge(persona, project, { signals = [], name = '' } = {}) {
+  const copy = project?.personaCopy?.[persona] || project?.personaCopy?.onbekend
+  const handoff = copy?.handoff || {}
+  const observations = handoff.observations || {}
+
+  const signalIds = new Set(signals.map((s) => s.id))
+  const hasCalc = signalIds.has('rentability_calc') || signalIds.has('mortgage_calc')
+  const hasMultiUnit = signalIds.has('unit_detail_multi')
+  const hasShortTimeline = signalIds.has('timeline_zsm') || signalIds.has('timeline_3mnd')
+
+  const obsRaw = hasCalc
+    ? observations.calc || observations.default
+    : hasMultiUnit
+    ? observations.multiUnit || observations.default
+    : hasShortTimeline
+    ? 'je timeline is helder'
+    : observations.default || 'je hebt al rondgekeken'
+
+  const obsLower = obsRaw.charAt(0).toLowerCase() + obsRaw.slice(1)
+  const obsUpper = obsRaw.charAt(0).toUpperCase() + obsRaw.slice(1)
+  const lead = name ? `${name}, ${obsLower}` : obsUpper
+  return `${lead}. Op zo'n moment helpt het meestal om kort even te schakelen.`
 }
 
 // Resolved persona-microIntro na de intent-keuze.

@@ -20,7 +20,16 @@ export default function SuggestedChips({ options, onPick, hint }) {
           <button
             key={opt.id}
             onClick={() => onPick(opt)}
-            className="rounded-full bg-paper border border-mist hover:border-midnite hover:bg-canvas-2 active:scale-[0.98] text-ink text-[13.5px] px-3.5 py-2 transition leading-snug"
+            className={
+              opt.variant === 'primary'
+                // Primary-variant: midnite achtergrond, paper tekst. Gebruikt
+                // voor de callback-chip wanneer de bezoeker warme signalen
+                // afgeeft — visueel uit de toon springen zonder dat het
+                // marketing-achtig wordt. Iconisch genoeg om de "service"-actie
+                // te signaleren naast informatie-chips.
+                ? 'rounded-full bg-midnite hover:bg-midnite-soft text-paper border border-midnite text-[13.5px] px-3.5 py-2 transition leading-snug active:scale-[0.98] font-medium'
+                : 'rounded-full bg-paper border border-mist hover:border-midnite hover:bg-canvas-2 active:scale-[0.98] text-ink text-[13.5px] px-3.5 py-2 transition leading-snug'
+            }
           >
             {opt.label}
           </button>

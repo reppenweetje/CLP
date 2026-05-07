@@ -28,7 +28,7 @@ import {
 } from './lib/consent.js'
 import { sendCredionLead } from './lib/credion.js'
 import { computeBuyingSignals, EMPTY_BEHAVIORS, getCallbackPromise, getTimeContext } from './lib/buyingSignals.js'
-import { buildHandoffCopy, resolveMicroIntro, resolveRecommendCopy } from './lib/handoffCopy.js'
+import { buildHandoffCopy, buildHandoffBridge, resolveMicroIntro, resolveRecommendCopy } from './lib/handoffCopy.js'
 
 import AppShell from './components/AppShell.jsx'
 import IntroScreen from './components/IntroScreen.jsx'
@@ -317,12 +317,18 @@ function moreInfoChips(persona, seen, temperature) {
   }
 
   const directContact = { id: '__contact', label: 'Direct contact' }
-  const callback = { id: '__callback', label: 'Laat Jann mij bellen' }
+  // De callback-chip krijgt bij warm/hot een primary-variant zodat hij
+  // visueel uit de toon springt tussen de info-chips. Bezoekers met warme
+  // signalen zien dan een duidelijke "Laat Jann mij bellen" CTA bovenaan
+  // de chips. Geen achtergrond-pop-up meer — expliciet, opvalend, opt-in.
+  const callbackPrimary = { id: '__callback', label: 'Laat Jann mij bellen', variant: 'primary' }
+  const callbackPlain = { id: '__callback', label: 'Laat Jann mij bellen' }
 
-  // Hot of warm: contact-opties bovenaan, plus expliciete callback-chip.
-  if (temperature === 'hot') return [callback, directContact, ...opts]
-  if (temperature === 'warm') return [directContact, ...opts]
-  return [...opts, directContact]
+  if (temperature === 'hot') return [callbackPrimary, directContact, ...opts]
+  if (temperature === 'warm') return [callbackPrimary, directContact, ...opts]
+  // Cold: callback-chip blijft bestaan als gewone optie achterin, geen
+  // visueel onderscheid omdat de bezoeker nog niet voldoende signaal afgeeft.
+  return [...opts, callbackPlain, directContact]
 }
 
 function buildMoreInfoMessages(id, persona) {
@@ -506,81 +512,23 @@ function Demo() {
   const temperature = deriveTemperature(stage)
   const buying = computeBuyingSignals(state.answers, state.behaviors)
 
-  // Veilige momenten om de warm-handoff in te schieten. Tijdens lead-capture
-  // of een sub-flow zoals financingAsk willen we niet onderbreken.
-  const SAFE_HANDOFF_QUESTIONS = ['moreInfo', 'followup', null]
-  const isSafeMoment = SAFE_HANDOFF_QUESTIONS.includes(state.currentQuestion)
-
   // De handoff bubble is "actief" zodra hij getoond is en de bezoeker nog
   // niets heeft gekozen. Tijdens deze fase verbergen we chip-bar, input en
-  // header-shortcuts zodat de bubble zelf de enige interactie is. Geldt voor
-  // zowel de losse warm-handoff bubble als de gecombineerde service-card.
+  // header-shortcuts zodat de bubble zelf de enige interactie is.
+  //
+  // Belangrijke ontwerp-keuze (mei 2026): de warm-handoff bubble komt nu
+  // ALLEEN op expliciete chip-keuze van de bezoeker — we firen 'm niet
+  // meer automatisch op basis van een score-drempel. Reden: bezoekers
+  // ervoeren de auto-trigger als abrupt en marketing-achtig. De score-engine
+  // blijft draaien voor sales-priorisering (Slack-ping) en voor visuele
+  // chip-prominentie (de "Laat Jann mij bellen" chip krijgt een primary-
+  // styling bij temperature >= warm), maar de UI-trigger is volledig
+  // user-pulled.
   const warmHandoffActive = !!state.behaviors?.warmHandoffShown && !state.behaviors?.warmHandoffOutcome
+  // Legacy: bestaande sessies in localStorage kunnen nog een service-card-
+  // bubble hebben uit de oude flow. Detect 'em zodat de UI-blokkering klopt
+  // bij replay. Nieuwe sessies maken geen service-cards meer aan.
   const serviceCardActive = state.messages.some((m) => m.kind === 'service-card' && !m.payload?.outcome)
-
-  useEffect(() => {
-    if (state.view !== 'chat') return
-    if (state.behaviors?.warmHandoffShown) return
-    if (buying.temperature !== 'hot') return
-    if (!isSafeMoment) return
-    // Wacht totdat de release-queue leeg is, anders breekt de handoff-bubble
-    // door het sequentiële reveal-ritme heen.
-    if ((state.messageQueue?.length || 0) > 0) return
-    // Geen handoff als bezoeker al expliciet om direct contact heeft gevraagd.
-    if (state.answers.followup) return
-
-    const personaForCopy = buying.inferredPersona !== 'onbekend' ? buying.inferredPersona : persona
-    const lead = state.answers.lead || {}
-    const phoneDeclined = !lead.phone && state.behaviors?.phoneAskedDeclined === true
-
-    const summary = buildCustomerWaSummary(state.answers, project)
-    const wa = whatsAppDeeplink(project, lead.firstName || '', summary)
-    const phoneLink = buildPhoneLink(project.phoneNumber)
-
-    trackEvent('warm-handoff:shown', {
-      persona: personaForCopy,
-      declaredPersona: buying.declaredPersona,
-      temperature: buying.temperature,
-      score: buying.score,
-      signalCount: buying.signals.length,
-      signalIds: buying.signals.map((s) => s.id),
-      currentQuestion: state.currentQuestion,
-    })
-
-    const handoffCopy = buildHandoffCopy(personaForCopy, project, {
-      signals: buying.signals,
-      name: lead.firstName || '',
-      hasPhone: !!lead.phone,
-      phoneDeclined,
-    })
-    dispatch({ type: 'WARM_HANDOFF_SHOWN' })
-    dispatch({
-      type: 'ENQUEUE',
-      messages: [
-        {
-          kind: 'warm-handoff',
-          payload: {
-            copy: handoffCopy,
-            salesTeam: project.salesTeam,
-            hasPhone: !!lead.phone,
-            waLink: wa,
-            waSummary: summary,
-            phoneLink,
-            phoneDisplay: project.phoneNumber,
-            outcome: null,
-          },
-        },
-      ],
-    })
-  }, [
-    state.view,
-    state.behaviors?.warmHandoffShown,
-    buying.temperature,
-    buying.score,
-    isSafeMoment,
-    state.answers.followup,
-    state.messageQueue?.length,
-  ])
 
   // Slack hot-lead notificatie — onafhankelijk van de warm-handoff-bubble
   // zodat sales ook gepingd wordt op momenten waarop de handoff niet kan
@@ -855,77 +803,11 @@ function Demo() {
       const confidence = leadConfidence(merged)
       trackEvent('timeline:answered', { id: opt.id, label: opt.label, recommendedUnit: unit.primary?.type })
 
-      // Bereken buying-signals NA timeline zodat we het hot-moment in deze flow
-      // direct kunnen detecteren ipv via de losse useEffect (die zou een aparte
-      // bubble lanceren bovenop de unit-card en juist de flood produceren).
-      const buyingNext = computeBuyingSignals(merged, state.behaviors)
-      const isHot = buyingNext.temperature === 'hot'
-
-      if (isHot) {
-        // Service-card-pad: 1 personal lead-in bubble + 1 gecombineerde card
-        // die unit-aanbeveling en handoff in 1 visueel object presenteert.
-        // Geen recommendCopy (duplicaat van microIntro) en geen "wil je meer
-        // info" bot-text — die rol neemt de card zelf over.
-        const personaForCard =
-          buyingNext.inferredPersona !== 'onbekend' ? buyingNext.inferredPersona : personaNext
-        const lead = state.answers.lead || {}
-        const phoneDeclined = !lead.phone && state.behaviors?.phoneAskedDeclined === true
-        const summary = buildCustomerWaSummary(merged, project)
-        const wa = whatsAppDeeplink(project, lead.firstName || '', summary)
-        const phoneLink = buildPhoneLink(project.phoneNumber)
-
-        trackEvent('service-card:shown', {
-          persona: personaForCard,
-          declaredPersona: buyingNext.declaredPersona,
-          temperature: buyingNext.temperature,
-          score: buyingNext.score,
-          signalCount: buyingNext.signals.length,
-          signalIds: buyingNext.signals.map((s) => s.id),
-          recommendedUnit: unit.primary?.type,
-          confidence,
-        })
-
-        // Markeer warmHandoff als getoond zodat de aparte useEffect deze
-        // bezoeker niet later alsnog een tweede handoff-bubble injecteert.
-        dispatch({ type: 'WARM_HANDOFF_SHOWN' })
-        dispatch({ type: 'ANSWER', key: 'timeline', value: answerValue(opt), next: 'moreInfo' })
-
-        const leadIn =
-          confidence >= 2
-            ? lead.firstName
-              ? `Helder, ${lead.firstName}. Met die timeline kijken we even gericht.`
-              : 'Helder. Met die timeline kijken we even gericht.'
-            : lead.firstName
-            ? `Dank, ${lead.firstName}. We zetten de meest concrete optie even op een rij.`
-            : 'Dank. We zetten de meest concrete optie even op een rij.'
-
-        sendSequence(userTextFromOpt(opt), [
-          { kind: 'bot-text', text: leadIn },
-          {
-            kind: 'service-card',
-            payload: {
-              unit,
-              copy: buildHandoffCopy(personaForCard, project, {
-                signals: buyingNext.signals,
-                name: lead.firstName || '',
-                hasPhone: !!lead.phone,
-                phoneDeclined,
-              }),
-              salesTeam: project.salesTeam,
-              hasPhone: !!lead.phone,
-              phoneDisplay: lead.phone || '',
-              waLink: wa,
-              waSummary: summary,
-              phoneLink,
-              phoneTextDisplay: project.phoneNumber,
-              outcome: null,
-            },
-          },
-        ])
-        return
-      }
-
-      // Niet-hot: huidige flow blijft ongewijzigd in deze ronde.
+      // Eén consistente flow voor alle temperaturen. Voorheen kreeg een hot-
+      // bezoeker hier een merged service-card te zien (foto + specs + handoff
+      // CTA-ladder in één bubble) maar die voelde als "ze willen me direct
+      // closen". De handoff is nu verplaatst naar een expliciete chip-keuze
+      // op de moreInfo-stap zodat de bezoeker zelf het tempo bepaalt.
       const botMessages = []
       if (confidence >= 2) {
         botMessages.push(
@@ -949,20 +831,57 @@ function Demo() {
 
     if (q === 'moreInfo') {
       if (opt.id === '__callback') {
-        const merged = state.answers
-        const personaNext = derivePersona(merged)
-        trackEvent('warm-handoff:callback-chip-clicked', { persona: personaNext, temperature: buying.temperature })
-        dispatch({ type: 'WARM_HANDOFF_OUTCOME', outcome: 'callback' })
-        if (state.answers.lead?.phone) {
-          sendSequence(userTextFromOpt(opt), [
-            { kind: 'bot-text', text: `Top. Mijn collega Jann belt je ${getCallbackPromise(getTimeContext())} op ${state.answers.lead.phone}.` },
-          ])
-        } else {
-          sendSequence(userTextFromOpt(opt), [
-            { kind: 'bot-text', text: 'Top. Wat is je 06-nummer? Dan zorg ik dat Jann je belt.' },
-          ])
-          dispatch({ type: 'SET_QUESTION', next: 'lead-phone' })
-        }
+        // User-pulled handoff: bezoeker kiest expliciet de "Laat Jann mij
+        // bellen" chip. We tonen geen directe bevestiging meer maar:
+        //   1) een persoonlijke brug-zin die observatie + reden geeft
+        //   2) de warm-handoff bubble met Bel/WA/Bel zelf/Verder lezen
+        //
+        // Reden: voorheen werd de bezoeker zonder enige overgang naar
+        // "we bellen je" gestuurd. Met de bridge + bubble krijgt 'ie de
+        // ruimte om te kiezen tussen contactvormen of alsnog door te lezen.
+        const personaForCard =
+          buying.inferredPersona !== 'onbekend' ? buying.inferredPersona : persona
+        const lead = state.answers.lead || {}
+        const phoneDeclined = !lead.phone && state.behaviors?.phoneAskedDeclined === true
+        const summary = buildCustomerWaSummary(state.answers, project)
+        const wa = whatsAppDeeplink(project, lead.firstName || '', summary)
+        const phoneLink = buildPhoneLink(project.phoneNumber)
+
+        trackEvent('warm-handoff:opened-via-chip', {
+          persona: personaForCard,
+          temperature: buying.temperature,
+          score: buying.score,
+          signalCount: buying.signals.length,
+          signalIds: buying.signals.map((s) => s.id),
+        })
+
+        const bridge = buildHandoffBridge(personaForCard, project, {
+          signals: buying.signals,
+          name: lead.firstName || '',
+        })
+
+        dispatch({ type: 'WARM_HANDOFF_SHOWN' })
+        sendSequence(userTextFromOpt(opt), [
+          { kind: 'bot-text', text: bridge },
+          {
+            kind: 'warm-handoff',
+            payload: {
+              copy: buildHandoffCopy(personaForCard, project, {
+                signals: buying.signals,
+                name: lead.firstName || '',
+                hasPhone: !!lead.phone,
+                phoneDeclined,
+              }),
+              salesTeam: project.salesTeam,
+              hasPhone: !!lead.phone,
+              waLink: wa,
+              waSummary: summary,
+              phoneLink,
+              phoneDisplay: project.phoneNumber,
+              outcome: null,
+            },
+          },
+        ])
         return
       }
       if (opt.id === '__contact') {
