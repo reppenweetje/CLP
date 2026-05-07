@@ -390,11 +390,13 @@ export const project = {
   credionWebhookUrl: 'https://hooks.zapier.com/hooks/catch/2082653/ua9zc1l/',
 
   // Sales team. Bot is de chat-persona (kop van elk bot-bericht); rep is de
-  // mens die belt en in de handoff-copy genoemd wordt. Per project anders
-  // mogelijk; default Jesse (REPP) en Jann.
+  // mens die belt. Bewust DEZELFDE persoon — Jesse begint de chat en Jesse
+  // belt later terug — zodat de bezoeker niet ineens met een onbekende naam
+  // ("Jann") geconfronteerd wordt. Handoff-copy spreekt daarom in eerste
+  // persoon ("ik denk graag mee") in plaats van "mijn collega ...".
   salesTeam: {
     bot: { name: 'Jesse', org: 'REPP' },
-    rep: { name: 'Jann', context: 'Waarderpolder-markt' },
+    rep: { name: 'Jesse', context: 'Waarderpolder-markt' },
   },
 
   // Persona-aware copy. Elke persona heeft vier buckets: microIntro
@@ -418,7 +420,7 @@ export const project = {
         shortTimelineHeadline: 'met die timeline is een korte call vaak prettiger dan veel mailen',
         body:
           'Een bedrijfsunit voor je eigen bedrijf koop je niet elke dag. ' +
-          'Mijn collega Jann denkt graag tien minuten met je mee over indeling, ' +
+          'Ik denk graag tien minuten met je mee over indeling, ' +
           'financiering en de stap naar een bezichtiging.',
         valueBullets: [
           'Welke unit qua indeling en grootte past bij jouw bedrijf',
@@ -440,7 +442,7 @@ export const project = {
         shortTimelineHeadline: 'met deze timeline is even schakelen vaak handig',
         body:
           'Een bedrijfsunit als belegging koop je niet zomaar. ' +
-          'Mijn collega Jann kent de Waarderpolder-markt en kan in 10 minuten met je door de cijfers ' +
+          'Ik ken de Waarderpolder-markt en kan in 10 minuten met je door de cijfers ' +
           'lopen en laten zien wat er nu nog beschikbaar is.',
         valueBullets: [
           "BAR-scenario's op basis van actuele markthuur Waarderpolder",
@@ -462,7 +464,7 @@ export const project = {
         shortTimelineHeadline: 'met deze timeline is even schakelen vaak handig',
         body:
           'Of je nu zelf gebruikt of verhuurt: een bedrijfsunit koop je niet zomaar. ' +
-          "Mijn collega Jann legt graag in een korte call beide scenario's naast " +
+          "Ik leg graag in een korte call beide scenario's naast " +
           'elkaar voor jouw situatie.',
         valueBullets: [
           'Eigen gebruik versus verhuur: wat brengt wat op',
@@ -483,8 +485,8 @@ export const project = {
         },
         shortTimelineHeadline: 'met die timeline is even schakelen vaak handig',
         body:
-          'Een bedrijfsunit koop je niet zomaar. Mijn collega Jann denkt graag ' +
-          'tien minuten met je mee, zonder verplichting. Vaak prettiger dan ' +
+          'Een bedrijfsunit koop je niet zomaar. Ik denk graag tien minuten ' +
+          'met je mee, zonder verplichting. Vaak prettiger dan ' +
           'zelf alles uitzoeken.',
         valueBullets: [
           'Wat De Hofman onderscheidt van andere bedrijfsunits in Haarlem',

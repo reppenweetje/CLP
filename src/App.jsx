@@ -311,6 +311,26 @@ const MORE_INFO_PERSONA_ORDER = {
   onbekend: ['highlights', 'location', 'sitePlan', 'gallery', 'price', 'planning', 'process', 'brochure', 'priceCompare', 'financing'],
 }
 
+// Drempel voor de "all_seen"-fase: zodra de bezoeker N unieke moreInfo-chips
+// heeft bekeken, gaat de bot van "discovery" naar "specifieke onderwerpen".
+// Op 5 chips heeft de bezoeker een volledig beeld van het project zonder dat
+// het te laat voelt om de "is er nog iets specifieks?"-vraag te stellen.
+const ALL_SEEN_THRESHOLD = 5
+
+// Telt hoeveel moreInfo-chips beschikbaar zijn voor deze persona. Wordt
+// gebruikt om de wrap-up-trigger ("alle chips bekeken") te detecteren.
+function countAvailableMoreInfo(persona) {
+  const order = MORE_INFO_PERSONA_ORDER[persona] || MORE_INFO_PERSONA_ORDER.onbekend
+  let count = 0
+  for (const id of order) {
+    const def = MORE_INFO_DEFS[id]
+    if (!def) continue
+    if (def.personas && !def.personas.includes(persona)) continue
+    count++
+  }
+  return count
+}
+
 function moreInfoChips(persona, seen, temperature) {
   const order = MORE_INFO_PERSONA_ORDER[persona] || MORE_INFO_PERSONA_ORDER.onbekend
   const opts = []
@@ -325,16 +345,29 @@ function moreInfoChips(persona, seen, temperature) {
   const directContact = { id: '__contact', label: 'Direct contact' }
   // De callback-chip krijgt bij warm/hot een primary-variant zodat hij
   // visueel uit de toon springt tussen de info-chips. Bezoekers met warme
-  // signalen zien dan een duidelijke "Laat Jann mij bellen" CTA bovenaan
-  // de chips. Geen achtergrond-pop-up meer — expliciet, opvalend, opt-in.
-  const callbackPrimary = { id: '__callback', label: 'Laat Jann mij bellen', variant: 'primary' }
-  const callbackPlain = { id: '__callback', label: 'Laat Jann mij bellen' }
+  // signalen zien dan een duidelijke contact-CTA bovenaan de chips.
+  // Generiek "de makelaar" — naam wordt pas relevant in de bubble-body
+  // en outcome-strip waar context al bestaat.
+  const callbackPrimary = { id: '__callback', label: 'Laat de makelaar mij bellen', variant: 'primary' }
+  const callbackPlain = { id: '__callback', label: 'Laat de makelaar mij bellen' }
 
-  if (temperature === 'hot') return [callbackPrimary, directContact, ...opts]
-  if (temperature === 'warm') return [callbackPrimary, directContact, ...opts]
+  // All-seen-fase: bezoeker is voorbij de discovery-drempel. Naast de
+  // resterende info-chips bieden we een expliciete "Ik heb genoeg gezien"-
+  // chip aan zodat de bezoeker zelf het einde kan triggeren in plaats van
+  // af te moeten wachten tot de laatste chip op is.
+  const inAllSeenFase = seen.length >= ALL_SEEN_THRESHOLD
+  const doneChip = { id: '__done', label: 'Ik heb genoeg gezien' }
+
+  if (temperature === 'hot' || temperature === 'warm') {
+    return inAllSeenFase
+      ? [callbackPrimary, ...opts, doneChip]
+      : [callbackPrimary, directContact, ...opts]
+  }
   // Cold: callback-chip blijft bestaan als gewone optie achterin, geen
   // visueel onderscheid omdat de bezoeker nog niet voldoende signaal afgeeft.
-  return [...opts, callbackPlain, directContact]
+  return inAllSeenFase
+    ? [...opts, callbackPlain, doneChip]
+    : [...opts, callbackPlain, directContact]
 }
 
 function buildMoreInfoMessages(id, persona) {
@@ -537,7 +570,7 @@ function Demo() {
   // meer automatisch op basis van een score-drempel. Reden: bezoekers
   // ervoeren de auto-trigger als abrupt en marketing-achtig. De score-engine
   // blijft draaien voor sales-priorisering (Slack-ping) en voor visuele
-  // chip-prominentie (de "Laat Jann mij bellen" chip krijgt een primary-
+  // chip-prominentie (de callback-chip krijgt een primary-
   // styling bij temperature >= warm), maar de UI-trigger is volledig
   // user-pulled.
   const warmHandoffActive = !!state.behaviors?.warmHandoffShown && !state.behaviors?.warmHandoffOutcome
@@ -838,7 +871,7 @@ function Demo() {
       }
       botMessages.push(
         { kind: 'bot-text', text: copy },
-        { kind: 'bot-text', text: 'Wil je nog ergens meer over weten, of direct contact?' },
+        { kind: 'bot-text', text: 'Wil je al direct contact met de makelaar, of zullen we je nog wat meer over het project laten zien?' },
       )
       dispatch({ type: 'ANSWER', key: 'timeline', value: answerValue(opt), next: 'moreInfo' })
       sendSequence(userTextFromOpt(opt), botMessages)
@@ -847,7 +880,7 @@ function Demo() {
 
     if (q === 'moreInfo') {
       if (opt.id === '__callback') {
-        // User-pulled handoff: bezoeker kiest expliciet de "Laat Jann mij
+        // User-pulled handoff: bezoeker kiest expliciet de "Laat de makelaar mij
         // bellen" chip. We tonen geen directe bevestiging meer maar:
         //   1) een persoonlijke brug-zin die observatie + reden geeft
         //   2) de warm-handoff bubble met Bel/WA/Bel zelf/Verder lezen
@@ -929,6 +962,41 @@ function Demo() {
         ])
         return
       }
+      if (opt.id === '__done') {
+        // Wrap-up: bezoeker geeft expliciet aan klaar te zijn met de
+        // exploratie. Sluit af met een rustige zin en de kale CTA-card
+        // (alleen WA + bellen, geen brochure-knop want die is al beschikbaar
+        // geweest, geen reset want dat verwijdert antwoorden).
+        const merged = state.answers
+        const personaNext = derivePersona(merged)
+        const customerSummary = buildCustomerWaSummary(merged, project)
+        const wa = whatsAppDeeplink(project, state.answers.lead?.firstName, customerSummary)
+        const phoneLink = buildPhoneLink(project.phoneNumber)
+        trackEvent('more-info:done', { from: 'chip', seenCount: state.moreInfoSeen.length })
+        trackEvent('flow:complete', { stage: 'self-paced', persona: personaNext })
+        dispatch({
+          type: 'ANSWER',
+          key: 'followup',
+          value: { ...answerValue({ id: 'self-paced', label: 'Ik heb genoeg gezien', score: 0 }) },
+          next: null,
+        })
+        sendSequence(userTextFromOpt(opt), [
+          { kind: 'bot-text', text: 'Helder. Je hebt nu alles van De Hofman gezien.' },
+          { kind: 'bot-text', text: 'Kijk rustig rond. Hieronder kun je altijd contact opnemen met de makelaar.' },
+          {
+            kind: 'cta-card',
+            payload: {
+              waLink: wa,
+              phoneLink,
+              phoneDisplay: project.phoneNumber,
+              summary: customerSummary,
+              hideBrochure: true,
+              hideReset: true,
+            },
+          },
+        ])
+        return
+      }
       if (opt.id === 'financing') {
         trackEvent('more-info:viewed', { id: opt.id, label: opt.label })
         dispatch({ type: 'MORE_INFO_SEEN', id: 'financing' })
@@ -943,7 +1011,74 @@ function Demo() {
       trackEvent('more-info:viewed', { id: opt.id, label: opt.label })
       dispatch({ type: 'MORE_INFO_SEEN', id: opt.id })
       dispatch({ type: 'BEHAVIOR_MORE_INFO_VIEWED', id: opt.id })
-      sendSequence(userTextFromOpt(opt), buildMoreInfoMessages(opt.id, persona))
+
+      // Conversational nudges + fase-detectie. seenCountAfter is wat er staat
+      // NA deze pick (state.moreInfoSeen heeft 'm nog niet, dispatch is async).
+      const seenCountAfter = state.moreInfoSeen.length + 1
+      const totalAvailable = countAvailableMoreInfo(persona)
+
+      const trailingMessages = []
+      if (seenCountAfter === ALL_SEEN_THRESHOLD) {
+        // Drempel-moment: bezoeker heeft N chips bekeken. Bot benoemt dat
+        // alles in grote lijnen besproken is en biedt resterende chips
+        // expliciet aan als "specifieke onderwerpen". 8s pause zodat de
+        // content van DEZE chip eerst rustig kan landen.
+        trailingMessages.push(
+          { kind: 'pause', ms: 1500 },
+          { kind: 'bot-text', text: 'Mooi, we hebben nu het belangrijkste van het project doorgenomen.' },
+          { kind: 'bot-text', text: 'Zijn er nog specifieke onderwerpen waar je meer over wilt weten? Of zal ik de makelaar je laten bellen?' },
+        )
+      } else if (seenCountAfter > ALL_SEEN_THRESHOLD && seenCountAfter < totalAvailable) {
+        // In specifieke-topics fase, af en toe een herhalende nudge.
+        if (seenCountAfter % 2 === 1) {
+          trailingMessages.push(
+            { kind: 'pause', ms: 1200 },
+            { kind: 'bot-text', text: 'Iets specifieks nog, of zullen we direct schakelen met de makelaar?' },
+          )
+        }
+      } else if (seenCountAfter === totalAvailable) {
+        // Alle chips opgemaakt zonder dat bezoeker expliciet "klaar" zei —
+        // automatische wrap-up. Markeer flow als afgerond + toon kale CTA.
+        const merged = state.answers
+        const personaNext = derivePersona(merged)
+        const customerSummary = buildCustomerWaSummary(merged, project)
+        const wa = whatsAppDeeplink(project, state.answers.lead?.firstName, customerSummary)
+        const phoneLink = buildPhoneLink(project.phoneNumber)
+        trackEvent('more-info:exhausted', { seenCount: seenCountAfter })
+        trackEvent('flow:complete', { stage: 'self-paced', persona: personaNext })
+        trailingMessages.push(
+          { kind: 'pause', ms: 1200 },
+          { kind: 'bot-text', text: 'Je hebt nu alles van De Hofman gezien.' },
+          { kind: 'bot-text', text: 'Kijk rustig rond. Hieronder kun je altijd contact opnemen met de makelaar.' },
+          {
+            kind: 'cta-card',
+            payload: {
+              waLink: wa,
+              phoneLink,
+              phoneDisplay: project.phoneNumber,
+              summary: customerSummary,
+              hideBrochure: true,
+              hideReset: true,
+            },
+          },
+        )
+        dispatch({
+          type: 'ANSWER',
+          key: 'followup',
+          value: { ...answerValue({ id: 'self-paced', label: 'Alles bekeken', score: 0 }) },
+          next: null,
+        })
+      } else if (seenCountAfter >= 2 && seenCountAfter % 2 === 0) {
+        // Discovery-fase nudge: na elke 2 chips een korte conversational
+        // zin om de keuze open te houden. Niet bij chip 1 (te vroeg) en
+        // niet bij chip 5 (daar pakt de all-seen-zin het over).
+        trailingMessages.push(
+          { kind: 'pause', ms: 1200 },
+          { kind: 'bot-text', text: 'Mooi. Wil je nog meer zien, of direct contact met de makelaar?' },
+        )
+      }
+
+      sendSequence(userTextFromOpt(opt), [...buildMoreInfoMessages(opt.id, persona), ...trailingMessages])
       return
     }
 
@@ -1522,7 +1657,7 @@ function Demo() {
   }
 
   // Wat de bezoeker met de warm-handoff bubble doet. We muteren het bestaande
-  // bericht zodat de visuele feedback (groen vinkje, "Jann belt je vandaag")
+  // bericht zodat de visuele feedback (groen vinkje, "Ik bel je vandaag")
   // direct in de chat verschijnt zonder extra bubble.
   const onHandoffAction = (msgId, outcome) => {
     trackEvent(`warm-handoff:${outcome}`, {
@@ -1544,7 +1679,7 @@ function Demo() {
       dispatch({
         type: 'ENQUEUE',
         messages: [
-          { kind: 'bot-text', text: 'Top. Wat is je 06-nummer? Dan zorg ik dat Jann je belt.' },
+          { kind: 'bot-text', text: 'Top. Wat is je 06-nummer? Dan bel ik je terug.' },
         ],
       })
       dispatch({ type: 'SET_QUESTION', next: 'lead-phone' })

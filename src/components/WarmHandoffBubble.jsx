@@ -28,7 +28,9 @@ export default function WarmHandoffBubble({
 }) {
   const time = getTimeContext()
   const promise = getCallbackPromise(time)
-  const repName = salesTeam?.rep?.name || 'een collega'
+  // repName niet meer gebruikt sinds rep == bot (zelfde Jesse). De
+  // outcome-strip spreekt in eerste persoon ("Ik bel je terug") wat
+  // natuurlijker leest dan "Jesse belt je terug" (Jesse spreekt nu).
   const botOrg = salesTeam?.bot?.org || ''
   const safeCopy = copy || { tag: 'Kort overleg', headline: '', body: '', value: [], primaryCta: 'Laat mij bellen' }
 
@@ -58,7 +60,7 @@ export default function WarmHandoffBubble({
                 Wat je krijgt
               </div>
               <div className="text-[12.5px] text-ink-soft leading-relaxed">
-                {repName} belt {promise}, meestal een korte call van tien minuten. Geen verkoop­praatje, gewoon je vragen doornemen.
+                Ik bel je {promise}, meestal een korte call van tien minuten. Geen verkoop­praatje, gewoon je vragen doornemen.
               </div>
             </div>
 
@@ -81,7 +83,7 @@ export default function WarmHandoffBubble({
             {outcome === 'callback' && (
               <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2.5">
                 <div className="text-[12.5px] text-emerald-900 leading-relaxed">
-                  Genoteerd. {repName} belt je {promise}.
+                  Genoteerd. Ik bel je {promise}.
                 </div>
               </div>
             )}

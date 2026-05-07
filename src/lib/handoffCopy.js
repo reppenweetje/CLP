@@ -9,7 +9,6 @@
 export function buildHandoffCopy(persona, project, { signals = [], name = '', hasPhone = false, phoneDeclined = false } = {}) {
   const copy = project?.personaCopy?.[persona] || project?.personaCopy?.onbekend
   const handoff = copy?.handoff || {}
-  const repName = project?.salesTeam?.rep?.name || 'een collega'
 
   const greet = name ? `${name}, ` : ''
   const signalIds = new Set(signals.map((s) => s.id))
@@ -30,11 +29,12 @@ export function buildHandoffCopy(persona, project, { signals = [], name = '', ha
     ? `${greet}${observation}`
     : greet.trim() || 'Even kort schakelen'
 
-  const primaryCta = hasPhone
-    ? `Laat ${repName} mij bellen`
-    : phoneDeclined
-    ? 'Plan een belmoment'
-    : `Laat ${repName} mij bellen`
+  // Bewust generiek: "de makelaar" in plaats van een naam. De repName komt
+  // pas weer in beeld in de outcome-strip ("Ik bel je vandaag terug" — eerste
+  // persoon want het is dezelfde Jesse die ook de chat doet). Dit voorkomt
+  // dat een naam (Jann/Jesse/...) uit het niets in de chip-tekst opduikt
+  // voor wie de personalia nog niet plaatst.
+  const primaryCta = phoneDeclined ? 'Plan een belmoment' : 'Laat de makelaar mij bellen'
 
   return {
     // Tag is bewust een neutrale "wat is dit"-marker, niet een marketing-claim.

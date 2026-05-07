@@ -184,7 +184,7 @@ function renderMessage(m, { onBrochure, onReset, onUnitView, onCalcInteract, onC
           summary={m.payload.summary}
           onWhatsapp={(e) => onWaRequest && onWaRequest(e, m.payload.waSummary || m.payload.summary || '', 'cta-card')}
           onBrochure={m.payload.hideBrochure ? null : onBrochure}
-          onReset={onReset}
+          onReset={m.payload.hideReset ? null : onReset}
         />
       )
     default:
