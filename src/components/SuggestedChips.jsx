@@ -20,16 +20,24 @@ export default function SuggestedChips({ options, onPick, hint }) {
           <button
             key={opt.id}
             onClick={() => onPick(opt)}
-            className={
-              opt.variant === 'primary'
+            className={(() => {
+              if (opt.variant === 'primary') {
                 // Primary-variant: midnite achtergrond, paper tekst. Gebruikt
                 // voor de callback-chip wanneer de bezoeker warme signalen
                 // afgeeft — visueel uit de toon springen zonder dat het
                 // marketing-achtig wordt. Iconisch genoeg om de "service"-actie
                 // te signaleren naast informatie-chips.
-                ? 'rounded-full bg-midnite hover:bg-midnite-soft text-paper border border-midnite text-[14.5px] px-3.5 py-2 transition leading-snug active:scale-[0.98] font-medium'
-                : 'rounded-full bg-paper border border-mist hover:border-midnite hover:bg-canvas-2 active:scale-[0.98] text-ink text-[14.5px] px-3.5 py-2 transition leading-snug'
-            }
+                return 'rounded-full bg-midnite hover:bg-midnite-soft text-paper border border-midnite text-[14.5px] px-3.5 py-2 transition leading-snug active:scale-[0.98] font-medium'
+              }
+              if (opt.variant === 'ghost') {
+                // Ghost-variant: dashed-border, minder visueel gewicht. Geeft
+                // de "Bekijk alle onderwerpen"-chip een subtle "er is meer
+                // hier"-uitstraling zonder dat 'em concurreert met de info-
+                // chips ernaast. Voelt als een uitnodiging, geen keuze.
+                return 'rounded-full bg-canvas-2/50 hover:bg-canvas-2 border border-dashed border-mist hover:border-midnite text-ink-soft hover:text-midnite text-[14px] px-3.5 py-2 transition leading-snug active:scale-[0.98]'
+              }
+              return 'rounded-full bg-paper border border-mist hover:border-midnite hover:bg-canvas-2 active:scale-[0.98] text-ink text-[14.5px] px-3.5 py-2 transition leading-snug'
+            })()}
           >
             {opt.label}
           </button>

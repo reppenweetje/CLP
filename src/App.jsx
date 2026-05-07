@@ -38,6 +38,7 @@ import SuggestedChips from './components/SuggestedChips.jsx'
 import ChatInput from './components/ChatInput.jsx'
 import DebugPanel from './components/DebugPanel.jsx'
 import AnswersSheet from './components/AnswersSheet.jsx'
+import OptionsSheet from './components/OptionsSheet.jsx'
 import AdminScreen from './screens/AdminScreen.jsx'
 import SmartResumeBanner from './components/SmartResumeBanner.jsx'
 import RescueNudge from './components/RescueNudge.jsx'
@@ -340,6 +341,11 @@ function countAvailableMoreInfo(persona) {
   return count
 }
 
+// Hoeveel info-chips we standaard inline tonen bij moreInfo. De rest is
+// bereikbaar via een "Bekijk alle onderwerpen" chip die de bottom-sheet
+// opent. 4 voelt als het juiste aantal: niet overweldigend, wel keuze.
+const PRIMARY_CHIP_COUNT = 4
+
 function moreInfoChips(persona, seen, temperature) {
   const order = MORE_INFO_PERSONA_ORDER[persona] || MORE_INFO_PERSONA_ORDER.onbekend
   const opts = []
@@ -351,7 +357,6 @@ function moreInfoChips(persona, seen, temperature) {
     opts.push({ id, label: def.label })
   }
 
-  const directContact = { id: '__contact', label: 'Direct contact' }
   // De callback-chip krijgt bij warm/hot een primary-variant zodat hij
   // visueel uit de toon springt tussen de info-chips. Bezoekers met warme
   // signalen zien dan een duidelijke contact-CTA bovenaan de chips.
@@ -367,16 +372,31 @@ function moreInfoChips(persona, seen, temperature) {
   const inAllSeenFase = seen.length >= ALL_SEEN_THRESHOLD
   const doneChip = { id: '__done', label: 'Ik heb genoeg gezien' }
 
-  if (temperature === 'hot' || temperature === 'warm') {
-    return inAllSeenFase
-      ? [callbackPrimary, ...opts, doneChip]
-      : [callbackPrimary, directContact, ...opts]
+  // Splits info-chips in primary (4 zichtbaar inline) + secondary (rest in
+  // bottom-sheet). Niet doen in all-seen-fase want daar willen we juist alle
+  // resterende opties tonen zodat de bezoeker er één kan kiezen.
+  if (inAllSeenFase) {
+    if (temperature === 'hot' || temperature === 'warm') {
+      return [callbackPrimary, ...opts, doneChip]
+    }
+    return [...opts, callbackPlain, doneChip]
   }
-  // Cold: callback-chip blijft bestaan als gewone optie achterin, geen
-  // visueel onderscheid omdat de bezoeker nog niet voldoende signaal afgeeft.
-  return inAllSeenFase
-    ? [...opts, callbackPlain, doneChip]
-    : [...opts, callbackPlain, directContact]
+
+  const primaryOpts = opts.slice(0, PRIMARY_CHIP_COUNT)
+  const secondaryOpts = opts.slice(PRIMARY_CHIP_COUNT)
+  // 'expand'-chip opent de OptionsSheet bottom-sheet. Toon 'em alleen als er
+  // ook daadwerkelijk meer onderwerpen zijn dan we inline laten zien.
+  const expandChip = secondaryOpts.length > 0
+    ? { id: '__expand_options', label: `Bekijk alle onderwerpen`, variant: 'ghost' }
+    : null
+
+  const inlineChips = [...primaryOpts]
+  if (expandChip) inlineChips.push(expandChip)
+
+  if (temperature === 'hot' || temperature === 'warm') {
+    return [callbackPrimary, ...inlineChips]
+  }
+  return [...inlineChips, callbackPlain]
 }
 
 function buildMoreInfoMessages(id, persona) {
@@ -464,6 +484,16 @@ function capitalize(s) {
   return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
 }
 
+// Lichtgewicht string-hash (DJB2 variant). Gebruikt om copy-variaties
+// deterministisch te kiezen op basis van session-id, zodat zelfde bezoeker
+// steeds dezelfde nudge-tekst ziet maar nieuwe sessies wel afwisseling
+// krijgen. Geen crypto-eis, geen botsings-zorg — alleen verdeling.
+function hashString(s) {
+  let h = 5381
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h) ^ s.charCodeAt(i)
+  return h | 0
+}
+
 // Hoe lang we wachten voordat de volgende bot-bubble verschijnt. Korter voor
 // korte tekst, langer voor lange tekst en rich cards. Levert een typing-bubble
 // gevoel zonder te traag te worden.
@@ -509,6 +539,7 @@ function Demo() {
     return init
   })
   const [answersOpen, setAnswersOpen] = useState(false)
+  const [optionsSheetOpen, setOptionsSheetOpen] = useState(false)
   const [showRescue, setShowRescue] = useState(false)
   const chatActive = state.view === 'chat'
   const flowComplete = state.messages.some((m) => m.kind === 'cta-card')
@@ -987,9 +1018,13 @@ function Demo() {
       }
       botMessages.push(
         { kind: 'bot-text', text: copy },
-        { kind: 'bot-text', text: 'Wil je al direct contact met de makelaar, of zullen we je nog wat meer over het project laten zien?' },
+        // Macro-keuze: bezoeker krijgt eerst een rustige "contact of rondkijken"
+        // vraag in plaats van direct alle 11 info-chips. Zonder deze
+        // tussenstap voelt de overgang van aanbeveling naar opties als een
+        // afgevuurd keuzemenu i.p.v. een gesprek.
+        { kind: 'bot-text', text: 'Wil je dit even kort overleggen met de makelaar, of liever eerst zelf rondkijken?' },
       )
-      dispatch({ type: 'ANSWER', key: 'timeline', value: answerValue(opt), next: 'moreInfo' })
+      dispatch({ type: 'ANSWER', key: 'timeline', value: answerValue(opt), next: 'postRecommendation' })
       sendSequence(userTextFromOpt(opt), botMessages)
       // Qualification-snapshot: persona + size + timeline + recommendation zijn
       // nu compleet. Goed moment om de Supabase-rij te updaten met het volledige
@@ -998,7 +1033,82 @@ function Demo() {
       return
     }
 
+    if (q === 'postRecommendation') {
+      // Macro-keuze direct na unit-aanbeveling. Twee paden:
+      //   a) "Even contact" → triggert direct de warm-handoff bubble
+      //   b) "Eerst rondkijken" → opent de moreInfo-fase met persona-relevante
+      //      chip-cluster (4 stuks ipv 11)
+      if (opt.id === '__contact_now') {
+        // Hergebruik dezelfde logica als de __callback chip in moreInfo,
+        // anders krijgen we copy-duplicatie. We dispatchen ANSWER + setten
+        // currentQuestion = 'moreInfo' zodat de bestaande handoff-bubble logic
+        // direct erna kan inhaken.
+        dispatch({ type: 'ANSWER', key: 'postRecommendation', value: answerValue(opt), next: 'moreInfo' })
+        // Direct daarna de __callback-flow triggeren door 'm onderhands aan te
+        // roepen — we doen dat door de chip-handler opnieuw aan te roepen met
+        // een synthetische __callback opt.
+        const personaForCard =
+          buying.inferredPersona !== 'onbekend' ? buying.inferredPersona : persona
+        const lead = state.answers.lead || {}
+        const phoneDeclined = !lead.phone && state.behaviors?.phoneAskedDeclined === true
+        const summary = buildCustomerWaSummary(state.answers, project)
+        const wa = whatsAppDeeplink(project, lead.firstName || '', summary)
+        const phoneLink = buildPhoneLink(project.phoneNumber)
+        trackEvent('warm-handoff:opened-via-macro-chip', {
+          persona: personaForCard,
+          temperature: buying.temperature,
+          score: buying.score,
+        })
+        const bridge = buildHandoffBridge(personaForCard, project, {
+          signals: buying.signals,
+          name: lead.firstName || '',
+        })
+        dispatch({ type: 'WARM_HANDOFF_SHOWN' })
+        sendSequence(userTextFromOpt(opt), [
+          { kind: 'bot-text', text: bridge },
+          {
+            kind: 'warm-handoff',
+            payload: {
+              copy: buildHandoffCopy(personaForCard, project, {
+                signals: buying.signals,
+                name: lead.firstName || '',
+                hasPhone: !!lead.phone,
+                phoneDeclined,
+              }),
+              salesTeam: project.salesTeam,
+              hasPhone: !!lead.phone,
+              waLink: wa,
+              waSummary: summary,
+              phoneLink,
+              phoneDisplay: project.phoneNumber,
+              outcome: null,
+            },
+          },
+        ])
+        return
+      }
+      if (opt.id === '__browse') {
+        // Bezoeker wil eerst rondkijken. Ga naar moreInfo met de persona-
+        // relevante chip-cluster zichtbaar (4 chips + 'Bekijk alle onderwerpen').
+        dispatch({ type: 'ANSWER', key: 'postRecommendation', value: answerValue(opt), next: 'moreInfo' })
+        sendSequence(userTextFromOpt(opt), [
+          { kind: 'bot-text', text: 'Goed. Hier zijn een paar onderwerpen die voor jou relevant kunnen zijn — kies wat je wilt zien.' },
+        ])
+        return
+      }
+      return
+    }
+
     if (q === 'moreInfo') {
+      if (opt.id === '__expand_options') {
+        // Bezoeker tikt op "Bekijk alle onderwerpen" — open de bottom-sheet.
+        // Geen state-mutatie aan de chat, geen userMessage; sheet is een
+        // ephemeral UI-laag bovenop de chat. Selectie binnen de sheet
+        // dispatcht alsnog via de gewone chip-handler.
+        trackEvent('options-sheet:opened', { seenCount: state.moreInfoSeen.length })
+        setOptionsSheetOpen(true)
+        return
+      }
       if (opt.id === '__callback') {
         // User-pulled handoff: bezoeker kiest expliciet de "Laat de makelaar mij
         // bellen" chip. We tonen geen directe bevestiging meer maar:
@@ -1151,13 +1261,9 @@ function Demo() {
           { kind: 'bot-text', text: 'Zijn er nog specifieke onderwerpen waar je meer over wilt weten? Of zal ik de makelaar je laten bellen?' },
         )
       } else if (seenCountAfter > ALL_SEEN_THRESHOLD && seenCountAfter < totalAvailable) {
-        // In specifieke-topics fase, af en toe een herhalende nudge.
-        if (seenCountAfter % 2 === 1) {
-          trailingMessages.push(
-            { kind: 'pause', ms: 1200 },
-            { kind: 'bot-text', text: 'Iets specifieks nog, of zullen we direct schakelen met de makelaar?' },
-          )
-        }
+        // In de specifieke-topics fase laten we de bezoeker grotendeels met
+        // rust. De all-seen-tekst boven heeft al "of zal ik de makelaar
+        // bellen" gevraagd — niet steeds herhalen. Geen extra nudge hier.
       } else if (seenCountAfter === totalAvailable) {
         // Alle chips opgemaakt zonder dat bezoeker expliciet "klaar" zei —
         // automatische wrap-up. Markeer flow als afgerond + toon kale CTA.
@@ -1191,14 +1297,29 @@ function Demo() {
           next: null,
         })
         pushSnapshot()
-      } else if (seenCountAfter >= 2 && seenCountAfter % 2 === 0) {
-        // Discovery-fase nudge: na elke 2 chips een korte conversational
-        // zin om de keuze open te houden. Niet bij chip 1 (te vroeg) en
-        // niet bij chip 5 (daar pakt de all-seen-zin het over).
-        trailingMessages.push(
-          { kind: 'pause', ms: 1200 },
-          { kind: 'bot-text', text: 'Mooi. Wil je nog meer zien, of direct contact met de makelaar?' },
-        )
+      } else if (seenCountAfter === 3) {
+        // Discovery-fase nudge: één keer rond chip 3, niet repetitief.
+        // Variatie in copy via een kleine pool zodat het natuurlijk klinkt
+        // als de bezoeker meerdere sessies doet of de chat opnieuw start.
+        // Cold-bezoekers krijgen geen nudge — die zijn nog aan het oriënteren
+        // en een vroege "wil je gebeld worden?" voelt voor hen pushy.
+        if (buying.temperature !== 'cold') {
+          const pool = [
+            'Mocht het helpen om kort te schakelen — dat kan altijd.',
+            'Verder kijken of zullen we de makelaar erbij vragen?',
+            'Tot zover. Iets specifieks waar je dieper op wilt gaan?',
+            'Nog iets onduidelijk, of zien we wat je hebt?',
+          ]
+          // Pseudo-random op session-id: zelfde bezoeker krijgt steeds
+          // dezelfde nudge bij re-visits (consistente ervaring), nieuwe
+          // bezoekers krijgen variatie.
+          const sid = getSessionId() || ''
+          const pickIdx = Math.abs(hashString(sid)) % pool.length
+          trailingMessages.push(
+            { kind: 'pause', ms: 1200 },
+            { kind: 'bot-text', text: pool[pickIdx] },
+          )
+        }
       }
 
       sendSequence(userTextFromOpt(opt), [...buildMoreInfoMessages(opt.id, persona), ...trailingMessages])
@@ -1909,6 +2030,19 @@ function Demo() {
   else if (state.currentQuestion === 'size') chipQuestion = flow.questions.size
   else if (state.currentQuestion === 'timeline') chipQuestion = flow.questions.timeline
   else if (state.currentQuestion === 'followup') chipQuestion = flow.questions.followup
+  else if (state.currentQuestion === 'postRecommendation') {
+    // Macro-keuze direct na unit-aanbeveling: contact of rondkijken.
+    // Slechts twee chips, primary callback-CTA visueel uit de toon
+    // springend zoals bij warm/hot moreInfo-state.
+    chipQuestion = {
+      key: 'postRecommendation',
+      label: 'wat nu',
+      options: [
+        { id: '__contact_now', label: 'Even contact opnemen', variant: 'primary' },
+        { id: '__browse', label: 'Eerst zelf rondkijken' },
+      ],
+    }
+  }
   else if (state.currentQuestion === 'moreInfo') {
     chipQuestion = {
       key: 'moreInfo',
@@ -2011,6 +2145,30 @@ function Demo() {
           dispatch({ type: 'RESET' })
         }}
       />
+
+      {/* OptionsSheet: bottom-sheet met alle moreInfo-onderwerpen. Wordt
+          alleen gerenderd in moreInfo-state — buiten dat is de chip
+          'Bekijk alle onderwerpen' niet zichtbaar dus geen trigger. */}
+      {state.currentQuestion === 'moreInfo' && (
+        <OptionsSheet
+          open={optionsSheetOpen}
+          onClose={() => setOptionsSheetOpen(false)}
+          options={(() => {
+            // Alle nog niet-gekozen info-chips, ongefilterd door
+            // PRIMARY_CHIP_COUNT — de sheet toont per categorie alles.
+            const order = MORE_INFO_PERSONA_ORDER[persona] || MORE_INFO_PERSONA_ORDER.onbekend
+            return order
+              .map((id) => ({ id, def: MORE_INFO_DEFS[id] }))
+              .filter(({ id, def }) => def && !state.moreInfoSeen.includes(id) && (!def.personas || def.personas.includes(persona)))
+              .map(({ id, def }) => ({ id, label: def.label }))
+          })()}
+          onPick={(opt) => {
+            // Sheet-keuze loopt door dezelfde dispatcher als inline chips
+            // zodat we geen aparte handler-flow onderhouden.
+            onChipPick(opt)
+          }}
+        />
+      )}
 
       <DebugPanel
         open={state.debugOpen}
