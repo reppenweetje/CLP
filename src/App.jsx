@@ -1153,14 +1153,14 @@ function Demo() {
     if (draft.firstName) {
       dispatch({ type: 'LEAD_DRAFT', draft })
 
-      // Credion-eerst-pad heeft 06 nodig (geen Yes/No-vraag).
+      // Credion-eerst-pad heeft 06 nodig (geen Yes/No-vraag). Focus op de
+      // belofte dat Credion belt; brochure is bonus.
       if (state.behaviors?.credionRequested && !draft.phone) {
         sendSequence(text, [
-          { kind: 'bot-text', text: 'Dank. Ik zorg dat de brochure zo naar je toe komt.' },
-          { kind: 'bot-text', text: privacyClaim },
+          { kind: 'bot-text', text: 'Dank. De brochure komt zo naar je toe.' },
+          { kind: 'bot-text', text: 'We delen je gegevens met Credion zodat ze je kunnen bellen voor de financieringsscan. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).' },
           { kind: 'bot-text', text: `Top, ${draft.firstName}.` },
-          { kind: 'bot-text', text: 'Voor de financieringsscan heeft Credion ook je 06 nodig.' },
-          { kind: 'bot-text', text: 'Wat is je 06-nummer?' },
+          { kind: 'bot-text', text: 'Tot slot je 06, zodat Credion je kan bereiken voor de scan.' },
         ])
         dispatch({ type: 'SET_QUESTION', next: 'lead-phone' })
         return
@@ -1203,6 +1203,17 @@ function Demo() {
       dispatch({ type: 'SET_QUESTION', next: 'lead-name' })
       return
     }
+    // Credion-pad: focus op de financieringsscan-belofte ipv enkel brochure.
+    // Brochure is bonus zodat de bezoeker iets te lezen heeft tot Credion belt.
+    if (state.behaviors?.credionRequested) {
+      sendSequence(text, [
+        { kind: 'bot-text', text: 'Dank. De brochure komt zo naar je toe.' },
+        { kind: 'bot-text', text: 'We delen je gegevens met Credion zodat ze je kunnen bellen voor de financieringsscan. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).' },
+        { kind: 'bot-text', text: 'Wat is je naam?' },
+      ])
+      dispatch({ type: 'SET_QUESTION', next: 'lead-name' })
+      return
+    }
     sendSequence(text, [
       { kind: 'bot-text', text: 'Dank. Ik zorg dat de brochure zo naar je toe komt.' },
       { kind: 'bot-text', text: privacyClaim },
@@ -1239,8 +1250,7 @@ function Demo() {
     if (state.behaviors?.credionRequested && !draft.phone) {
       sendSequence(text, [
         { kind: 'bot-text', text: `Top, ${firstName}.` },
-        { kind: 'bot-text', text: 'Voor de financieringsscan heeft Credion ook je 06 nodig — zo kunnen ze je vrijblijvend bellen om je situatie door te nemen.' },
-        { kind: 'bot-text', text: 'Wat is je 06-nummer?' },
+        { kind: 'bot-text', text: 'Tot slot je 06, zodat Credion je zo snel mogelijk kan bellen voor de financieringsscan.' },
       ])
       dispatch({ type: 'SET_QUESTION', next: 'lead-phone' })
       return
@@ -1306,7 +1316,8 @@ function Demo() {
     // Credion-eerst-pad: bezoeker klikte op de Credion-link in de calc
     // VÓÓR de standaard lead-capture. Nu data binnen is, sturen we direct
     // naar Credion (geen extra Yes/No-vraag — de klik op de link was het
-    // commitment) en bevestigen we beide diensten in één bubble-set.
+    // commitment). Eerst bevestiging dat Credion zsm belt en de brochure
+    // gemaild wordt; dan eventueel door naar size-vraag.
     if (state.behaviors?.credionRequested) {
       logCredionConsent(true)
       trackEvent('financing:credion-shared', { from: 'calc-link' })
@@ -1315,14 +1326,17 @@ function Demo() {
         size: state.answers.size?.label,
         timeline: state.answers.timeline?.label,
       })
-      const tail = sizeDone
+      const credionConfirmation = [
+        { kind: 'bot-text', text: 'Top. We delen je gegevens met Credion zodat ze je zo snel mogelijk kunnen bellen voor de financieringsscan.' },
+        { kind: 'bot-text', text: 'De brochure sturen we naar het opgegeven e-mailadres, zodat je het project alvast rustig kunt doorlezen.' },
+      ]
+      const sizeTail = sizeDone
         ? []
         : [
-            { kind: 'bot-text', text: 'Top. We delen je gegevens met Credion en sturen je de brochure op het opgegeven e-mailadres.' },
-            { kind: 'bot-text', text: 'Nog even, zodat we de juiste prijslijst en plattegronden meesturen.' },
+            { kind: 'bot-text', text: 'Nog een korte vraag, zodat we de juiste prijslijst en plattegronden meesturen.' },
             { kind: 'bot-text', text: flow.questions.size.label },
           ]
-      dispatch({ type: 'ENQUEUE', messages: [...botPrepend, ...tail] })
+      dispatch({ type: 'ENQUEUE', messages: [...botPrepend, ...credionConfirmation, ...sizeTail] })
       return
     }
 
@@ -1453,10 +1467,12 @@ function Demo() {
     // Pad B: gecombineerde flow. We markeren credionRequested zodat
     // de lead-capture-handler na phone (of skip) automatisch naar
     // Credion stuurt en niet de normale brochureTrigger-flow doorloopt.
+    // Boodschap: Credion belt zsm, brochure komt alvast per mail zodat
+    // de bezoeker iets te lezen heeft tot Credion belt.
     dispatch({ type: 'BEHAVIOR_CREDION_REQUESTED' })
     sendSequence('Vraag financieringsscan via Credion', [
-      { kind: 'bot-text', text: 'Onze partner Credion kan vrijblijvend met je meedenken over de financiering.' },
-      { kind: 'bot-text', text: 'Daarvoor heb ik je naam, e-mail en 06 nodig. Ik gebruik datzelfde e-mailadres ook om je de brochure te sturen.' },
+      { kind: 'bot-text', text: 'Mooi. Onze partner Credion belt je zo snel mogelijk om vrijblijvend met je door de financiering te lopen.' },
+      { kind: 'bot-text', text: 'We sturen je ook meteen de brochure per mail, zodat je het project alvast rustig kunt doorlezen.' },
       { kind: 'bot-text', text: 'Wat is je e-mailadres?' },
     ])
     // Markeer brochureTrigger impliciet als "ja" (bezoeker heeft via deze
