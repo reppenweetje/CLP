@@ -18,7 +18,8 @@ import {
   leadConfidence,
 } from './lib/recommendation.js'
 import { parseLeadInput, mergeLead } from './lib/parseLead.js'
-import { startNewSession, trackEvent } from './lib/analytics.js'
+import { startNewSession, trackEvent, getSessionId } from './lib/analytics.js'
+import { notifyHotLead } from './lib/slack.js'
 import {
   logSessionStartConsent,
   logBrochureConsent,
@@ -579,6 +580,38 @@ function Demo() {
     isSafeMoment,
     state.answers.followup,
     state.messageQueue?.length,
+  ])
+
+  // Slack hot-lead notificatie — onafhankelijk van de warm-handoff-bubble
+  // zodat sales ook gepingd wordt op momenten waarop de handoff niet kan
+  // landen (bv. tijdens lead-capture). Triggert zodra temperature hot is en
+  // we minimaal een e-mailadres hebben zodat sales daadwerkelijk iets om
+  // mee aan de slag kan. Slack-helper dedupet zelf op sessionId.
+  useEffect(() => {
+    if (state.view !== 'chat') return
+    if (buying.temperature !== 'hot') return
+    const lead = state.answers.lead || {}
+    if (!lead.email) return
+    notifyHotLead({
+      sessionId: getSessionId(),
+      firstName: lead.firstName,
+      email: lead.email,
+      phone: lead.phone,
+      persona: buying.inferredPersona !== 'onbekend' ? buying.inferredPersona : persona,
+      temperature: buying.temperature,
+      score: buying.score,
+      signals: buying.signals.map((s) => s.id),
+      intent: state.answers.intent?.label,
+      size: state.answers.size?.label,
+      timeline: state.answers.timeline?.label,
+      source: 'clp-de-hofman',
+    })
+  }, [
+    state.view,
+    buying.temperature,
+    buying.score,
+    state.answers.lead?.email,
+    state.answers.lead?.phone,
   ])
 
   // Sticky copy-variant voor flow-questions (intent/brochureTrigger/timeline).
