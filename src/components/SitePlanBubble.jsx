@@ -7,7 +7,7 @@ import { trackEvent } from '../lib/analytics.js'
 // 14 units 2 rijen volgens werkelijke situatietekening
 // status kleuren matchen de officiele kopen repp nl plattegrond
 // klik op een unit voor m² prijs en status detail
-export default function SitePlanBubble({ sitePlan, units, persona, onUnitView, onCalcInteract }) {
+export default function SitePlanBubble({ sitePlan, units, persona, onUnitView, onCalcInteract, onCredionRequest }) {
   const [selectedNumber, setSelectedNumber] = useState(null)
   const allUnits = sitePlan.rows.flatMap((r) => r.units)
   const selected = allUnits.find((u) => u.number === selectedNumber)
@@ -88,7 +88,7 @@ export default function SitePlanBubble({ sitePlan, units, persona, onUnitView, o
             </div>
 
             {selected && selectedTypeData && (
-              <UnitDetail unit={selected} typeData={selectedTypeData} persona={persona} onCalcInteract={onCalcInteract} />
+              <UnitDetail unit={selected} typeData={selectedTypeData} persona={persona} onCalcInteract={onCalcInteract} onCredionRequest={onCredionRequest} />
             )}
           </div>
         </div>
@@ -97,7 +97,7 @@ export default function SitePlanBubble({ sitePlan, units, persona, onUnitView, o
   )
 }
 
-function UnitDetail({ unit, typeData, persona, onCalcInteract }) {
+function UnitDetail({ unit, typeData, persona, onCalcInteract, onCredionRequest }) {
   // Beleggers en mensen die als beide kijken zien een rendement-indicator.
   // Eigen gebruikers en onbekend zien een maandlast-calculator.
   const showRentability = persona === 'belegger' || persona === 'beide'
@@ -140,12 +140,14 @@ function UnitDetail({ unit, typeData, persona, onCalcInteract }) {
               size={typeData.size}
               indicative={unit.state === 'coming_soon'}
               onInteract={() => onCalcInteract && onCalcInteract('rentability')}
+              onCredionRequest={onCredionRequest}
             />
           ) : (
             <MortgageCalc
               price={typeData.priceFrom}
               indicative={unit.state === 'coming_soon'}
               onInteract={() => onCalcInteract && onCalcInteract('mortgage')}
+              onCredionRequest={onCredionRequest}
             />
           )}
         </div>

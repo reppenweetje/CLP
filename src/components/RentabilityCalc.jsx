@@ -8,7 +8,7 @@ function formatEuro(n) {
   return Math.round(n).toLocaleString('nl-NL')
 }
 
-export default function RentabilityCalc({ price, size, indicative = false, onInteract }) {
+export default function RentabilityCalc({ price, size, indicative = false, onInteract, onCredionRequest }) {
   const [marktHuur, setMarktHuur] = useState(175)
   const interactedRef = useRef(false)
   const yearlyRent = size * marktHuur
@@ -61,6 +61,19 @@ export default function RentabilityCalc({ price, size, indicative = false, onInt
 
       <div className="mt-3 pt-3 border-t border-mist-light text-[11px] text-ink-mute leading-snug">
         Indicatief, geen prognose. Exclusief VvE-lasten, onderhoud, leegstand en fiscale invloed. Range markthuur Waarderpolder ligt doorgaans €150 tot €200 per m² per jaar.
+        {onCredionRequest && (
+          <>
+            {' '}
+            <button
+              type="button"
+              onClick={onCredionRequest}
+              className="text-midnite hover:text-midnite-soft underline underline-offset-2 decoration-midnite/30 hover:decoration-midnite font-medium transition"
+            >
+              Vraag een vrijblijvende financieringsscan via Credion
+            </button>
+            .
+          </>
+        )}
       </div>
     </div>
   )

@@ -16,7 +16,7 @@ function formatEuro(n) {
   return Math.round(n).toLocaleString('nl-NL')
 }
 
-export default function MortgageCalc({ price, indicative = false, onInteract }) {
+export default function MortgageCalc({ price, indicative = false, onInteract, onCredionRequest }) {
   const [downPayment, setDownPayment] = useState(30)
   const [rate, setRate] = useState(4.5)
   const interactedRef = useRef(false)
@@ -102,9 +102,28 @@ export default function MortgageCalc({ price, indicative = false, onInteract }) 
       </div>
 
       <div className="text-[11px] text-ink-mute leading-snug mt-3 pt-3 border-t border-mist-light">
-        {noFinancing
-          ? 'Geen financiering, geen maandlast. Wel houden we rekening met onderhoud, VvE-lasten en fiscale invloed.'
-          : 'Indicatie, geen advies. Lening tot 75 procent van de koopsom is gangbaar voor bedrijfsunits. Vraag een vrijblijvende financieringsscan via Credion.'}
+        {noFinancing ? (
+          'Geen financiering, geen maandlast. Wel houden we rekening met onderhoud, VvE-lasten en fiscale invloed.'
+        ) : (
+          <>
+            Indicatie, geen advies. Lening tot 75 procent van de koopsom is gangbaar voor bedrijfsunits.
+            {onCredionRequest ? (
+              <>
+                {' '}
+                <button
+                  type="button"
+                  onClick={onCredionRequest}
+                  className="text-midnite hover:text-midnite-soft underline underline-offset-2 decoration-midnite/30 hover:decoration-midnite font-medium transition"
+                >
+                  Vraag een vrijblijvende financieringsscan via Credion
+                </button>
+                .
+              </>
+            ) : (
+              ' Vraag een vrijblijvende financieringsscan via Credion.'
+            )}
+          </>
+        )}
       </div>
     </div>
   )

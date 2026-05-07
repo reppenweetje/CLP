@@ -216,6 +216,14 @@ function reducer(state, action) {
       }
       return state
     }
+    case 'BEHAVIOR_CREDION_REQUESTED': {
+      // Vlag dat bezoeker via de calc-link Credion heeft aangevraagd.
+      // Lead-capture handlers checken deze flag om na de phone-stap
+      // (of phone-skip) automatisch de Credion-flow af te ronden ipv
+      // de normale brochureTrigger-vervolgstappen te draaien.
+      const b = state.behaviors || EMPTY_BEHAVIORS
+      return { ...state, behaviors: { ...b, credionRequested: true } }
+    }
     case 'BEHAVIOR_MORE_INFO_VIEWED': {
       const b = state.behaviors || EMPTY_BEHAVIORS
       const ids = b.moreInfoIds || []
@@ -1204,6 +1212,29 @@ function Demo() {
       dispatch({ type: 'APPEND', messages: userMsgs })
     }
 
+    // Credion-eerst-pad: bezoeker klikte op de Credion-link in de calc
+    // VÓÓR de standaard lead-capture. Nu data binnen is, sturen we direct
+    // naar Credion (geen extra Yes/No-vraag — de klik op de link was het
+    // commitment) en bevestigen we beide diensten in één bubble-set.
+    if (state.behaviors?.credionRequested) {
+      logCredionConsent(true)
+      trackEvent('financing:credion-shared', { from: 'calc-link' })
+      sendCredionLead(lead, project, {
+        intent: state.answers.intent?.label,
+        size: state.answers.size?.label,
+        timeline: state.answers.timeline?.label,
+      })
+      const tail = sizeDone
+        ? []
+        : [
+            { kind: 'bot-text', text: 'Top. We delen je gegevens met Credion en sturen je de brochure op het opgegeven e-mailadres.' },
+            { kind: 'bot-text', text: 'Nog even, zodat we de juiste prijslijst en plattegronden meesturen.' },
+            { kind: 'bot-text', text: flow.questions.size.label },
+          ]
+      dispatch({ type: 'ENQUEUE', messages: [...botPrepend, ...tail] })
+      return
+    }
+
     // Bevestigings-bubbel + size-vraag horen alleen bij het pad waarin size
     // nog moet komen. Als size al beantwoord is, alleen botPrepend tonen.
     const tail = sizeDone
@@ -1276,6 +1307,51 @@ function Demo() {
   const onCalcInteract = (calcType) => {
     trackEvent(calcType === 'rentability' ? 'calc:rentability-interaction' : 'calc:mortgage-interaction', {})
     dispatch({ type: 'BEHAVIOR_CALC_INTERACTED', calcType })
+  }
+
+  // Credion-link in de mortgage-calculator. Twee paden afhankelijk van
+  // of we al lead-gegevens hebben:
+  //  A. lead compleet (e-mail + naam) → bestaande financingAsk Yes/No
+  //  B. nog geen lead → start lead-capture met gecombineerde framing:
+  //     "voor de scan heb ik gegevens nodig, en ik stuur de brochure
+  //     gelijk mee" — twee captures in één moment. Na de phone-stap
+  //     wordt automatisch naar Credion gestuurd (zonder extra Yes/No)
+  //     omdat de klik op de link al het commitment was.
+  const onCredionRequest = () => {
+    trackEvent('credion:requested-from-calc', {
+      hasEmail: !!state.answers.lead?.email,
+      hasName: !!state.answers.lead?.firstName,
+      hasPhone: !!state.answers.lead?.phone,
+    })
+
+    const lead = state.answers.lead || {}
+    const hasEmail = !!lead.email
+    const hasName  = !!lead.firstName
+
+    // Pad A: gegevens al binnen → bestaande Yes/No-vraag
+    if (hasEmail && hasName) {
+      sendSequence('Vraag financieringsscan via Credion', [
+        { kind: 'bot-text', text: 'Onze partner Credion kan vrijblijvend met je meedenken over de financiering.' },
+        { kind: 'bot-text', text: 'Mag ik je naam, e-mailadres en 06 met Credion delen voor een vrijblijvende financieringsscan? Zonder je akkoord doen we dat niet.' },
+      ])
+      dispatch({ type: 'SET_QUESTION', next: 'financingAsk' })
+      return
+    }
+
+    // Pad B: gecombineerde flow. We markeren credionRequested zodat
+    // de lead-capture-handler na phone (of skip) automatisch naar
+    // Credion stuurt en niet de normale brochureTrigger-flow doorloopt.
+    dispatch({ type: 'BEHAVIOR_CREDION_REQUESTED' })
+    sendSequence('Vraag financieringsscan via Credion', [
+      { kind: 'bot-text', text: 'Onze partner Credion kan vrijblijvend met je meedenken over de financiering.' },
+      { kind: 'bot-text', text: 'Daarvoor heb ik je naam, e-mail en 06 nodig. Ik gebruik datzelfde e-mailadres ook om je de brochure te sturen.' },
+      { kind: 'bot-text', text: 'Wat is je e-mailadres?' },
+    ])
+    dispatch({ type: 'SET_QUESTION', next: 'lead-email' })
+    // Markeer brochureTrigger impliciet als "ja" (bezoeker heeft via deze
+    // route al voor brochure + Credion gekozen) — zodat de flow na lead-
+    // capture niet alsnog de brochure-vraag stelt.
+    dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: { id: 'ja', label: 'Ja, stuur maar', _msgCountBefore: state.messages.length, _viaCredion: true } })
   }
 
   // Wat de bezoeker met de service-card doet. Net als bij de losse
@@ -1502,6 +1578,7 @@ function Demo() {
             onBrochure={onBrochure}
             onUnitView={onUnitView}
             onCalcInteract={onCalcInteract}
+            onCredionRequest={onCredionRequest}
             onHandoffAction={onHandoffAction}
             onServiceCardAction={onServiceCardAction}
             onServiceCardSubmitPhone={onServiceCardSubmitPhone}
