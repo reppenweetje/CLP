@@ -36,7 +36,10 @@ export default function AppShell({
                   <img src="/images/repp-mark.svg" alt="" aria-hidden="true" className="w-[18px]" />
                 </div>
               )}
-              <div className="text-[12px] tracking-[0.18em] text-ink uppercase font-medium whitespace-nowrap">de hofman</div>
+              <div className="flex flex-col leading-tight min-w-0">
+                <div className="text-[12px] tracking-[0.18em] text-ink uppercase font-medium whitespace-nowrap">de hofman</div>
+                <div className="text-[9px] tracking-[0.14em] text-ink-mute uppercase whitespace-nowrap mt-0.5">exclusief in verkoop bij REPP</div>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               {progress && <ProgressIndicator current={progress.current} total={progress.total} />}

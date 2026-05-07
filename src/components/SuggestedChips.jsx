@@ -35,7 +35,7 @@ export default function SuggestedChips({ options, onPick, hint }) {
           </button>
         ))}
       </div>
-      <div className="text-[10.5px] text-ink-mute text-center mt-2 leading-tight px-4 pb-1">
+      <div className="text-[10.5px] text-ink-mute text-center mt-2 leading-tight px-4 pb-1 flex items-center justify-center gap-3">
         <a
           href="/privacy.html"
           target="_blank"
@@ -43,6 +43,15 @@ export default function SuggestedChips({ options, onPick, hint }) {
           className="text-ink-mute hover:text-midnite underline underline-offset-2 decoration-mist hover:decoration-midnite"
         >
           Privacystatement
+        </a>
+        <span className="text-mist" aria-hidden="true">|</span>
+        <a
+          href="https://repp.nl"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-ink-mute hover:text-midnite underline underline-offset-2 decoration-mist hover:decoration-midnite"
+        >
+          Verkoop door REPP
         </a>
       </div>
     </div>

@@ -144,6 +144,12 @@ function reducer(state, action) {
       const queue = state.messageQueue || []
       if (queue.length === 0) return state
       const [next, ...rest] = queue
+      // Pause-marker: alleen de queue verschuiven, niet renderen. Geeft de
+      // bezoeker rust na een rich bubble (bv. site-plan) zonder dat de
+      // chip-bar te snel weer in beeld komt.
+      if (next.kind === 'pause') {
+        return { ...state, messageQueue: rest }
+      }
       return {
         ...state,
         messages: [...state.messages, { id: nextId(), ...next }],
@@ -336,7 +342,14 @@ function buildMoreInfoMessages(id, persona) {
     case 'location':
       return [{ kind: 'location', payload: { location: project.location, projectName: project.displayName } }]
     case 'sitePlan':
-      return [{ kind: 'site-plan', payload: { sitePlan: project.sitePlan, units: project.units, persona } }]
+      // Site-plan is een visueel rijke bubble waar de bezoeker per unit kan
+      // tikken voor m², prijs en status. Direct daarna de chip-bar tonen
+      // voelt te druk — we gunnen 8 seconden om de plattegrond te scannen
+      // en een unit aan te tikken voor er een volgende prompt komt.
+      return [
+        { kind: 'site-plan', payload: { sitePlan: project.sitePlan, units: project.units, persona } },
+        { kind: 'pause', ms: 8000 },
+      ]
     case 'gallery':
       return [{
         kind: 'gallery',
@@ -414,6 +427,9 @@ function capitalize(s) {
 // gevoel zonder te traag te worden.
 function computeReleaseDelay(message) {
   if (!message) return 500
+  // Pause-kind: expliciete delay-marker. Wordt door RELEASE_NEXT niet als
+  // bubble gerendered, alleen gebruikt om tijd te kopen tussen bubbles.
+  if (message.kind === 'pause') return Math.max(0, message.ms || 0)
   if (message.kind === 'bot-text') {
     const len = message.text?.length || 30
     return Math.max(450, Math.min(900, 350 + len * 9))
@@ -1372,9 +1388,18 @@ function Demo() {
   }
 
   const onWaClick = (e) => {
-    // Header WhatsApp-icoon: gebruikt een generieke summary. Door dezelfde
-    // requestWhatsAppOpen heen zodat ook hier de naam-vraag werkt.
-    requestWhatsAppOpen(e, '', 'header')
+    // Header WhatsApp-icoon: bewust GEEN naam-vraag eerst. De header is een
+    // escape-route — onderbreken voor lead-capture is een afhaak-moment.
+    // whatsAppDeeplink valt al elegant terug op een naam-loze opener als de
+    // bezoeker nog geen naam heeft achtergelaten ("Hoi REPP, ik heb interesse
+    // in De Hofman."). Bij wel-bekende naam komt die er natuurlijk in.
+    trackEvent('cta:whatsapp-clicked', { location: 'header' })
+    if (e && e.preventDefault) e.preventDefault()
+    const lead = state.answers.lead || {}
+    const wa = whatsAppDeeplink(project, lead.firstName || '', '')
+    if (typeof window !== 'undefined') {
+      window.open(wa, '_blank', 'noopener,noreferrer')
+    }
   }
 
   // Behavior callbacks vanuit de site-plan en calc-componenten.
@@ -1655,7 +1680,7 @@ function Demo() {
         <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-md">
           <ChatThread
             messages={state.messages}
-            showTyping={(state.messageQueue?.length || 0) > 0}
+            showTyping={(state.messageQueue || []).some((m) => m.kind !== 'pause')}
             onBrochure={onBrochure}
             onUnitView={onUnitView}
             onCalcInteract={onCalcInteract}

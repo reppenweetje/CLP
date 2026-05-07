@@ -27,6 +27,12 @@ export default function CtaBubble({
           {intro && (
             <div className="text-[13px] text-ink-soft leading-relaxed">{intro}</div>
           )}
+          {/* Subtle attribution: bezoeker kent op dit moment al de bot-stem
+              ("Jesse van REPP") maar de CTA-card is het belangrijkste contact-
+              moment. Hier maken we expliciet wie achter de knoppen staat. */}
+          <div className="text-[11px] text-ink-mute leading-relaxed">
+            REPP is verkopend makelaar van De Hofman.
+          </div>
           {phoneLink && (
             <a
               href={phoneLink}

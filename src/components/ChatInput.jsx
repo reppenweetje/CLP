@@ -79,6 +79,16 @@ export default function ChatInput({ placeholder, inputMode, validate, onSend, se
         </a>
         .
       </div>
+      <div className="text-[10.5px] text-ink-mute text-center mt-1 leading-tight">
+        <a
+          href="https://repp.nl"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-ink-mute hover:text-midnite underline underline-offset-2 decoration-mist hover:decoration-midnite"
+        >
+          Verkoop door REPP
+        </a>
+      </div>
     </div>
   )
 }

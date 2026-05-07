@@ -22,6 +22,7 @@ export default function IntroScreen({ onStart }) {
           <div className="mx-auto w-full max-w-md lg:max-w-2xl px-4 lg:px-6">
             <div className="text-[28px] lg:text-[44px] font-semibold text-ink leading-tight">{project.displayName}</div>
             <div className="text-[13px] lg:text-[16px] text-ink-soft mt-0.5 lg:mt-1">{project.tagline}</div>
+            <div className="text-[10px] lg:text-[12px] tracking-[0.16em] text-ink-mute uppercase mt-1.5 lg:mt-2">exclusief in verkoop bij REPP</div>
           </div>
         </div>
       </div>
