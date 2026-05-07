@@ -29,7 +29,12 @@ const STORAGE_KEY = 'clp-consent-log-v1'
 // Wijzigingsgeschiedenis:
 //   2026-05-06   initial — privacystatement live met 60mnd retentie
 //   2026-05-06b  Plausible Analytics toegevoegd in sectie 4 + 9
-export const PRIVACY_STATEMENT_VERSION = '2026-05-06b'
+//   2026-05-07   lichter herschreven, info@repp.nl ipv jann@repp.nl, service-
+//                mails als doel toegevoegd (gerechtvaardigd belang met opt-out),
+//                Supabase als verwerker toegevoegd, harde tijdsbeloftes
+//                vervangen door "binnen wettelijke termijn", retentie omschreven
+//                als "zolang we je nog relevant kunnen helpen" ipv 60 mnd hard.
+export const PRIVACY_STATEMENT_VERSION = '2026-05-07'
 
 function readLog() {
   if (typeof window === 'undefined') return []
