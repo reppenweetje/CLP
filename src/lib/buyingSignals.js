@@ -62,6 +62,7 @@ export const EMPTY_BEHAVIORS = {
   warmHandoffOutcome: null,
   credionRequested: false,
   rentMatchRequested: false,
+  rendementInfoShown: false,
   phoneAskedDeclined: false,
 }
 

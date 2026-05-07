@@ -55,9 +55,9 @@ export default function ExitIntentPrompt({ onDismiss }) {
             <div className="flex items-start gap-3 mb-3">
               <div className="w-8 h-8 rounded-full bg-gold/20 flex items-center justify-center shrink-0 text-gold text-[14px]" aria-hidden>?</div>
               <div className="min-w-0 flex-1">
-                <div className="text-[14px] font-semibold text-ink">Help ons even verbeteren</div>
+                <div className="text-[14px] font-semibold text-ink">Voor je verder gaat</div>
                 <div className="text-[12px] text-ink-soft leading-snug mt-0.5">
-                  Wat zoek je écht? We onthouden niets persoonlijks — alleen je antwoord.
+                  Je bent al even niet actief of lijkt weg te klikken. Help ons even leren wat je miste, dan kunnen we de chat voor anderen verbeteren. We onthouden niets persoonlijks, alleen je antwoord.
                 </div>
               </div>
               <button

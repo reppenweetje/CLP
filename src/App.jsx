@@ -239,6 +239,14 @@ function reducer(state, action) {
       const b = state.behaviors || EMPTY_BEHAVIORS
       return { ...state, behaviors: { ...b, rentMatchRequested: true } }
     }
+    case 'BEHAVIOR_RENDEMENT_SHOWN': {
+      // Bezoeker heeft via de brochureTrigger-stap de rendement-uitleg
+      // bekeken. Vlag voorkomt dat de "Vertel meer over rendement"-chip
+      // opnieuw verschijnt en geeft de chip-bar de schoon-gehouden
+      // ja/nee-keuze terug.
+      const b = state.behaviors || EMPTY_BEHAVIORS
+      return { ...state, behaviors: { ...b, rendementInfoShown: true } }
+    }
     case 'BEHAVIOR_MORE_INFO_VIEWED': {
       const b = state.behaviors || EMPTY_BEHAVIORS
       const ids = b.moreInfoIds || []
@@ -694,6 +702,9 @@ function Demo() {
         botMessages.push(
           { kind: 'bot-text', text: 'Hier zijn de 14 units met de actuele status. Tik op een unit voor meer informatie over die unit.' },
           { kind: 'site-plan', payload: { sitePlan: project.sitePlan, units: project.units, persona } },
+          // 8s rust voordat de brochure-vraag komt — bezoeker scant en
+          // tikt eerst op units zonder dat de chips eronder al verschijnen.
+          { kind: 'pause', ms: 8000 },
         )
       }
       botMessages.push({ kind: 'bot-text', text: getLabel('brochureTrigger', copyVariant) })
@@ -703,6 +714,30 @@ function Demo() {
     }
 
     if (q === 'brochureTrigger') {
+      // Optionele rendement-uitleg voor beleggers en "beide". Bezoeker
+      // krijgt een korte toelichting + de InvestorBubble en daarna komt
+      // de brochure-vraag opnieuw met enkel ja/nee (rendement-chip is
+      // weg via behaviors.rendementInfoShown). currentQuestion blijft
+      // brochureTrigger zodat de chip-bar automatisch terug komt.
+      if (opt.id === 'rendement') {
+        trackEvent('brochure-trigger:rendement-shown', {})
+        dispatch({ type: 'BEHAVIOR_RENDEMENT_SHOWN' })
+        sendSequence(userTextFromOpt(opt), [
+          { kind: 'bot-text', text: 'Goed dat je daarnaar vraagt — bij beleggen op de Waarderpolder is het rendement de kern.' },
+          {
+            kind: 'investor',
+            payload: {
+              benefits: project.investorBenefits,
+              investor: project.investor,
+              intro: 'Hoe het rendement op De Hofman opgebouwd wordt.',
+            },
+          },
+          { kind: 'pause', ms: 2500 },
+          { kind: 'bot-text', text: 'In de brochure staan de exacte prijzen en plattegronden zodat je zelf kunt rekenen. Wil je die ontvangen?' },
+        ])
+        return
+      }
+
       trackEvent('brochure-trigger:answered', { id: opt.id, label: opt.label, isAfhaak: !!opt.afhaak })
 
       // Bezoeker zegt ja tegen de brochure: dat is impliciete toestemming
@@ -1749,7 +1784,27 @@ function Demo() {
   let inputConfig = null
   if (state.currentQuestion === 'intent') chipQuestion = flow.questions.intent
   else if (state.currentQuestion === 'availabilityCheck') chipQuestion = flow.questions.availabilityCheck
-  else if (state.currentQuestion === 'brochureTrigger') chipQuestion = flow.questions.brochureTrigger
+  else if (state.currentQuestion === 'brochureTrigger') {
+    // Voor beleggers en de "beide"-persona bieden we een 3e optie aan om
+    // eerst meer over het rendement te horen voordat ze de brochure-keuze
+    // maken. Dat past bij hun afweging (cijfers eerst, brochure daarna).
+    // Eigen-gebruikers en onbekend krijgen de standaard ja/nee — voor hen
+    // is rendement geen primaire beslissingsfactor.
+    const investorMinded = persona === 'belegger' || persona === 'beide'
+    const alreadyShown = !!state.behaviors?.rendementInfoShown
+    const baseQuestion = flow.questions.brochureTrigger
+    if (investorMinded && !alreadyShown) {
+      chipQuestion = {
+        ...baseQuestion,
+        options: [
+          ...baseQuestion.options,
+          { id: 'rendement', label: 'Vertel meer over rendement' },
+        ],
+      }
+    } else {
+      chipQuestion = baseQuestion
+    }
+  }
   else if (state.currentQuestion === 'afhaakReasons' || state.currentQuestion === 'afhaakReason') chipQuestion = flow.questions.afhaakReasons
   else if (state.currentQuestion === 'rentRange') chipQuestion = flow.questions.rentRange
   else if (state.currentQuestion === 'size') chipQuestion = flow.questions.size

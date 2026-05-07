@@ -102,29 +102,23 @@ export default function MortgageCalc({ price, indicative = false, onInteract, on
       </div>
 
       <div className="text-[11px] text-ink-mute leading-snug mt-3 pt-3 border-t border-mist-light">
-        {noFinancing ? (
-          'Geen financiering, geen maandlast. Wel houden we rekening met onderhoud, VvE-lasten en fiscale invloed.'
-        ) : (
-          <>
-            Indicatie, geen advies. Lening tot 75 procent van de koopsom is gangbaar voor bedrijfsunits.
-            {onCredionRequest ? (
-              <>
-                {' '}
-                <button
-                  type="button"
-                  onClick={onCredionRequest}
-                  className="text-midnite hover:text-midnite-soft underline underline-offset-2 decoration-midnite/30 hover:decoration-midnite font-medium transition"
-                >
-                  Vraag een vrijblijvende financieringsscan via Credion
-                </button>
-                .
-              </>
-            ) : (
-              ' Vraag een vrijblijvende financieringsscan via Credion.'
-            )}
-          </>
-        )}
+        {noFinancing
+          ? 'Geen financiering, geen maandlast. Wel houden we rekening met onderhoud, VvE-lasten en fiscale invloed.'
+          : 'Indicatie, geen advies. Lening tot 75 procent van de koopsom is gangbaar voor bedrijfsunits.'}
       </div>
+      {!noFinancing && onCredionRequest && (
+        <button
+          type="button"
+          onClick={onCredionRequest}
+          className="mt-3 w-full flex items-center justify-between gap-2 rounded-2xl border border-mist hover:border-midnite bg-paper hover:bg-canvas-2 active:scale-[0.99] px-3.5 py-2.5 transition group"
+        >
+          <div className="flex flex-col items-start min-w-0 text-left">
+            <span className="text-[9px] tracking-[0.18em] uppercase text-midnite font-medium">Partner Credion</span>
+            <span className="text-[12.5px] text-ink leading-tight mt-0.5">Vrijblijvende financieringsscan</span>
+          </div>
+          <span className="text-[14px] text-ink-mute group-hover:text-midnite shrink-0 ml-2 leading-none" aria-hidden>→</span>
+        </button>
+      )}
     </div>
   )
 }
