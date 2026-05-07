@@ -635,9 +635,18 @@ function Demo() {
   //  - finishLead (lead-gegevens binnen)
   //  - timeline-answer (qualification compleet)
   //  - flow:complete momenten (followup-keuze, all-seen wrap-up, rent-match)
-  function pushSnapshot(extraConsents = []) {
+  function pushSnapshot(extraConsents = [], freshLead = null) {
     if (!isApiConfigured()) return // master-switch uit of env-vars ontbreken
-    const lead = state.answers.lead || {}
+    // freshLead override is voor finishLead-callsite waar de lead-arg al
+    // bekend is maar React-state nog niet via de async dispatch is bijgewerkt.
+    // Andere callers (timeline, followup, etc.) lopen ná finishLead, dan
+    // klopt state.answers.lead al en kan de fallback gebruikt worden.
+    const lead = freshLead || state.answers.lead || {}
+    // Email-gate: alleen leads met minimaal e-mailadres landen in Supabase.
+    // Voorkomt anonieme/onbruikbare rijen in het CRM (bezoekers die vóór
+    // lead-capture afhaken, sessiestart-consent zonder lead, etc.). Dropoff-
+    // analyse blijft beschikbaar via Plausible — daar hoort het thuis.
+    if (!lead.email) return
     const session = {
       sessionId:    getSessionId(),
       events:       [],
@@ -1525,11 +1534,13 @@ function Demo() {
 
     // Eerste Supabase-push: lead is nu compleet (e-mail + naam + evt. 06).
     // Inclusief alle tot dusver geregistreerde consent-momenten zodat de
-    // server-side audit-trail meteen vol is. State.leadDraft is hier de
-    // bron van waarheid. Achter feature-flag — no-op tot Edge Function live.
-    pushSnapshot([
-      { scope: 'brochure-en-opvolging', granted: true, detail: { from: 'finishLead' } },
-    ])
+    // server-side audit-trail meteen vol is. lead-arg expliciet meegeven
+    // omdat React-state via async dispatch nog niet is bijgewerkt en
+    // pushSnapshot's email-gate anders zou skippen.
+    pushSnapshot(
+      [{ scope: 'brochure-en-opvolging', granted: true, detail: { from: 'finishLead' } }],
+      lead,
+    )
 
     // prependMessages bevat user-text + eventueel een bot-bevestiging.
     // Splits: user-text direct, bot-bubbles in de queue.

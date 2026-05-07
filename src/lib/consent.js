@@ -81,10 +81,26 @@ export function logConsent(scope, granted, detail = {}) {
   return entry
 }
 
+// Email-gate: alleen pushen als er een lead-rij met email bestaat. Voorkomt
+// dat sessiestart-consent of brochure-consent (vóór lead-capture) een lege
+// orphan-rij in Supabase aanmaken. Ook deze module hanteert "alleen leads
+// met email landen in Supabase" — consistent met App.jsx::pushSnapshot.
+function visitorHasEmail() {
+  if (typeof window === 'undefined') return false
+  try {
+    const raw = window.localStorage.getItem('clp-state-v5')
+    if (!raw) return false
+    const parsed = JSON.parse(raw)
+    return !!parsed?.answers?.lead?.email
+  } catch {
+    return false
+  }
+}
+
 // Asynchrone push van een single consent-entry naar het lead-upsert
-// endpoint. Bewust geen lead-data meegestuurd — alleen de consent-rij —
-// zodat een orphan consent (bv. voor verwijdering) ook in de DB komt
-// zonder een lead-rij te overschrijven met partial data.
+// endpoint. Idempotency: de Edge Function append't elke consent-rij, dus
+// dubbele aanroepen kunnen dubbele rijen geven. Acceptabel AVG-wise (wij
+// over-recorden liever dan dat we missen).
 //
 // Dynamische import voorkomt een circulaire dep met api.js (api.js
 // importeert uit consent.js voor PRIVACY_STATEMENT_VERSION).
@@ -93,6 +109,9 @@ async function sendConsentToBackend(entry) {
   const { pushLead, isApiConfigured } = await import('./api.js')
   const { getSessionId } = await import('./analytics.js')
   if (!isApiConfigured()) return
+
+  // Email-gate consistent met App.jsx::pushSnapshot.
+  if (!visitorHasEmail()) return
 
   const sessionId = getSessionId()
   if (!sessionId) return
