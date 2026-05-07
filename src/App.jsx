@@ -224,6 +224,14 @@ function reducer(state, action) {
       const b = state.behaviors || EMPTY_BEHAVIORS
       return { ...state, behaviors: { ...b, credionRequested: true } }
     }
+    case 'BEHAVIOR_RENT_MATCH_REQUESTED': {
+      // Vlag dat bezoeker via de huur-flow zijn voorkeur heeft geregistreerd
+      // zonder lead-gegevens. Lead-capture handlers checken deze flag om na
+      // naam/06 de rent-match-flow af te ronden met een CTA-card ipv door
+      // te schieten naar size/timeline.
+      const b = state.behaviors || EMPTY_BEHAVIORS
+      return { ...state, behaviors: { ...b, rentMatchRequested: true } }
+    }
     case 'BEHAVIOR_MORE_INFO_VIEWED': {
       const b = state.behaviors || EMPTY_BEHAVIORS
       const ids = b.moreInfoIds || []
@@ -743,21 +751,39 @@ function Demo() {
     // matchmaking met beleggers. Deze data is goud voor REPP.
     if (q === 'rentRange') {
       trackEvent('rent-match:registered', { id: opt.id, label: opt.label })
-      trackEvent('flow:complete', { stage: 'rent-match', persona })
-      const customerSummary = customerRentSummary(opt.label)
-      const wa = whatsAppDeeplink(project, state.answers.lead?.firstName || '', customerSummary)
-      dispatch({ type: 'ANSWER', key: 'rentRange', value: answerValue(opt), next: null })
-      sendSequence(userTextFromOpt(opt), [
-        { kind: 'bot-text', text: 'Genoteerd. We bewaren je voorkeur en nemen contact op zodra er een match is.' },
-        { kind: 'bot-text', text: 'Mocht je nog vragen hebben, stuur ons dan gerust een WhatsApp.' },
-        {
-          kind: 'cta-card',
-          payload: {
-            waLink: wa,
-            summary: customerSummary,
-            hideBrochure: true,
+      // Twee paden afhankelijk van of we al lead-gegevens hebben:
+      //  A. Lead compleet (e-mail + naam) → direct flow:complete + CTA
+      //  B. Geen lead → eerst gegevens vragen, anders kunnen we de
+      //     "we bewaren je voorkeur"-belofte niet waarmaken
+      const lead = state.answers.lead || {}
+      const hasLead = !!lead.email && !!lead.firstName
+
+      if (hasLead) {
+        trackEvent('flow:complete', { stage: 'rent-match', persona })
+        const customerSummary = customerRentSummary(opt.label)
+        const wa = whatsAppDeeplink(project, lead.firstName, customerSummary)
+        dispatch({ type: 'ANSWER', key: 'rentRange', value: answerValue(opt), next: null })
+        sendSequence(userTextFromOpt(opt), [
+          { kind: 'bot-text', text: `Genoteerd, ${lead.firstName}. We bewaren je voorkeur en nemen contact op zodra er een match is.` },
+          { kind: 'bot-text', text: 'Mocht je nog vragen hebben, stuur ons dan gerust een WhatsApp.' },
+          {
+            kind: 'cta-card',
+            payload: { waLink: wa, summary: customerSummary, hideBrochure: true },
           },
-        },
+        ])
+        return
+      }
+
+      // Pad B: geen lead — antwoord opslaan, dan e-mail + naam vragen
+      // zodat we daadwerkelijk contact kunnen opnemen bij een match.
+      // De rentMatchRequested-flag laat finishLead het rent-match-pad
+      // voortzetten in plaats van naar size te gaan (size is niet
+      // relevant voor rent-match).
+      dispatch({ type: 'ANSWER', key: 'rentRange', value: answerValue(opt), next: 'lead-email' })
+      dispatch({ type: 'BEHAVIOR_RENT_MATCH_REQUESTED' })
+      sendSequence(userTextFromOpt(opt), [
+        { kind: 'bot-text', text: 'Helder. Om je voorkeur op te kunnen slaan en contact op te kunnen nemen zodra er een match is, heb ik je gegevens nodig.' },
+        { kind: 'bot-text', text: 'Wat is je e-mailadres?' },
       ])
       return
     }
@@ -1126,6 +1152,34 @@ function Demo() {
 
     if (draft.firstName) {
       dispatch({ type: 'LEAD_DRAFT', draft })
+
+      // Credion-eerst-pad heeft 06 nodig (geen Yes/No-vraag).
+      if (state.behaviors?.credionRequested && !draft.phone) {
+        sendSequence(text, [
+          { kind: 'bot-text', text: 'Dank. Ik zorg dat de brochure zo naar je toe komt.' },
+          { kind: 'bot-text', text: privacyClaim },
+          { kind: 'bot-text', text: `Top, ${draft.firstName}.` },
+          { kind: 'bot-text', text: 'Voor de financieringsscan heeft Credion ook je 06 nodig.' },
+          { kind: 'bot-text', text: 'Wat is je 06-nummer?' },
+        ])
+        dispatch({ type: 'SET_QUESTION', next: 'lead-phone' })
+        return
+      }
+
+      // Rent-match-pad heeft 06 nodig zodat we daadwerkelijk contact kunnen
+      // opnemen zodra er een match is — geen Yes/No-vraag, want zonder 06
+      // kunnen we de "we bewaren je voorkeur"-belofte niet waarmaken.
+      if (state.behaviors?.rentMatchRequested && !draft.phone) {
+        sendSequence(text, [
+          { kind: 'bot-text', text: 'Dank.' },
+          { kind: 'bot-text', text: 'We bewaren je voorkeur en mailen je zodra er een match is. Hoe we met je gegevens omgaan staat in onze [privacystatement](/privacy.html).' },
+          { kind: 'bot-text', text: `Top, ${draft.firstName}.` },
+          { kind: 'bot-text', text: 'Tot slot je 06-nummer, zodat we je kunnen bereiken zodra er een match is.' },
+        ])
+        dispatch({ type: 'SET_QUESTION', next: 'lead-phone' })
+        return
+      }
+
       sendSequence(text, [
         { kind: 'bot-text', text: 'Dank. Ik zorg dat de brochure zo naar je toe komt.' },
         { kind: 'bot-text', text: privacyClaim },
@@ -1137,6 +1191,18 @@ function Demo() {
     }
 
     dispatch({ type: 'LEAD_DRAFT', draft })
+    // Rent-match-pad: geen brochure-belofte want we slaan een huur-voorkeur op,
+    // niet een koop-aanvraag. Aparte copy voorkomt verwarring.
+    if (state.behaviors?.rentMatchRequested) {
+      sendSequence(text, [
+        { kind: 'bot-text', text: 'Dank.' },
+        { kind: 'bot-text', text: 'We bewaren je voorkeur en mailen je zodra er een match is. Hoe we met je gegevens omgaan staat in onze [privacystatement](/privacy.html).' },
+        { kind: 'bot-text', text: 'Ook nog handig om je naam te weten, zodat we weten aan wie we het sturen.' },
+        { kind: 'bot-text', text: 'Wat is je naam?' },
+      ])
+      dispatch({ type: 'SET_QUESTION', next: 'lead-name' })
+      return
+    }
     sendSequence(text, [
       { kind: 'bot-text', text: 'Dank. Ik zorg dat de brochure zo naar je toe komt.' },
       { kind: 'bot-text', text: privacyClaim },
@@ -1166,6 +1232,31 @@ function Demo() {
     }
     trackNewLeadFields(state.leadDraft, draft)
     dispatch({ type: 'LEAD_DRAFT', draft })
+
+    // Credion-eerst-pad: 06 is voor de financieringsscan essentieel
+    // (Credion belt om door cijfers te lopen). Skip dus de Yes/No-vraag
+    // en vraag direct het nummer.
+    if (state.behaviors?.credionRequested && !draft.phone) {
+      sendSequence(text, [
+        { kind: 'bot-text', text: `Top, ${firstName}.` },
+        { kind: 'bot-text', text: 'Voor de financieringsscan heeft Credion ook je 06 nodig — zo kunnen ze je vrijblijvend bellen om je situatie door te nemen.' },
+        { kind: 'bot-text', text: 'Wat is je 06-nummer?' },
+      ])
+      dispatch({ type: 'SET_QUESTION', next: 'lead-phone' })
+      return
+    }
+
+    // Rent-match-pad: 06 is essentieel om "we nemen contact op zodra er een
+    // match is" waar te maken. Skip de Yes/No-vraag en vraag direct het 06.
+    if (state.behaviors?.rentMatchRequested && !draft.phone) {
+      sendSequence(text, [
+        { kind: 'bot-text', text: `Top, ${firstName}.` },
+        { kind: 'bot-text', text: 'Tot slot je 06-nummer, zodat we je kunnen bereiken zodra er een match is.' },
+      ])
+      dispatch({ type: 'SET_QUESTION', next: 'lead-phone' })
+      return
+    }
+
     sendSequence(text, [
       { kind: 'bot-text', text: `Top, ${firstName}.` },
       { kind: 'bot-text', text: 'We houden bij dit soort projecten vaak kort contact via WhatsApp, bijvoorbeeld over beschikbaarheid of als je nog vragen hebt. Vind je dat prettig?' },
@@ -1231,6 +1322,27 @@ function Demo() {
             { kind: 'bot-text', text: 'Nog even, zodat we de juiste prijslijst en plattegronden meesturen.' },
             { kind: 'bot-text', text: flow.questions.size.label },
           ]
+      dispatch({ type: 'ENQUEUE', messages: [...botPrepend, ...tail] })
+      return
+    }
+
+    // Rent-match-pad: bezoeker registreerde zijn huur-voorkeur zonder lead.
+    // Nu naam, mail en 06 binnen zijn, sluiten we de huur-flow direct af met
+    // bevestiging plus CTA-card. We slaan de standaard size-vraag over want
+    // bij huur is m² minder doorslaggevend dan locatie en oplevering.
+    if (state.behaviors?.rentMatchRequested) {
+      const rentLabel = state.answers.rentRange?.label || ''
+      const customerSummary = customerRentSummary(rentLabel)
+      const wa = whatsAppDeeplink(project, lead.firstName || '', customerSummary)
+      // Sluit de flow door currentQuestion expliciet op null te zetten — niet
+      // door naar size doortikken zoals het standaard-pad doet.
+      dispatch({ type: 'SET_QUESTION', next: null })
+      trackEvent('flow:complete', { stage: 'rent-match', persona })
+      const tail = [
+        { kind: 'bot-text', text: `Genoteerd, ${lead.firstName || 'helder'}. We bewaren je voorkeur en nemen contact op zodra er een match is.` },
+        { kind: 'bot-text', text: 'Mocht je nog vragen hebben, stuur ons dan gerust een WhatsApp.' },
+        { kind: 'cta-card', payload: { waLink: wa, summary: customerSummary, hideBrochure: true } },
+      ]
       dispatch({ type: 'ENQUEUE', messages: [...botPrepend, ...tail] })
       return
     }
@@ -1347,11 +1459,12 @@ function Demo() {
       { kind: 'bot-text', text: 'Daarvoor heb ik je naam, e-mail en 06 nodig. Ik gebruik datzelfde e-mailadres ook om je de brochure te sturen.' },
       { kind: 'bot-text', text: 'Wat is je e-mailadres?' },
     ])
-    dispatch({ type: 'SET_QUESTION', next: 'lead-email' })
     // Markeer brochureTrigger impliciet als "ja" (bezoeker heeft via deze
     // route al voor brochure + Credion gekozen) — zodat de flow na lead-
-    // capture niet alsnog de brochure-vraag stelt.
-    dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: { id: 'ja', label: 'Ja, stuur maar', _msgCountBefore: state.messages.length, _viaCredion: true } })
+    // capture niet alsnog de brochure-vraag stelt. ANSWER wint van
+    // SET_QUESTION wanneer ze in dezelfde dispatch-batch zitten, dus deze
+    // ANSWER dispatch heeft expliciet next: 'lead-email' nodig.
+    dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: { id: 'ja', label: 'Ja, stuur maar', _msgCountBefore: state.messages.length, _viaCredion: true }, next: 'lead-email' })
   }
 
   // Wat de bezoeker met de service-card doet. Net als bij de losse

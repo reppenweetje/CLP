@@ -60,6 +60,9 @@ export const EMPTY_BEHAVIORS = {
   brochureClicked: false,
   warmHandoffShown: false,
   warmHandoffOutcome: null,
+  credionRequested: false,
+  rentMatchRequested: false,
+  phoneAskedDeclined: false,
 }
 
 // Hoofdberekening. Geeft een snapshot van waar de bezoeker staat.
