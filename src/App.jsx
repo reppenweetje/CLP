@@ -39,6 +39,7 @@ import ChatInput from './components/ChatInput.jsx'
 import DebugPanel from './components/DebugPanel.jsx'
 import AnswersSheet from './components/AnswersSheet.jsx'
 import OptionsSheet from './components/OptionsSheet.jsx'
+import CredionConfirmDialog from './components/CredionConfirmDialog.jsx'
 import AdminScreen from './screens/AdminScreen.jsx'
 import SmartResumeBanner from './components/SmartResumeBanner.jsx'
 import RescueNudge from './components/RescueNudge.jsx'
@@ -572,6 +573,7 @@ function Demo() {
   })
   const [answersOpen, setAnswersOpen] = useState(false)
   const [optionsSheetOpen, setOptionsSheetOpen] = useState(false)
+  const [credionConfirmOpen, setCredionConfirmOpen] = useState(false)
   const [showRescue, setShowRescue] = useState(false)
   const chatActive = state.view === 'chat'
   const flowComplete = state.messages.some((m) => m.kind === 'cta-card')
@@ -1852,7 +1854,25 @@ function Demo() {
   //     gelijk mee" — twee captures in één moment. Na de phone-stap
   //     wordt automatisch naar Credion gestuurd (zonder extra Yes/No)
   //     omdat de klik op de link al het commitment was.
+  // Klik op de Credion-link in de calc opent eerst een confirm-dialog tegen
+  // misclicks (sliders en knoppen liggen dichtbij elkaar). Pas bij bevestigen
+  // start de echte flow via runCredionRequest.
   const onCredionRequest = () => {
+    trackEvent('credion:confirm-shown', {})
+    setCredionConfirmOpen(true)
+  }
+
+  const cancelCredionRequest = () => {
+    trackEvent('credion:confirm-cancelled', {})
+    setCredionConfirmOpen(false)
+  }
+
+  const confirmCredionRequest = () => {
+    setCredionConfirmOpen(false)
+    runCredionRequest()
+  }
+
+  const runCredionRequest = () => {
     trackEvent('credion:requested-from-calc', {
       hasEmail: !!state.answers.lead?.email,
       hasName: !!state.answers.lead?.firstName,
@@ -2230,6 +2250,13 @@ function Demo() {
           _id = 0
           dispatch({ type: 'RESET' })
         }}
+      />
+
+      {/* Credion confirm-dialog tegen misclicks in de calc. */}
+      <CredionConfirmDialog
+        open={credionConfirmOpen}
+        onConfirm={confirmCredionRequest}
+        onCancel={cancelCredionRequest}
       />
 
       {/* OptionsSheet: bottom-sheet met alle moreInfo-onderwerpen. Wordt

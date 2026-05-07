@@ -2,7 +2,7 @@ import { useState } from 'react'
 import Avatar from './Avatar.jsx'
 
 // Interactieve m²-prijs vergelijking. Bezoeker tapt op een staaf om
-// het verschil met De Hofman Early Bird in euro's per m² te zien.
+// het verschil met De Hofman in euro's per m² te zien.
 // Eigen units zijn gemarkeerd met midnite, anderen met mist-tint.
 function formatEuro(n) {
   return Math.round(n).toLocaleString('nl-NL')

@@ -67,26 +67,18 @@ export default function ChatInput({ placeholder, inputMode, validate, onSend, se
           </svg>
         </button>
       </div>
-      <div className="text-[11.5px] text-ink-mute text-center mt-2 leading-tight">
+      {/* Bewust 1 regel + mat: vlak voor email/naam-invoer is privacy-claim
+          relevant maar mag niet visueel concurreren met het input-veld.
+          Verkoop-attributie zit in de Info-sheet onder de chip-bar. */}
+      <div className="text-[11px] text-ink-mute/80 text-center mt-2 leading-tight">
         We bewaren je antwoorden om je goed te helpen.{' '}
         <a
           href="/privacy.html"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-ink-soft hover:text-midnite underline underline-offset-2 decoration-mist hover:decoration-midnite"
-        >
-          Lees hoe in onze privacystatement
-        </a>
-        .
-      </div>
-      <div className="text-[11.5px] text-ink-mute text-center mt-1 leading-tight">
-        <a
-          href="https://repp.nl"
-          target="_blank"
-          rel="noopener noreferrer"
           className="text-ink-mute hover:text-midnite underline underline-offset-2 decoration-mist hover:decoration-midnite"
         >
-          Verkoop door REPP
+          Privacystatement
         </a>
       </div>
     </div>

@@ -42,7 +42,6 @@ export default function AppShell({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {progress && <ProgressIndicator current={progress.current} total={progress.total} />}
               {showAnswersButton && (
                 <button
                   onClick={onAnswersOpen}
@@ -89,8 +88,15 @@ export default function AppShell({
               )}
             </div>
           </div>
-          <div className="mx-auto max-w-md px-4">
-            <div className="h-px bg-gold/40" />
+          {/* Progress als dunne segmented bar over de volle header-breedte.
+              Vervangt de oude gold-divider en de inline progress-dots: geeft
+              de titel-rij ademruimte op smal scherm en maakt de "journey"
+              visueel doorlopend. Bij geen progress (intro of laatste fase)
+              valt 'em terug op de subtiele gold-divider. */}
+          <div className="mx-auto max-w-md px-4 pb-1.5">
+            {progress
+              ? <ProgressIndicator current={progress.current} total={progress.total} variant="bar" />
+              : <div className="h-px bg-gold/40" />}
           </div>
         </header>
       )}

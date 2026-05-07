@@ -178,7 +178,6 @@ export const project = {
       levelDetail: '52,5 m² begane grond plus 52,5 m² eerste verdieping',
       priceFrom: 239500,
       pricePerM2: 2281,
-      pricePerM2EarlyBird: 2233,
       state: 'available',
       stateLabel: 'Nog enkele beschikbaar',
       uses: ['Opslag', 'Werkplaats', 'Kantoor', 'Showroom', 'Studio'],
@@ -277,8 +276,7 @@ export const project = {
   priceComparison: {
     peildatum: '26 maart 2026',
     rows: [
-      { name: 'De Hofman L', tag: 'Early Bird', price: 2233, isOurs: true },
-      { name: 'De Hofman L', tag: 'Regulier', price: 2281, isOurs: true },
+      { name: 'De Hofman L', price: 2281, isOurs: true },
       { name: 'Wateringweg', tag: 'Bestaand 2022', price: 2375 },
       { name: 'Nijverheidsweg', tag: 'Nieuwbouw', price: 2500 },
       { name: 'Beijnesweg', tag: 'Nieuwbouw', price: 2533 },
@@ -306,10 +304,6 @@ export const project = {
       'All-in koopsom: aansluitkosten water en elektra inbegrepen.',
       '21% btw bij verhuur of eigen gebruik vaak terugvorderbaar, fiscaal advies aanbevolen.',
     ],
-    earlyBird: {
-      L: 5000,
-      XL: 7500,
-    },
   },
 
   investorBenefits: [
