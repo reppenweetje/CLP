@@ -33,11 +33,14 @@
 //   SUPABASE_URL                     (auto-provided)
 //   SUPABASE_SERVICE_ROLE_KEY        (auto-provided in Edge runtime)
 //   SLACK_HOTLEADS_WEBHOOK_URL       (optional — set to enable Slack alerts)
+//   BREVO_API_KEY                    (optional — set to enable Brevo upsert)
+//   BREVO_LIST_ID                    (optional — numeric ID of target Brevo list)
 //   ALLOWED_ORIGINS                  (comma-separated, default: dehofman.clp.repp.nl,clp-xi-tan.vercel.app,localhost:5173)
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4'
 import { notifyHotLead } from './slack.ts'
+import { upsertBrevoContact } from './brevo.ts'
 
 // ── CORS ────────────────────────────────────────────────────────────────────
 
@@ -257,6 +260,11 @@ serve(async (req: Request) => {
   if (v.data.temperature === 'hot') {
     notifyHotLead(v.data, lead.id).catch(() => { /* logged in slack.ts */ })
   }
+
+  // Fire-and-forget Brevo upsert voor ELKE lead met email. Marketing-flow
+  // (mailings, segmenten) leest hieruit. Mislukken blokkeert Supabase-pad
+  // niet — Supabase blijft de bron-van-waarheid voor sales.
+  upsertBrevoContact(v.data).catch(() => { /* logged in brevo.ts */ })
 
   return json(
     {

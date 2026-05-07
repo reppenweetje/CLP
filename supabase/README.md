@@ -197,10 +197,18 @@ supabase link --project-ref <project-ref>      # from the Supabase URL
 ### Set secrets
 
 ```bash
-supabase secrets set SLACK_HOTLEADS_WEBHOOK_URL='https://hooks.slack.com/...' \
-                     ALLOWED_ORIGINS='https://dehofman.clp.repp.nl,https://clp-xi-tan.vercel.app,http://localhost:5173'
+supabase secrets set \
+  ALLOWED_ORIGINS='https://dehofman.clp.repp.nl,https://clp-xi-tan.vercel.app,http://localhost:5173' \
+  BREVO_API_KEY='xkeysib-...'                  \  # v3 API key uit Brevo dashboard
+  BREVO_LIST_ID='42'                            \  # numerieke ID van de target-lijst
+  SLACK_HOTLEADS_WEBHOOK_URL='https://hooks.slack.com/...'  # optioneel; alleen voor consolidatie van Slack-routing later
 
-# SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are auto-provided in the Edge runtime.
+# SUPABASE_URL en SUPABASE_SERVICE_ROLE_KEY worden automatisch geinjecteerd door
+# de Edge runtime — niet zelf zetten.
+#
+# Slack is OPTIONEEL in deze ronde: zonder die secret slaat de Edge Function
+# de Slack-call netjes over en blijft de bestaande Vercel /api/slack-hot.js
+# de Hothothot pings doen. Slack-consolidatie is een aparte vervolgstap.
 ```
 
 ### Deploy

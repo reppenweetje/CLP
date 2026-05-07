@@ -34,7 +34,9 @@ const STORAGE_KEY = 'clp-consent-log-v1'
 //                Supabase als verwerker toegevoegd, harde tijdsbeloftes
 //                vervangen door "binnen wettelijke termijn", retentie omschreven
 //                als "zolang we je nog relevant kunnen helpen" ipv 60 mnd hard.
-export const PRIVACY_STATEMENT_VERSION = '2026-05-07'
+//   2026-05-07b  Brevo toegevoegd als verwerker (e-mail platform voor brochure-
+//                versturen + opt-out service-mails).
+export const PRIVACY_STATEMENT_VERSION = '2026-05-07b'
 
 function readLog() {
   if (typeof window === 'undefined') return []

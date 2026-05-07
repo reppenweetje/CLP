@@ -1,32 +1,50 @@
-# WhatsApp-bericht voor Tharwat — 2026-05-07
+# WhatsApp briefing for Tharwat — 2026-05-07 (rev with Brevo)
 
-Doorstuurbare versie. Kopieer en plak in WhatsApp. Iets korter dan de README, en in jouw stem.
+Forward-ready text. Copy and paste into WhatsApp.
 
 ---
 
 Hi Tharwat,
 
-Dank voor de uitgebreide review en notes — heel waardevol om te lezen dat de WhatsApp-bot al via service-role draait en de migration-pad clean is. We zijn aan onze kant ook bezig.
+Great that you've cleared us and the backups are running. For now we just want to land leads + tags into Supabase **and** mirror them into Brevo (our marketing-email platform). RLS rollout we'll do later, separately, after the CRM-impact check.
 
-Wat we vandaag hebben gedaan:
-1. Project URL + anon key verwerkt in onze Vercel-deploy. Anon key staat als env-var, niet hardcoded.
-2. Frontend client (lead-upsert + consent log) wired in de chat — maar **achter een feature-flag** (`VITE_SUPABASE_ENABLED=false`). Dus er gaat NU nog niets naar Supabase. Bij go-live flippen we de flag in Vercel zonder rebuild.
-3. Health-check tegen het project gedaan: `auth/v1/health` geeft 200, anon key werkt. Edge Function endpoint geeft 404 zoals verwacht (jij moet 'm nog deployen).
-4. Onze README + runbook bijgewerkt met de baseline counts die jij gaf (leads 393 etc.) en de Phase 2 wachtmoment-sectie zodat onze rollout op jouw signaal aanhaakt.
+I've attached a zip with everything you need (`clp-supabase-handoff-2026-05-07.zip`). Inside the `supabase/` folder you'll find migrations, the Edge Function source (now also includes `brevo.ts`), policies, rollback, and the full runbook in `README.md`.
 
-Voordat we Fase 1 (migrations + RLS) kunnen starten heb ik nog een paar antwoorden van je nodig:
+Three things on your side:
 
-1. **CRM-frontend**: praat de bestaande CRM met de anon key tegen `public.leads`? Zo ja, op welke tabellen leest 'ie? Onze `recommended_rls.sql` blokkeert anon-toegang tot leads — als de CRM via anon leest, breken we 'em. Dan moeten we de policy-shape aanpassen.
+**1. Apply migrations** (additive, no breakage — `leads` count must stay at 393, `consent_log` is new):
+```
+psql "$DATABASE_URL" -f supabase/migrations/20260506120000_extend_leads.sql
+psql "$DATABASE_URL" -f supabase/migrations/20260506120100_create_consent_log.sql
+```
 
-2. **Staging-omgeving**: bestaat er een tweede Supabase-project (staging/preview) waar we eerst de migrations + RLS kunnen testen? Of doen we direct op productie? Mijn voorkeur is staging als die er is.
+**2. Deploy the Edge Function** (service-role key gets auto-injected by Supabase Edge runtime — you don't need to share it):
+```
+supabase link --project-ref vgdwgjthvltucabqfysd
+supabase functions deploy lead-upsert
+```
 
-3. **Backup**: kun je vóór de migration een full pg_dump maken (minimaal `leads` + `consent_log`, liefst hele DB) en versleuteld bewaren? Eigen rollback-zekerheid voor onze kant.
+**3. Set secrets** (CORS allowlist + Brevo credentials):
+```
+supabase secrets set \
+  ALLOWED_ORIGINS="https://dehofman.clp.repp.nl,https://clp-xi-tan.vercel.app" \
+  BREVO_API_KEY="<I'll send the value in a separate message>" \
+  BREVO_LIST_ID="<I'll send this once the Brevo list is created>"
+```
 
-4. **Phase 2 timing**: wat is een realistische datum waarop je Phase 2 als groen verklaart? Onze rollout haakt daarop aan.
+Slack is intentionally NOT set in this round — our existing Vercel `/api/slack-hot.js` keeps doing the Hothothot pings. Slack-routing consolidation is a separate later step.
 
-5. **Bredere RLS-gap**: je noemt 5 tabellen zonder RLS (leads, chatlog, projects, outbound_settings, escalations). Onze CLP-rollout raakt alleen leads + consent_log. Wie pakt na CLP-launch de andere drie aan? Lijkt me een follow-up sprint, maar wel goed dat we 't markeren.
+Smoke-test runbook is in `supabase/README.md` under "Edge Function deployment → Smoke test". One curl-call with `clp_smoketest` as source-tag, then SQL cleanup.
 
-Service-role key komt zoals afgesproken pas bij de final deployment step — geen druk daarop tot 1-4 groen zijn.
+Once that's green, we flip `VITE_SUPABASE_ENABLED=true` in Vercel on our side. RLS rollout later, together, when you've confirmed the CRM impact.
 
-Laat maar weten,
+Let me know.
 Jann
+
+---
+
+## Internal notes (don't forward)
+
+- Brevo API key is `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` — stuur in een tweede WhatsApp-bericht naar Tharwat zodra je het bovenstaande hebt gestuurd, met een korte note "Here's the BREVO_API_KEY value — please don't paste it in any logs or commit it anywhere".
+- BREVO_LIST_ID krijgt Tharwat zodra de lijst is aangemaakt in Brevo. Tot die tijd kan hij `BREVO_LIST_ID` weglaten — de Edge Function logt dan alleen contact zonder lijst-koppeling. Liever wel meteen de juiste ID erin.
+- Onze Vercel-deploy van vandaag bevat de wiring achter `VITE_SUPABASE_ENABLED=false`. Bij Tharwat's groen op de smoke-test flippen we 'em.
