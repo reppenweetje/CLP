@@ -132,7 +132,7 @@ export default function WarmHandoffBubble({
                 </div>
                 {/* Vierde, gelijkwaardige optie: bezoeker mag zonder drempel
                     terug naar zelf rondkijken. Voorheen was dit een matte
-                    tekstlink — visueel 3 vs 1 — wat als drammerig aanvoelde. */}
+                    tekstlink (visueel 3 vs 1) wat als drammerig aanvoelde. */}
                 <button
                   onClick={onDismiss}
                   className="w-full border border-mist hover:border-midnite text-ink-soft hover:text-midnite text-[13.5px] py-2.5 rounded-full transition flex items-center justify-center"

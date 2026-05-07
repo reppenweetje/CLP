@@ -9,7 +9,7 @@ import {
   humanizePersona,
 } from '../../lib/analytics.js'
 
-// "AI"-style weekly summary — geen LLM-call (privacy + kosten),
+// "AI"-style weekly summary , geen LLM-call (privacy + kosten),
 // maar een rule-based narrative die de meest opvallende patronen
 // herkent en in nette zinnen samenvat. Schaalt mee met je data:
 // hoe meer events, hoe rijker de narrative.
@@ -110,7 +110,7 @@ function generateInsights(sessions) {
   } else if (completionRate >= 0.25) {
     out.push({
       tone: 'info',
-      title: `Conversie ${(completionRate * 100).toFixed(0)}% — gezond maar te tunen`,
+      title: `Conversie ${(completionRate * 100).toFixed(0)}% , gezond maar te tunen`,
       body: `${completed.length} van ${sessions.length} bereikten voltooiing. Voor CLP's is 50%+ haalbaar.`,
       action: 'Identificeer onderstaande drop-off-knelpunten en test daar copy of UX.',
     })
@@ -161,7 +161,7 @@ function generateInsights(sessions) {
     out.push({
       tone: 'info',
       title: `Persona-gat: ${humanizePersona(bestP.p)} converteert beter dan ${humanizePersona(worstP.p)}`,
-      body: `${(bestP.rate * 100).toFixed(0)}% vs ${(worstP.rate * 100).toFixed(0)}% — ${Math.round((bestP.rate - worstP.rate) * 100)}pp verschil.`,
+      body: `${(bestP.rate * 100).toFixed(0)}% vs ${(worstP.rate * 100).toFixed(0)}% , ${Math.round((bestP.rate - worstP.rate) * 100)}pp verschil.`,
       action: `Test of de flow voor ${humanizePersona(worstP.p)} aanpassing nodig heeft.`,
     })
   }
@@ -194,7 +194,7 @@ function generateInsights(sessions) {
     out.push({
       tone: 'action',
       title: `Hete lead wacht op contact: ${hottest.session.lead?.firstName || humanizePersona(hottest.session.persona)}`,
-      body: `Score ${hottest.score}/100 — laatste activiteit ${formatDuration(Date.now() - hottest.session.lastEventAt)} geleden.`,
+      body: `Score ${hottest.score}/100 , laatste activiteit ${formatDuration(Date.now() - hottest.session.lastEventAt)} geleden.`,
       action: 'Open hot leads-blok en bel/mail vandaag.',
     })
   }
@@ -204,14 +204,14 @@ function generateInsights(sessions) {
     if (ttc.median < 30000) {
       out.push({
         tone: 'info',
-        title: 'Mediaan voltooid in <30s — controleer of dit echt is',
+        title: 'Mediaan voltooid in <30s , controleer of dit echt is',
         body: 'Korte voltooitijd kan duiden op test-traffic of een te-lichte funnel waarin mensen klikken zonder te lezen.',
         action: 'Filter op 30d range en check of de duur realistisch is.',
       })
     } else if (ttc.median > 360000) {
       out.push({
         tone: 'info',
-        title: `Mediaan voltooitijd ${formatDuration(ttc.median)} — wellicht te lang`,
+        title: `Mediaan voltooitijd ${formatDuration(ttc.median)} , wellicht te lang`,
         body: 'Bezoekers die >6min doen kunnen verdwalen. Overweeg de flow korter te maken voor zekere persona\'s.',
       })
     }

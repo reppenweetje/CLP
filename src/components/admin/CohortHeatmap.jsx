@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { buildCohortHeatmap } from '../../lib/analytics.js'
 
 // Day-of-week × hour-of-day heatmap.
-// Inzicht: wanneer komen bezoekers — werktijd? avond? weekend?
+// Inzicht: wanneer komen bezoekers , werktijd? avond? weekend?
 // Drives marketing-timing en CTA-test-windows.
 export default function CohortHeatmap({ sessions }) {
   const data = useMemo(() => buildCohortHeatmap(sessions), [sessions])
@@ -54,7 +54,7 @@ function DayRow({ day, label, grid, max }) {
             key={h}
             className="aspect-square rounded-sm hover:ring-2 hover:ring-midnite cursor-default transition"
             style={{ background: count === 0 ? '#efeee8' : `rgba(15,15,112,${opacity})` }}
-            title={`${label} ${h}:00 — ${count} sessies`}
+            title={`${label} ${h}:00 , ${count} sessies`}
           />
         )
       })}

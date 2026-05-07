@@ -21,7 +21,7 @@ export default function DropoffMatrix({ sessions }) {
       </header>
       {!hasData ? (
         <div className="rounded-xl border border-dashed border-mist-light bg-canvas px-6 py-8 text-center text-[14px] text-ink-soft">
-          Nog geen drop-offs om te tonen — of iedereen voltooit netjes.
+          Nog geen drop-offs om te tonen , of iedereen voltooit netjes.
         </div>
       ) : (
         <div className="overflow-x-auto -mx-2 px-2">
@@ -71,7 +71,7 @@ function Cell({ count, percentage }) {
       style={{ background: count === 0 ? 'transparent' : `rgba(15,15,112,${opacity})` }}
       title={`${count} sessies (${(percentage * 100).toFixed(0)}%)`}
     >
-      <div className="text-[13.5px] font-semibold tabular-nums leading-none">{count || '·'}</div>
+      <div className="text-[13.5px] font-semibold tabular-nums leading-none">{count || '-'}</div>
       {count > 0 && (
         <div className="text-[9.5px] tabular-nums opacity-80 mt-0.5">{(percentage * 100).toFixed(0)}%</div>
       )}

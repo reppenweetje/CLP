@@ -103,22 +103,32 @@ function SegmentControl({ value, onChange, options }) {
 function ReachPanel({ travelTimes }) {
   return (
     <div>
+      {/* Tegels stapelen vertikaal: plaatsnaam krijgt de volle breedte
+          (geen competitie meer met de tijd-waarde rechts) en mag rustig
+          wrappen. Mode-icoon + reistijd vormen daaronder een subtiele
+          meta-rij, gescheiden door een hairline. Resultaat: namen als
+          "Amsterdam Zuidoost" of "Haarlem Spaarnwoude" passen comfortabel
+          in twee kolommen zonder afkapping of cramped wrap. */}
       <div className="grid grid-cols-2 gap-2">
         {travelTimes.map((t) => (
           <div
             key={t.to}
-            className="rounded-xl bg-canvas-2 border border-mist-light px-3 py-2.5 flex items-start justify-between gap-2"
+            className="rounded-xl bg-canvas-2 border border-mist-light px-3 py-2.5"
           >
-            <div className="min-w-0">
-              <div className="text-[11px] tracking-wider text-ink-mute uppercase">
-                {modeLabel(t.mode)}
-              </div>
-              {/* Plaatsnaam mag wrappen ipv truncate (Haarlem CS, Amsterdam
-                  Zuidoost passen anders niet in 2-koloms grid). Iets kleiner
-                  font + leading-snug houdt de tegel compact. */}
-              <div className="text-[12.5px] text-ink leading-snug break-words">{t.to}</div>
+            <div className="text-[13.5px] font-semibold text-ink leading-snug break-words">
+              {t.to}
             </div>
-            <div className="text-[15px] font-semibold text-ink shrink-0 tabular-nums leading-tight">{t.value}</div>
+            <div className="mt-1.5 pt-1.5 border-t border-mist-light/70 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 text-ink-mute min-w-0">
+                <ModeIcon mode={t.mode} />
+                <span className="text-[10.5px] tracking-[0.14em] uppercase font-medium truncate">
+                  {modeLabel(t.mode)}
+                </span>
+              </div>
+              <span className="text-[13.5px] font-semibold text-ink tabular-nums leading-none shrink-0">
+                {t.value}
+              </span>
+            </div>
           </div>
         ))}
       </div>
@@ -127,6 +137,44 @@ function ReachPanel({ travelTimes }) {
       </p>
     </div>
   )
+}
+
+function ModeIcon({ mode }) {
+  const stroke = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round' }
+  switch (mode) {
+    case 'car':
+      return (
+        <svg width="13" height="13" viewBox="0 0 24 24" {...stroke} aria-hidden="true">
+          <path d="M5 17h14M6.5 17v-4l1.6-4h7.8l1.6 4v4M5 17v2.5M19 17v2.5" />
+          <circle cx="8.5" cy="17" r="1.4" fill="currentColor" stroke="none" />
+          <circle cx="15.5" cy="17" r="1.4" fill="currentColor" stroke="none" />
+        </svg>
+      )
+    case 'bike':
+      return (
+        <svg width="13" height="13" viewBox="0 0 24 24" {...stroke} aria-hidden="true">
+          <circle cx="6" cy="17" r="3" />
+          <circle cx="18" cy="17" r="3" />
+          <path d="M9 17l3-7h-2L8 7M12 10l4 7M16 7h2" />
+        </svg>
+      )
+    case 'walk':
+      return (
+        <svg width="13" height="13" viewBox="0 0 24 24" {...stroke} aria-hidden="true">
+          <circle cx="13" cy="4.5" r="1.5" />
+          <path d="M9 22l3-7-2-3 4-4 3 4M11 12l-3 1" />
+        </svg>
+      )
+    case 'transit':
+      return (
+        <svg width="13" height="13" viewBox="0 0 24 24" {...stroke} aria-hidden="true">
+          <rect x="6" y="3" width="12" height="14" rx="2" />
+          <path d="M6 11h12M9 17l-2 4M15 17l2 4" />
+        </svg>
+      )
+    default:
+      return null
+  }
 }
 
 function SurroundingsPanel({ surroundings = [] }) {

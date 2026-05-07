@@ -882,7 +882,7 @@ function Demo() {
         trackEvent('brochure-trigger:rendement-shown', {})
         dispatch({ type: 'BEHAVIOR_RENDEMENT_SHOWN' })
         sendSequence(userTextFromOpt(opt), [
-          { kind: 'bot-text', text: 'Goed dat je daarnaar vraagt — bij beleggen op de Waarderpolder is het rendement de kern.' },
+          { kind: 'bot-text', text: 'Goed dat je daarnaar vraagt. Bij beleggen op de Waarderpolder is het rendement de kern.' },
           {
             kind: 'investor',
             payload: {
@@ -1140,7 +1140,7 @@ function Demo() {
         // relevante chip-cluster zichtbaar (4 chips + 'Bekijk alle onderwerpen').
         dispatch({ type: 'ANSWER', key: 'postRecommendation', value: answerValue(opt), next: 'moreInfo' })
         sendSequence(userTextFromOpt(opt), [
-          { kind: 'bot-text', text: 'Goed. Hier zijn een paar onderwerpen die voor jou relevant kunnen zijn — kies wat je wilt zien.' },
+          { kind: 'bot-text', text: 'Goed. Hier zijn een paar onderwerpen die voor jou relevant kunnen zijn. Kies wat je wilt zien.' },
         ])
         return
       }
@@ -1357,7 +1357,7 @@ function Demo() {
         // en een vroege "wil je gebeld worden?" voelt voor hen pushy.
         if (buying.temperature !== 'cold') {
           const pool = [
-            'Mocht het helpen om kort te schakelen — dat kan altijd.',
+            'Mocht het helpen om kort te schakelen, dat kan altijd.',
             'Verder kijken of zullen we de makelaar erbij vragen?',
             'Tot zover. Iets specifieks waar je dieper op wilt gaan?',
             'Nog iets onduidelijk, of zien we wat je hebt?',
@@ -2282,7 +2282,7 @@ function Demo() {
       />
 
       {/* OptionsSheet: bottom-sheet met alle moreInfo-onderwerpen. Wordt
-          alleen gerenderd in moreInfo-state — buiten dat is de chip
+          alleen gerenderd in moreInfo-state, buiten dat is de chip
           'Bekijk alle onderwerpen' niet zichtbaar dus geen trigger. */}
       {state.currentQuestion === 'moreInfo' && (
         <OptionsSheet

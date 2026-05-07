@@ -122,7 +122,7 @@ export default function SuggestedChips({ options, onPick, hint }) {
 
       {/* Mat info-knopje rechts-onder. Tap opent een mini-sheet met privacy
           + verkoop-attribution. Voorheen stond die tekst altijd zichtbaar
-          en concurreerde 'em met de chips — nu alleen op verzoek. */}
+          en concurreerde 'em met de chips, nu alleen op verzoek. */}
       <div className="flex items-center justify-end px-3 pb-1">
         <button
           type="button"

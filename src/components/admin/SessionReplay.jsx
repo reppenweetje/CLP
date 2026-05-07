@@ -64,7 +64,7 @@ export default function SessionReplay({ session, onClose, onPrev, onNext }) {
               {humanizePersona(session.persona)}
             </div>
             <div className="text-[12.5px] text-ink-mute tabular-nums mt-0.5">
-              {formatTimestamp(session.startedAt)} · {formatDuration(session.duration)} · {session.events.length} events
+              {formatTimestamp(session.startedAt)} | {formatDuration(session.duration)} | {session.events.length} events
             </div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
@@ -147,7 +147,7 @@ function humanizeStage(s) {
     case 'sales_ready':          return 'Sales-ready'
     case 'rent-match':           return 'Huur-match'
     case 'afhaak':               return 'Afhaak'
-    default:                     return s || '—'
+    default:                     return s || '-'
   }
 }
 

@@ -43,7 +43,7 @@ export function notifyHotLead(payload) {
     }).then((res) => {
       if (!res.ok) {
         if (res.status === 404 && import.meta.env?.DEV) {
-          console.info('[slack] /api/slack-hot 404 — Vercel function pas live na deploy. Lokaal is dit verwacht.')
+          console.info('[slack] /api/slack-hot 404, Vercel function pas live na deploy. Lokaal is dit verwacht.')
           return
         }
         trackEvent('slack:hot-lead-failed', { status: res.status })

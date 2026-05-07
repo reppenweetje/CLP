@@ -35,16 +35,16 @@ export default function TimeToConversion({ sessions }) {
                 <Bar value={a.count} max={max} color="bg-rose-500/70" labelLeft="afgehaakt" labelRight={String(a.count)} />
               </div>
               <div className="text-[11px] text-ink-mute tabular-nums text-right">
-                {b.count + a.count > 0 ? `${Math.round((b.count / Math.max(1, b.count + a.count)) * 100)}%` : '—'}
+                {b.count + a.count > 0 ? `${Math.round((b.count / Math.max(1, b.count + a.count)) * 100)}%` : '-'}
               </div>
             </div>
           )
         })}
       </div>
       <div className="mt-4 pt-3 border-t border-mist-light flex items-center justify-between text-[12px] text-ink-mute">
-        <span>Groen = voltooid · rood = verlaten</span>
+        <span>Groen = voltooid | rood = verlaten</span>
         <span className="tabular-nums">
-          {data.completedCount} voltooid · {data.abandonedCount} verlaten
+          {data.completedCount} voltooid | {data.abandonedCount} verlaten
         </span>
       </div>
     </section>

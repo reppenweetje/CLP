@@ -454,7 +454,7 @@ export const project = {
       waPhrase: 'Ik kijk als belegger',
     },
     beide: {
-      microIntro: 'Helemaal goed. Dan ga ik je wat meer laten zien over De Hofman, vanuit beide kanten — eigen gebruik én beleggingsperspectief.',
+      microIntro: 'Helemaal goed. Dan ga ik je wat meer laten zien over De Hofman, vanuit beide kanten: eigen gebruik én beleggingsperspectief.',
       recommendCopy: 'Dan kijken we vanuit beide kanten. De Hofman werkt voor ondernemers die zelf willen gebruiken én voor beleggers die schaarste en locatie zoeken.',
       handoff: {
         observations: {

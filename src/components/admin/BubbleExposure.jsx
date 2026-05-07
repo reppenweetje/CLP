@@ -76,7 +76,7 @@ function BubbleRow({ row }) {
         <div className="text-[14px] font-medium text-ink truncate">{row.label}</div>
         <div className="text-[12px] text-ink-mute mt-0.5">
           <span className="tabular-nums">{row.uniqueSessions}</span> sessies
-          {' · '}
+          {' | '}
           <span className="tabular-nums">{row.exposureCount}</span>× vertoond
         </div>
       </div>

@@ -33,7 +33,7 @@ export default function PlanningBubble({ planning }) {
                 <line x1="12" y1="16" x2="12.01" y2="16" />
               </svg>
               <div className="text-[12px] text-ink-soft leading-snug">
-                Alle data zijn indicatief — bouwtraject afhankelijk van vergunningen, weer en aannemerscapaciteit.
+                Alle data zijn indicatief. Bouwtraject is afhankelijk van vergunningen, weer en aannemerscapaciteit.
               </div>
             </div>
           </div>

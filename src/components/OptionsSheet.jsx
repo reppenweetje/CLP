@@ -70,7 +70,7 @@ export default function OptionsSheet({ open, onClose, options, onPick }) {
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end pointer-events-none">
-      {/* Backdrop met blur — tap sluit sheet */}
+      {/* Backdrop met blur. Tap sluit sheet. */}
       <div
         className="absolute inset-0 bg-ink/30 backdrop-blur-sm pointer-events-auto fade-up"
         onClick={onClose}

@@ -81,7 +81,7 @@ export default function AdminSettings() {
           <h2 className="text-[15px] font-semibold text-ink">IP-uitsluiting</h2>
           <p className="text-[13px] text-ink-soft leading-relaxed mt-1 max-w-prose">
             Sluit team-verkeer uit zodat onze eigen sessies de analytics niet vervuilen.
-            Werkt zowel voor lokale events als richting Plausible — beide worden onderdrukt
+            Werkt zowel voor lokale events als richting Plausible , beide worden onderdrukt
             als jouw IP in de lijst staat.
           </p>
         </div>
@@ -102,7 +102,7 @@ export default function AdminSettings() {
             (suppressed ? 'bg-emerald-600 text-paper' : 'bg-mist text-ink-soft')
           }
         >
-          {suppressed ? '✓' : '·'}
+          {suppressed ? '✓' : '-'}
         </span>
         <div className="min-w-0 flex-1">
           <div className="text-[14px] font-semibold text-ink">
@@ -211,7 +211,7 @@ export default function AdminSettings() {
         <div className="mt-3 text-[12px] text-ink-mute leading-relaxed">
           <strong className="text-ink-soft">Hoe het werkt:</strong> bij elke pageload haalt de admin het huidige IP op via
           {' '}<code className="bg-canvas-2 px-1 py-px rounded">api.ipify.org</code>. Als dat IP in de lijst staat,
-          wordt <code className="bg-canvas-2 px-1 py-px rounded">trackEvent()</code> overgeslagen — dus geen lokale
+          wordt <code className="bg-canvas-2 px-1 py-px rounded">trackEvent()</code> overgeslagen , dus geen lokale
           events én geen Plausible custom events. Plausible's eigen pageviews worden ook geblokkeerd doordat we het
           script suppressen wanneer suppress-flag actief is.
         </div>
@@ -221,6 +221,6 @@ export default function AdminSettings() {
 }
 
 function isValidIp(ip) {
-  // Lichte validatie — IPv4 of IPv6. Niet-strict, gewoon plausibele check.
+  // Lichte validatie , IPv4 of IPv6. Niet-strict, gewoon plausibele check.
   return /^(\d{1,3}\.){3}\d{1,3}$/.test(ip) || /^[0-9a-fA-F:]+$/.test(ip)
 }

@@ -21,7 +21,7 @@ export default function SessionsList({ sessions, onOpen }) {
           <span className="text-[12px] text-ink-mute tabular-nums">{sessions.length} totaal</span>
         </div>
         <p className="text-[13px] text-ink-soft mt-1">
-          Tik voor inline timeline · {onOpen ? 'klik "Open" voor volledige replay' : 'volledige replay zit in admin-overlay'}.
+          Tik voor inline timeline | {onOpen ? 'klik "Open" voor volledige replay' : 'volledige replay zit in admin-overlay'}.
         </p>
       </div>
 

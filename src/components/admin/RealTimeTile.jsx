@@ -49,7 +49,7 @@ export default function RealTimeTile({ onOpenSession }) {
                   {humanizePersona(s.persona)}
                 </span>
                 {s.lead?.email && (
-                  <span className="text-[11.5px] text-ink-mute truncate">· {s.lead.email}</span>
+                  <span className="text-[11.5px] text-ink-mute truncate">{s.lead.email}</span>
                 )}
               </div>
               <span className="text-[11px] text-ink-mute tabular-nums shrink-0">
@@ -60,7 +60,7 @@ export default function RealTimeTile({ onOpenSession }) {
         </ul>
       )}
       <div className="mt-3 pt-3 border-t border-mist-light text-[11px] text-ink-mute">
-        Auto-refresh 10s · tap een sessie voor replay
+        Auto-refresh 10s | tap een sessie voor replay
         <span className="hidden">{tick}</span>
       </div>
     </section>

@@ -42,7 +42,7 @@ export default function HotLeads({ sessions, onOpenSession }) {
                 <div className="text-[14px] font-medium text-ink truncate flex items-center gap-2">
                   {session.lead?.firstName || humanizePersona(session.persona)}
                   {session.lead?.email && (
-                    <span className="text-[11.5px] text-ink-mute truncate">· {session.lead.email}</span>
+                    <span className="text-[11.5px] text-ink-mute truncate">{session.lead.email}</span>
                   )}
                 </div>
                 <div className="text-[11.5px] text-ink-mute mt-0.5 flex items-center gap-1.5 truncate">
@@ -52,7 +52,7 @@ export default function HotLeads({ sessions, onOpenSession }) {
                       {session.handoffOutcome}
                     </span>
                   )}
-                  <span>· {formatRelativeTime(session.lastEventAt)}</span>
+                  <span>{formatRelativeTime(session.lastEventAt)}</span>
                 </div>
               </div>
               <ScoreChip value={score} />

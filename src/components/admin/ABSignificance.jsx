@@ -40,7 +40,7 @@ export default function ABSignificance({ sessions }) {
       </div>
       {single ? (
         <div className="mt-4 pt-3 border-t border-mist-light text-[12.5px] text-ink-mute leading-relaxed">
-          Slechts één variant in de data — voeg een tweede variant toe om significantie te kunnen meten.
+          Slechts één variant in de data, voeg een tweede variant toe om significantie te kunnen meten.
         </div>
       ) : (
         <ComparisonReadout c={stats.comparison} />
@@ -57,8 +57,8 @@ function ComparisonReadout({ c }) {
   const verdict =
     !c.sampleOk ? 'Te kleine sample (N≥30 per variant nodig)' :
     conclusive  ? `Variant ${c.winner} wint statistisch significant` :
-    trending    ? `Variant ${c.winner} loopt voor — wacht op meer data` :
-                  'Verschil binnen meetfout — niet conclusief'
+    trending    ? `Variant ${c.winner} loopt voor, wacht op meer data` :
+                  'Verschil binnen meetfout, niet conclusief'
   const tone = !c.sampleOk ? 'mute' : conclusive ? 'green' : trending ? 'amber' : 'mute'
   const toneClasses = {
     green: 'bg-emerald-50 border-emerald-200 text-emerald-900',
@@ -69,9 +69,9 @@ function ComparisonReadout({ c }) {
     <div className={'mt-4 rounded-xl border px-4 py-3 ' + toneClasses}>
       <div className="text-[13.5px] font-semibold">{verdict}</div>
       <div className="text-[12.5px] mt-1 leading-relaxed opacity-90">
-        Variant {c.a} {c.pA >= c.pB ? '+' : '−'}{Math.abs(diffPct)}% t.o.v. {c.b} ·
-        {' '}confidence <span className="tabular-nums">{c.confidence.toFixed(1)}%</span>
-        {' · '}p = <span className="tabular-nums">{c.p.toExponential(2)}</span>
+        Variant {c.a} {c.pA >= c.pB ? '+' : '−'}{Math.abs(diffPct)}% t.o.v. {c.b},
+        {' '}confidence <span className="tabular-nums">{c.confidence.toFixed(1)}%</span>,
+        {' '}p = <span className="tabular-nums">{c.p.toExponential(2)}</span>
       </div>
     </div>
   )

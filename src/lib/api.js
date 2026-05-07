@@ -24,7 +24,7 @@ import { PRIVACY_STATEMENT_VERSION } from './consent.js'
 
 const QUEUE_KEY = 'clp-lead-queue-v1'
 const MAX_QUEUE = 50          // hard cap zodat localStorage niet vol loopt
-const MAX_RETRIES = 5         // per item — daarna gooi 'm weg
+const MAX_RETRIES = 5         // per item, daarna gooi 'm weg
 
 // ── Config ──────────────────────────────────────────────────────────────────
 
@@ -236,7 +236,7 @@ export async function flushPending() {
       flushed += 1
     } catch (err) {
       if (err.status && err.status >= 400 && err.status < 500) {
-        console.warn('[api] dropping lead — server rejected payload', err.body)
+        console.warn('[api] dropping lead, server rejected payload', err.body)
         continue
       }
       remaining.push({ ...item, attempts: item.attempts + 1 })
