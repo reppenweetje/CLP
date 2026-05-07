@@ -347,7 +347,7 @@ function countAvailableMoreInfo(persona) {
 // opent. 4 voelt als het juiste aantal: niet overweldigend, wel keuze.
 const PRIMARY_CHIP_COUNT = 4
 
-function moreInfoChips(persona, seen, temperature) {
+function moreInfoChips(persona, seen, temperature, callbackArranged = false) {
   const order = MORE_INFO_PERSONA_ORDER[persona] || MORE_INFO_PERSONA_ORDER.onbekend
   const opts = []
   for (const id of order) {
@@ -358,13 +358,27 @@ function moreInfoChips(persona, seen, temperature) {
     opts.push({ id, label: def.label })
   }
 
+  // Wanneer bezoeker al "Laat de makelaar mij bellen" heeft gekozen én
+  // een 06 heeft achtergelaten, vervangen we de actieve callback-chip
+  // door een non-clickable bevestigings-chip. Voorkomt dubbele-aanvraag
+  // misclick en geeft visuele rust dat de afspraak genoteerd is.
+  const callbackConfirmed = {
+    id: '__callback_confirmed',
+    label: 'De makelaar belt je zsm',
+    variant: 'confirmed',
+    disabled: true,
+  }
   // De callback-chip krijgt bij warm/hot een primary-variant zodat hij
   // visueel uit de toon springt tussen de info-chips. Bezoekers met warme
   // signalen zien dan een duidelijke contact-CTA bovenaan de chips.
   // Generiek "de makelaar" — naam wordt pas relevant in de bubble-body
   // en outcome-strip waar context al bestaat.
-  const callbackPrimary = { id: '__callback', label: 'Laat de makelaar mij bellen', variant: 'primary' }
-  const callbackPlain = { id: '__callback', label: 'Laat de makelaar mij bellen' }
+  const callbackPrimary = callbackArranged
+    ? callbackConfirmed
+    : { id: '__callback', label: 'Laat de makelaar mij bellen', variant: 'primary' }
+  const callbackPlain = callbackArranged
+    ? callbackConfirmed
+    : { id: '__callback', label: 'Laat de makelaar mij bellen' }
 
   // All-seen-fase: bezoeker is voorbij de discovery-drempel. Naast de
   // resterende info-chips bieden we een expliciete "Ik heb genoeg gezien"-
@@ -2151,7 +2165,15 @@ function Demo() {
     chipQuestion = {
       key: 'moreInfo',
       label: 'meer info',
-      options: moreInfoChips(persona, state.moreInfoSeen, buying.temperature),
+      options: moreInfoChips(
+        persona,
+        state.moreInfoSeen,
+        buying.temperature,
+        // Callback-afspraak gemaakt? Detecteer via outcome=callback in de
+        // warm-handoff bubble plus 06 aanwezig. Zonder 06 kan de makelaar
+        // niet bellen, dus geen reden om de chip al te muten.
+        state.behaviors?.warmHandoffOutcome === 'callback' && !!state.answers.lead?.phone,
+      ),
     }
   } else if (state.currentQuestion === 'lead-phoneAsk') {
     chipQuestion = {

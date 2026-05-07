@@ -264,11 +264,14 @@ export const project = {
     { step: 6, title: 'Oplevering', body: 'Sleuteloverdracht inclusief opleverkeuring.' },
   ],
 
+  // Planning is indicatief — bouw-traject afhankelijk van vergunningen,
+  // weersomstandigheden en aannemerscapaciteit. PlanningBubble toont een
+  // expliciete "Indicatieve planning"-noot zodat dat duidelijk is.
   planning: [
     { phase: 'Start verkoop', date: 'Gestart' },
-    { phase: 'Start bouw', date: 'December 2026' },
-    { phase: 'Bouwfase', date: '2027 tot 2028' },
-    { phase: 'Oplevering', date: 'Q4 2028 indicatief' },
+    { phase: 'Start bouw', date: 'Q4 2026' },
+    { phase: 'Bouwfase', date: '9 tot 12 maanden' },
+    { phase: 'Oplevering', date: 'Q3 2027' },
   ],
 
   // m²-prijs vergelijking met andere bedrijfsunits in de Waarderpolder.

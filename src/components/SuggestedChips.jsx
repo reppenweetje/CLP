@@ -78,23 +78,44 @@ export default function SuggestedChips({ options, onPick, hint }) {
             <div className="text-[12px] tracking-wider text-ink-mute uppercase mb-2 px-4">{hint}</div>
           )}
           <div className="flex flex-wrap gap-2 px-4 justify-center pb-2">
-            {options.map((opt) => (
-              <button
-                key={opt.id}
-                onClick={() => onPick(opt)}
-                className={(() => {
-                  if (opt.variant === 'primary') {
-                    return 'rounded-full bg-midnite hover:bg-midnite-soft text-paper border border-midnite text-[14.5px] px-3.5 py-2 transition leading-snug active:scale-[0.98] font-medium'
-                  }
-                  if (opt.variant === 'ghost') {
-                    return 'rounded-full bg-canvas-2/50 hover:bg-canvas-2 border border-dashed border-mist hover:border-midnite text-ink-soft hover:text-midnite text-[14px] px-3.5 py-2 transition leading-snug active:scale-[0.98]'
-                  }
-                  return 'rounded-full bg-paper border border-mist hover:border-midnite hover:bg-canvas-2 active:scale-[0.98] text-ink text-[14.5px] px-3.5 py-2 transition leading-snug'
-                })()}
-              >
-                {opt.label}
-              </button>
-            ))}
+            {options.map((opt) => {
+              if (opt.variant === 'confirmed') {
+                // Niet-klikbare bevestigings-chip. Gebruikt voor "afspraak
+                // genoteerd"-status zodat bezoeker niet per ongeluk dubbel
+                // aanvraagt en wel ziet dat de actie geslaagd is.
+                // Emerald-tinten voor positieve bevestiging, dezelfde
+                // grijs-mute kleur als de bestaande outcome-strip.
+                return (
+                  <span
+                    key={opt.id}
+                    role="status"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-900 text-[14px] px-3.5 py-2 leading-snug font-medium cursor-default select-none"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    <span>{opt.label}</span>
+                  </span>
+                )
+              }
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => onPick(opt)}
+                  className={(() => {
+                    if (opt.variant === 'primary') {
+                      return 'rounded-full bg-midnite hover:bg-midnite-soft text-paper border border-midnite text-[14.5px] px-3.5 py-2 transition leading-snug active:scale-[0.98] font-medium'
+                    }
+                    if (opt.variant === 'ghost') {
+                      return 'rounded-full bg-canvas-2/50 hover:bg-canvas-2 border border-dashed border-mist hover:border-midnite text-ink-soft hover:text-midnite text-[14px] px-3.5 py-2 transition leading-snug active:scale-[0.98]'
+                    }
+                    return 'rounded-full bg-paper border border-mist hover:border-midnite hover:bg-canvas-2 active:scale-[0.98] text-ink text-[14.5px] px-3.5 py-2 transition leading-snug'
+                  })()}
+                >
+                  {opt.label}
+                </button>
+              )
+            })}
           </div>
         </>
       )}

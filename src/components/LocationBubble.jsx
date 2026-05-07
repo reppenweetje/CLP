@@ -107,15 +107,18 @@ function ReachPanel({ travelTimes }) {
         {travelTimes.map((t) => (
           <div
             key={t.to}
-            className="rounded-xl bg-canvas-2 border border-mist-light px-3 py-2.5 flex items-baseline justify-between gap-2"
+            className="rounded-xl bg-canvas-2 border border-mist-light px-3 py-2.5 flex items-start justify-between gap-2"
           >
             <div className="min-w-0">
               <div className="text-[11px] tracking-wider text-ink-mute uppercase">
                 {modeLabel(t.mode)}
               </div>
-              <div className="text-[13.5px] text-ink truncate">{t.to}</div>
+              {/* Plaatsnaam mag wrappen ipv truncate (Haarlem CS, Amsterdam
+                  Zuidoost passen anders niet in 2-koloms grid). Iets kleiner
+                  font + leading-snug houdt de tegel compact. */}
+              <div className="text-[12.5px] text-ink leading-snug break-words">{t.to}</div>
             </div>
-            <div className="text-[15px] font-semibold text-ink shrink-0 tabular-nums">{t.value}</div>
+            <div className="text-[15px] font-semibold text-ink shrink-0 tabular-nums leading-tight">{t.value}</div>
           </div>
         ))}
       </div>
