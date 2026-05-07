@@ -18,9 +18,9 @@ export default function RescueNudge({ onDismiss, onContact, project }) {
       <div className="rounded-2xl border border-mist-light bg-paper shadow-lg px-4 py-3.5 flex items-start gap-3">
         <div className="w-8 h-8 rounded-full bg-midnite/10 flex items-center justify-center shrink-0 text-midnite text-[15px]" aria-hidden>💬</div>
         <div className="min-w-0 flex-1">
-          <div className="text-[14px] font-semibold text-ink">Vragen onderweg?</div>
+          <div className="text-[14px] font-semibold text-ink">Even iets onduidelijk?</div>
           <div className="text-[12.5px] text-ink-soft mt-1 leading-snug">
-            {project?.bot?.name || 'Jesse'} kan je ook direct helpen via WhatsApp of bellen.
+            Geen probleem. {project?.bot?.name || 'Jesse'} helpt je ook direct via WhatsApp of telefoon.
           </div>
           <div className="flex items-center gap-1.5 mt-2.5">
             <button

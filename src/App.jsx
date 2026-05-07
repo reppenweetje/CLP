@@ -1213,7 +1213,7 @@ function Demo() {
         })
         sendSequence(userTextFromOpt(opt), [
           { kind: 'bot-text', text: 'Helder. Je hebt nu alles van De Hofman gezien.' },
-          { kind: 'bot-text', text: 'Kijk rustig rond. Hieronder kun je altijd contact opnemen met de makelaar.' },
+          { kind: 'bot-text', text: 'Kijk rustig rond. Hieronder kun je altijd contact opnemen met de makelaar of doorklikken naar het portaal voor de volledige plattegrond.' },
           {
             kind: 'cta-card',
             payload: {
@@ -1221,6 +1221,8 @@ function Demo() {
               phoneLink,
               phoneDisplay: project.phoneNumber,
               summary: customerSummary,
+              portalUrl: project.portalUrl,
+              seenTopics: seenTopics.map((t) => ({ id: t.id, label: t.label })),
               hideBrochure: true,
               hideReset: true,
             },
@@ -1277,7 +1279,7 @@ function Demo() {
         trailingMessages.push(
           { kind: 'pause', ms: 1200 },
           { kind: 'bot-text', text: 'Je hebt nu alles van De Hofman gezien.' },
-          { kind: 'bot-text', text: 'Kijk rustig rond. Hieronder kun je altijd contact opnemen met de makelaar.' },
+          { kind: 'bot-text', text: 'Kijk rustig rond. Hieronder kun je altijd contact opnemen met de makelaar of doorklikken naar het portaal voor de volledige plattegrond.' },
           {
             kind: 'cta-card',
             payload: {
@@ -1285,6 +1287,8 @@ function Demo() {
               phoneLink,
               phoneDisplay: project.phoneNumber,
               summary: customerSummary,
+              portalUrl: project.portalUrl,
+              seenTopics: seenTopics.map((t) => ({ id: t.id, label: t.label })),
               hideBrochure: true,
               hideReset: true,
             },
@@ -1502,10 +1506,11 @@ function Demo() {
       dispatch({ type: 'LEAD_DRAFT', draft })
 
       // Credion-eerst-pad heeft 06 nodig (geen Yes/No-vraag). Focus op de
-      // belofte dat Credion belt; brochure is bonus.
+      // belofte dat Credion belt; brochure is bonus. Email-adres expliciet
+      // tonen zodat bezoeker een typo direct kan opmerken.
       if (state.behaviors?.credionRequested && !draft.phone) {
         sendSequence(text, [
-          { kind: 'bot-text', text: 'Dank. De brochure komt zo naar je toe.' },
+          { kind: 'bot-text', text: `Dank. We sturen de brochure naar ${draft.email}.` },
           { kind: 'bot-text', text: 'We delen je gegevens met Credion zodat ze je kunnen bellen voor de financieringsscan. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).' },
           { kind: 'bot-text', text: `Top, ${draft.firstName}.` },
           { kind: 'bot-text', text: 'Tot slot je 06, zodat Credion je kan bereiken voor de scan.' },
@@ -1529,7 +1534,7 @@ function Demo() {
       }
 
       sendSequence(text, [
-        { kind: 'bot-text', text: 'Dank. Ik zorg dat de brochure zo naar je toe komt.' },
+        { kind: 'bot-text', text: `Dank. We sturen de brochure naar ${draft.email}.` },
         { kind: 'bot-text', text: privacyClaim },
         { kind: 'bot-text', text: `Top, ${draft.firstName}.` },
         { kind: 'bot-text', text: 'We houden bij dit soort projecten vaak kort contact via WhatsApp, bijvoorbeeld over beschikbaarheid of als je nog vragen hebt. Vind je dat prettig?' },
@@ -1555,7 +1560,7 @@ function Demo() {
     // Brochure is bonus zodat de bezoeker iets te lezen heeft tot Credion belt.
     if (state.behaviors?.credionRequested) {
       sendSequence(text, [
-        { kind: 'bot-text', text: 'Dank. De brochure komt zo naar je toe.' },
+        { kind: 'bot-text', text: `Dank. We sturen de brochure naar ${draft.email}.` },
         { kind: 'bot-text', text: 'We delen je gegevens met Credion zodat ze je kunnen bellen voor de financieringsscan. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).' },
         { kind: 'bot-text', text: 'Wat is je naam?' },
       ])
@@ -1563,7 +1568,7 @@ function Demo() {
       return
     }
     sendSequence(text, [
-      { kind: 'bot-text', text: 'Dank. Ik zorg dat de brochure zo naar je toe komt.' },
+      { kind: 'bot-text', text: `Dank. We sturen de brochure naar ${draft.email}.` },
       { kind: 'bot-text', text: privacyClaim },
       { kind: 'bot-text', text: 'Ook nog handig om je naam te weten, zodat we weten aan wie we het sturen.' },
       { kind: 'bot-text', text: 'Wat is je naam?' },
@@ -1684,9 +1689,14 @@ function Demo() {
         size: state.answers.size?.label,
         timeline: state.answers.timeline?.label,
       })
+      // Email expliciet in de bevestiging tonen zodat bezoeker een typo nog
+      // kan opmerken — extra mini-vertrouwenscheck. Fallback voor zeldzaam
+      // geval dat email leeg is (defensive, finishLead vereist em maar
+      // belt&breaks-compliant).
+      const emailDisplay = lead.email || 'het opgegeven e-mailadres'
       const credionConfirmation = [
         { kind: 'bot-text', text: 'Top. We delen je gegevens met Credion zodat ze je zo snel mogelijk kunnen bellen voor de financieringsscan.' },
-        { kind: 'bot-text', text: 'De brochure sturen we naar het opgegeven e-mailadres, zodat je het project alvast rustig kunt doorlezen.' },
+        { kind: 'bot-text', text: `De brochure sturen we naar ${emailDisplay}, zodat je het project alvast rustig kunt doorlezen.` },
       ]
       const sizeTail = sizeDone
         ? []
@@ -1945,6 +1955,48 @@ function Demo() {
     trackEvent('cta:phone-clicked', { location: 'header' })
   }
 
+  const onPortalClick = () => {
+    trackEvent('cta:portal-clicked', { location: 'cta-card' })
+  }
+
+  // Mini-TOC voor de wrap-up CTA-card. Geeft de bezoeker een snelle
+  // terugkeer-route naar al bekeken kaarten zonder dat 'ie door een lange
+  // chat moet scrollen. Bouwt op moreInfoSeen + de message-IDs van de
+  // inhoudelijke bubbles (kind === MORE_INFO_DEFS-id).
+  const seenTopics = state.moreInfoSeen
+    .map((id) => {
+      const def = MORE_INFO_DEFS[id]
+      if (!def) return null
+      // Vind de bijbehorende rich-bubble in de thread om scroll-target te
+      // bepalen. We matchen op kind: 'site-plan' voor sitePlan, 'gallery'
+      // voor gallery, etc. (zie buildMoreInfoMessages voor de mapping).
+      const kindOf = {
+        location: 'location', sitePlan: 'site-plan', gallery: 'gallery',
+        highlights: 'highlights', price: 'price', priceCompare: 'price-compare',
+        planning: 'planning', process: 'process', brochure: 'brochure',
+        investor: 'investor',
+      }[id]
+      const msg = state.messages.find((m) => m.kind === kindOf)
+      if (!msg) return null
+      return { id, label: def.label, messageId: msg.id }
+    })
+    .filter(Boolean)
+
+  const onTopicJump = (topicId) => {
+    const topic = seenTopics.find((t) => t.id === topicId)
+    if (!topic || typeof document === 'undefined') return
+    trackEvent('toc:jump', { topicId })
+    // Vind het DOM-element van de bubble en scroll erheen via de
+    // ChatThread-scroller. Geen window-scroll want de chat heeft z'n eigen
+    // scroll-container.
+    const el = document.querySelector(`[data-msg-id="${topic.messageId}"]`)
+    const scroller = document.querySelector('.flex-1.overflow-y-auto')
+    if (el && scroller) {
+      const elTop = el.offsetTop
+      scroller.scrollTo({ top: Math.max(0, elTop - 12), behavior: 'smooth' })
+    }
+  }
+
   const headerWaLink = whatsAppDeeplink(project, state.answers.lead?.firstName || '', 'Graag info over De Hofman')
   const headerPhoneLink = buildPhoneLink(project.phoneNumber)
 
@@ -2112,6 +2164,8 @@ function Demo() {
             onServiceCardAction={onServiceCardAction}
             onServiceCardSubmitPhone={onServiceCardSubmitPhone}
             onWaRequest={requestWhatsAppOpen}
+            onTopicJump={onTopicJump}
+            onPortalClick={onPortalClick}
             onReset={() => {
               clearPersisted()
               _id = 0

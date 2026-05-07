@@ -386,6 +386,10 @@ export const project = {
   // Outbound bel-nummer voor de header- en thankyou-CTA.
   phoneNumber: '020-2610080',
   brochureUrl: '/brochure.pdf',
+  // Externe portal: live plattegrond + actuele beschikbaarheid + alle units.
+  // Komt als tertiaire CTA in de wrap-up bubble zodat bezoekers die voldoende
+  // hebben gezien direct kunnen doorklikken naar het officiele kanaal.
+  portalUrl: 'https://kopen.repp.nl/de-hofman/plattegrond',
   // Webhook voor financiering-doorgeven aan Credion (Zapier-trigger).
   credionWebhookUrl: 'https://hooks.zapier.com/hooks/catch/2082653/ua9zc1l/',
 

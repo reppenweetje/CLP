@@ -33,7 +33,7 @@ const TRACKABLE_BUBBLE_KINDS = new Set([
 // Scrollable chat thread. Bij nieuwe messages scrollen we zo dat
 // het laatste user-bubble bovenaan komt te staan; de bot-replies daaronder
 // blijven leesbaar zonder dat de bezoeker handmatig terug moet scrollen.
-export default function ChatThread({ messages, showTyping = false, onBrochure, onReset, onUnitView, onCalcInteract, onCredionRequest, onHandoffAction, onServiceCardAction, onServiceCardSubmitPhone, onWaRequest }) {
+export default function ChatThread({ messages, showTyping = false, onBrochure, onReset, onUnitView, onCalcInteract, onCredionRequest, onHandoffAction, onServiceCardAction, onServiceCardSubmitPhone, onWaRequest, onTopicJump, onPortalClick }) {
   const containerRef = useRef(null)
   const prevLengthRef = useRef(0)
   const trackedIdsRef = useRef(new Set())
@@ -70,8 +70,8 @@ export default function ChatThread({ messages, showTyping = false, onBrochure, o
   return (
     <div ref={containerRef} className="flex-1 overflow-y-auto px-4 pt-4 pb-2 space-y-3">
       {messages.map((m, i) => (
-        <div key={m.id} data-msg-idx={i}>
-          {renderMessage(m, { onBrochure, onReset, onUnitView, onCalcInteract, onCredionRequest, onHandoffAction, onServiceCardAction, onServiceCardSubmitPhone, onWaRequest })}
+        <div key={m.id} data-msg-idx={i} data-msg-id={m.id} data-msg-kind={m.kind}>
+          {renderMessage(m, { onBrochure, onReset, onUnitView, onCalcInteract, onCredionRequest, onHandoffAction, onServiceCardAction, onServiceCardSubmitPhone, onWaRequest, onTopicJump, onPortalClick })}
         </div>
       ))}
       {showTyping && (
@@ -83,7 +83,7 @@ export default function ChatThread({ messages, showTyping = false, onBrochure, o
   )
 }
 
-function renderMessage(m, { onBrochure, onReset, onUnitView, onCalcInteract, onCredionRequest, onHandoffAction, onServiceCardAction, onServiceCardSubmitPhone, onWaRequest }) {
+function renderMessage(m, { onBrochure, onReset, onUnitView, onCalcInteract, onCredionRequest, onHandoffAction, onServiceCardAction, onServiceCardSubmitPhone, onWaRequest, onTopicJump, onPortalClick }) {
   switch (m.kind) {
     case 'bot-text':
       return <BotMessage>{m.text}</BotMessage>
@@ -180,10 +180,14 @@ function renderMessage(m, { onBrochure, onReset, onUnitView, onCalcInteract, onC
           waLink={m.payload.waLink}
           phoneLink={m.payload.phoneLink}
           phoneDisplay={m.payload.phoneDisplay}
+          portalUrl={m.payload.portalUrl}
           intro={m.payload.intro}
           summary={m.payload.summary}
+          seenTopics={m.payload.seenTopics}
+          onTopicJump={onTopicJump}
           onWhatsapp={(e) => onWaRequest && onWaRequest(e, m.payload.waSummary || m.payload.summary || '', 'cta-card')}
           onBrochure={m.payload.hideBrochure ? null : onBrochure}
+          onPortalClick={onPortalClick}
           onReset={m.payload.hideReset ? null : onReset}
         />
       )
