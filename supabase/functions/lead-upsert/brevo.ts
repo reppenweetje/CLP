@@ -57,8 +57,19 @@ function buildAttributes(lead: BrevoLeadInput): Record<string, unknown> {
     attrs[key] = value
   }
 
+  // Telefoonnummer naar twee plekken schrijven:
+  //   SMS      = Brevo standaard attribuut, uniek per contact (handig voor
+  //              SMS campaigns maar weigert insert als het nummer al
+  //              ergens in Brevo bekend is, zie retry-logica onderaan)
+  //   WHATSAPP = custom non-unique attribuut, landt ALTIJD. Sales kan hier
+  //              op terugvallen om het 06 te vinden ook als SMS conflict
+  //              gaf. Nederlandse markt heeft veel 06-overlap tussen
+  //              WhatsApp-bot leads en CLP-bezoekers, dus dit is geen edge
+  //              case maar het normale geval
+  const phoneE164 = normalizePhoneE164(lead.phone)
   set('FIRSTNAME',       lead.first_name)
-  set('SMS',             normalizePhoneE164(lead.phone))
+  set('SMS',             phoneE164)
+  set('WHATSAPP',        phoneE164)
   set('PERSONA',         lead.persona)
   set('INTENT',          lead.intent_id)
   set('SIZE',            lead.size_id)
