@@ -1,38 +1,99 @@
 # Environment-variabelen
 
-Niet versioned. Zet ze in Vercel Dashboard onder **Project Settings → Environment Variables**.
+Niet versioned. Zet ze in Vercel Dashboard onder **Project Settings, Environment Variables**.
+
+Per integratie de volledige set die nodig is voor activatie. Zonder de bijbehorende env-vars draait de feature niet maar blokkeert ook niets, zodat je elke integratie afzonderlijk kunt aanzetten.
+
+---
 
 ## Slack hot-lead notificaties
 
-| Variabele | Waarde | Waarom |
+| Variabele | Waarde | Scope |
 |---|---|---|
-| `SLACK_WEBHOOK_URL` | `https://hooks.slack.com/services/.../...` | Server-side webhook voor de Hothothot Slack-app. Post in `#hot-clp-leads` zodra een bezoeker een hot-lead-score raakt en minimaal een e-mailadres heeft achtergelaten. |
+| `SLACK_WEBHOOK_URL` | `https://hooks.slack.com/services/.../...` | Production + Preview |
 
-### Hothothot Slack-app
+Server-side webhook voor de Slack-app. Post in een privé-channel zodra een bezoeker expliciet om callback vraagt en een 06 invult. Trigger sinds mei 2026: alleen `warmHandoffOutcome === 'callback'` plus `lead.phone` aanwezig (dus geen score-gebaseerde pings meer).
 
-- App-naam: `Hothothot`
-- Workspace: `REPP`
-- Channel: `#hot-clp-leads` (privé)
-- Beheer: https://api.slack.com/apps/A0B23VBE72R
-- Webhook-URL onder **Incoming Webhooks** in de app-config
+**Setup:**
+1. Slack-app aanmaken in jouw workspace via api.slack.com/apps
+2. Activeer **Incoming Webhooks** in de app-config
+3. Voeg een webhook toe voor het kanaal waar pings moeten landen
+4. Kopieer de webhook URL en zet 'em in Vercel
+5. Redeploy productie zodat de env-var wordt meegenomen
 
-### Vercel scope
+**Endpoint**: `/api/slack-hot.js` (Vercel serverless), POST application/json. Returns 204 bij succes, 503 bij ontbrekende env, 502 bij Slack-API failure.
 
-Zet `SLACK_WEBHOOK_URL` aan voor zowel **Production** als **Preview** als je ook PR-deploys realtime alerts wil zien. Voor lokale `npm run dev` wordt geen Slack-call gedaan — de fetch faalt op 404 zonder dat de chat-flow blokkeert.
+**Dedupe**: localStorage `clp-slack-notified-v1` (max 200 sessionIds). Page-reloads herfire't niet.
 
-### Endpoints
+---
 
-- `/api/slack-hot` (Vercel serverless function in `api/slack-hot.js`)
-- Methode: `POST application/json`
-- Body schema: zie comments in `api/slack-hot.js`
-- Returns: `204` bij succes, `503` bij ontbrekende env, `502` bij Slack-API failure
+## Supabase backend
 
-### Trigger-logica
+| Variabele | Waarde | Scope |
+|---|---|---|
+| `VITE_SUPABASE_URL` | `https://xxxxx.supabase.co` | Production + Preview |
+| `VITE_SUPABASE_ANON_KEY` | `eyJ...` (anon key, niet service-role) | Production + Preview |
+| `VITE_SUPABASE_ENABLED` | `true` of `false` (master-switch) | Production + Preview |
+| `VITE_LEAD_UPSERT_PATH` | `/functions/v1/lead-upsert` (default, optioneel) | Production + Preview |
+| `VITE_CLP_SOURCE` | `clp_<projectnaam>` (per project uniek) | Production + Preview |
 
-Frontend `src/lib/slack.js::notifyHotLead()` wordt vanuit `App.jsx` aangeroepen wanneer:
+Frontend wiring zit in `src/lib/api.js`. Wordt aangeroepen op alle flow-complete momenten in `App.jsx`. Bij `VITE_SUPABASE_ENABLED=false` doet de client niets en retourneert `{ ok: true, queued: false, skipped: true }`.
 
-1. `buying.temperature === 'hot'` (uit `lib/buyingSignals.js`, score ≥ 50)
-2. `state.answers.lead.email` is aanwezig (anders kan sales niets met de melding)
-3. Per `sessionId` maximaal 1 keer per sessie (in-memory dedupe)
+**Setup:**
+1. Backend-dev (Tharwat-traject voor REPP) deployt migrations + Edge Function `lead-upsert` plus configureert `ALLOWED_ORIGINS` en Brevo secrets aan de Supabase-kant
+2. Wij krijgen de project-URL en anon-key, zetten ze in Vercel
+3. `VITE_SUPABASE_ENABLED` blijft op `false` tot de backend live is
+4. Bij activatie: zet 'em op `true` en redeploy productie (Vite injecteert env-vars tijdens build, dus redeploy is verplicht)
 
-Bij elke call worden naam, e-mail, 06, persona, score, signalen en context (intent/m²/timeline) meegestuurd.
+**Localstorage queue**: `clp-lead-queue-v1` (max 50 items, max 5 retries per item). Geflusht bij app-mount en bij `online`-event. Zichtbaar in admin-panel onder de section "Supabase".
+
+Zie [supabase/README.md](supabase/README.md) voor de volledige briefing.
+
+---
+
+## Brevo email-sync
+
+Brevo-integratie loopt via de Supabase Edge Function (server-side). Frontend stuurt geen Brevo-credentials. Backend-dev configureert deze secrets aan de Supabase-kant via `supabase secrets set`:
+
+| Secret (Supabase, niet Vercel) | Waarde |
+|---|---|
+| `BREVO_API_KEY` | v3 API-key uit Brevo dashboard |
+| `BREVO_LIST_ID` | Numerieke ID van de target-lijst |
+
+Voor onze frontend dus niet relevant. Werkt automatisch zodra Supabase actief is.
+
+---
+
+## Plausible analytics
+
+Geen env-vars nodig. Plausible-script wordt geladen in `index.html` met domain-attribuut. Aanpassen in `index.html` na elke domein-wijziging:
+
+```html
+<script defer data-domain="jouw-domein.nl" src="..."></script>
+```
+
+Custom events worden in de code aangeroepen via `trackEvent()` in `src/lib/analytics.js`. Goals kunnen geinitialiseerd worden via `npm run setup:plausible` (vereist Plausible API key in een `.env.local`):
+
+```
+PLAUSIBLE_API_KEY=plausible_pat_xxx   # alleen voor lokale setup-script
+PLAUSIBLE_SITE_ID=jouw-domein.nl      # idem
+```
+
+`.env.local` is gitignored, gebruikt door `scripts/setup-plausible-goals.mjs` om custom-events als goals te registreren. Eenmalige actie per project.
+
+---
+
+## Lokaal ontwikkelen
+
+Voor `npm run dev` heb je geen van deze env-vars nodig. De CLP draait dan op puur localStorage zonder Slack of Supabase calls. Alle integraties faalsoft naar `console.info` of stille skip.
+
+Voor lokale Supabase-tests: maak een `.env.local` (gitignored):
+
+```
+VITE_SUPABASE_URL=https://xxxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJ...
+VITE_SUPABASE_ENABLED=true
+VITE_CLP_SOURCE=clp_<projectnaam>_dev
+```
+
+Vergeet niet `dev` als suffix toe te voegen aan `VITE_CLP_SOURCE` zodat lokale testdata niet vermengt met productie-rijen.

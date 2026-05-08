@@ -6,11 +6,27 @@ Mobile-first conversational landing page voor REPP-projecten. Eerste pilot: **De
 
 ## Template-modus
 
-Deze repo is óók een **GitHub-template**: gebruik de _Use this template_ knop op GitHub om een nieuwe CLP voor een ander project op te starten. Het hele copy-traject (microIntro, recommendCopy, persoonlijke handoff, WhatsApp-zinnen) is data-gestuurd via `src/data/project.js` — geen forks van componenten nodig.
+Deze repo is óók een **GitHub-template**: gebruik de _Use this template_ knop op GitHub om een nieuwe CLP op te starten voor een ander project. Het hele copy-traject (microIntro, recommendCopy, persoonlijke handoff, WhatsApp-zinnen) is data-gestuurd via `src/data/project.js`, geen forks van componenten nodig.
 
-Twee setup-paden:
-- **Met Claude Code**: open de gekloonde repo, zeg `nieuw project setup`. De wizard in [CLAUDE.md](CLAUDE.md) loopt 9 stappen door en vult alles in.
-- **Handmatig**: zie [SETUP.md](SETUP.md) voor stap-voor-stap instructies.
+### Snelste route: met Claude Code
+
+```bash
+# 1. Maak een nieuwe repo van de template
+gh repo create reppenweetje/clp-jouwproject --template reppenweetje/CLP --private --clone
+cd clp-jouwproject
+
+# 2. Open in Claude Code
+claude
+
+# 3. In de Claude-sessie:
+> setup nieuwe CLP voor [projectnaam]
+```
+
+Claude doorloopt dan de 9 fases uit [WIZARD.md](WIZARD.md): archetype-keuze, integratie-opt-in (Slack, Supabase, etc.), content-fill, deploy, smoke-test en hand-off. Tussendoor controleren met `npm run wizard:status`.
+
+### Handmatige route
+
+Zie [SETUP.md](SETUP.md) voor stap-voor-stap instructies zonder Claude. Komt op hetzelfde resultaat uit, kost meer tijd.
 
 ## Voor wie
 
@@ -103,14 +119,18 @@ thankyou (cta-card met WhatsApp deeplink + brochure)
 
 ## Documentatie
 
-- [SETUP.md](SETUP.md) — nieuw project opzetten vanuit deze template
-- [CLAUDE.md](CLAUDE.md) — wizard voor template-modus + project-conventies + valkuilen voor Claude Code sessies
-- [src/data/project.js](src/data/project.js) — alle De Hofman content op één plek (de enige bron-van-waarheid die per project wijzigt)
-- [src/data/flow.js](src/data/flow.js) — vragen, chip-opties, scores
-- [src/lib/scoring.js](src/lib/scoring.js) — persona, stage, temperatuur, leadscore-logica
-- [src/lib/recommendation.js](src/lib/recommendation.js) — unit-advies, copy-keuzes, salesactie
-- [src/lib/handoffCopy.js](src/lib/handoffCopy.js) — persona-aware copy-resolver voor service-card en warm-handoff
-- [scripts/check-content.mjs](scripts/check-content.mjs) — validator die `project.js` en assets controleert; loopt automatisch in `prebuild`
+- [WIZARD.md](WIZARD.md), volledig onboarding-handboek voor nieuwe CLP-projecten (9 fases, opt-in integraties, archetypes-bijlage, component-inventaris)
+- [SETUP.md](SETUP.md), korte handmatige route voor wie Claude Code niet wil gebruiken
+- [CLAUDE.md](CLAUDE.md), project-conventies + valkuilen voor Claude Code sessies in deze repo
+- [HANDOFF.md](HANDOFF.md), template-document voor sales-team overdracht na go-live
+- [ENV.md](ENV.md), environment-variabelen reference (Slack, Supabase, Plausible)
+- [src/data/project.js](src/data/project.js), alle content op één plek (enige bron-van-waarheid die per project wijzigt)
+- [src/data/flow.js](src/data/flow.js), vragen, chip-opties, scores
+- [src/lib/scoring.js](src/lib/scoring.js), persona, stage, temperatuur, leadscore-logica
+- [src/lib/recommendation.js](src/lib/recommendation.js), unit-advies, copy-keuzes, salesactie
+- [src/lib/handoffCopy.js](src/lib/handoffCopy.js), persona-aware copy-resolver voor service-card en warm-handoff
+- [scripts/check-content.mjs](scripts/check-content.mjs), validator die `project.js` en assets controleert. Loopt automatisch in `prebuild`
+- [scripts/check-wizard.mjs](scripts/check-wizard.mjs), wizard-voortgangs-checker. Run met `npm run wizard:status`
 
 ## Roadmap
 

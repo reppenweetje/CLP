@@ -1,15 +1,26 @@
 # Nieuw CLP-project opzetten
 
-Deze repo is een GitHub-template. Eén keer klonen en je hebt een werkende CLP — daarna vervang je de De Hofman content door je eigen project.
+Deze repo is een GitHub-template. Eén keer klonen en je hebt een werkende CLP. Daarna vervang je de De Hofman content door je eigen project.
 
-## Snelle versie (met Claude Code)
+## Snelle versie (met Claude Code, aanbevolen)
 
-Aanbevolen: open de gekloonde repo in Claude Code en zeg `nieuw project setup`. De wizard in `CLAUDE.md` start met één basisvraag — *"is dit een bedrijfsunit-koop project zoals De Hofman, of iets anders?"* — en kiest op basis daarvan het juiste pad:
+Open de gekloonde repo in Claude Code en zeg `setup nieuwe CLP voor [projectnaam]`. Het volledige onboarding-handboek staat in [WIZARD.md](WIZARD.md). Claude doorloopt 9 fases:
 
-- **Pad A — content-fill** voor projecten die qua structuur op De Hofman lijken: 9 stappen, gegidste vragen, alleen content invullen
-- **Pad B — co-design** voor afwijkende project-types (woningen / garageboxen / kavels / huur / iets anders): Claude Code ontwerpt samen met jou de aangepaste vragen, aanbeveling-logica en koop-signalen voor jouw archetype, en pas dáárna ga je over naar content-fill
+1. Detect + scope (welk archetype, welke integraties wil je)
+2. Project-basis (naam, sales team, contact)
+3. Inhoud + assets (units, persona-copy, marketing-content)
+4. Flow + signalen (alleen voor afwijkende archetypes zoals huur, propositie, kavels)
+5. Stijl + tone
+6. Build + lokaal valideren
+7. Hosting + analytics (Vercel, Plausible, domein)
+8. Optionele integraties (Slack, Supabase + Brevo, admin-panel, A/B testing)
+9. Smoke-test + go-live + hand-off
 
-Beide paden eindigen op een werkende deploybare CLP. Pad B kost meer tijd (1.5-2u in plaats van 30-45 min) maar het resultaat is een volledig op jouw project afgestemde flow.
+Tussendoor altijd checken met `npm run wizard:status`.
+
+Twee paden binnen de wizard:
+- **Pad A** voor projecten die qua structuur op De Hofman lijken (vastgoed-koop, units met m²): direct content-fill, ongeveer 30-45 minuten
+- **Pad B** voor afwijkende archetypes: eerst flow + signalen co-designen, dan content-fill. Ongeveer 1.5 a 2 uur
 
 ## Handmatige versie
 
