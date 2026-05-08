@@ -6,11 +6,37 @@
 // Output is een gewone JS-object met {tag, headline, body, value, primaryCta}
 // dat de bubbels direct renderen. Geen logica meer in de bubbels zelf.
 
-export function buildHandoffCopy(persona, project, { signals = [], name = '', hasPhone = false, phoneDeclined = false } = {}) {
+export function buildHandoffCopy(persona, project, { signals = [], name = '', hasPhone = false, phoneDeclined = false, directContact = false } = {}) {
   const copy = project?.personaCopy?.[persona] || project?.personaCopy?.onbekend
   const handoff = copy?.handoff || {}
 
+  // Bewust generiek: "de makelaar" in plaats van een naam. De repName komt
+  // pas weer in beeld in de outcome-strip ("Ik bel je vandaag terug", eerste
+  // persoon want het is dezelfde Jesse die ook de chat doet). Dit voorkomt
+  // dat een naam (Jann/Jesse/...) uit het niets in de chip-tekst opduikt
+  // voor wie de personalia nog niet plaatst.
+  const primaryCta = phoneDeclined ? 'Plan een belmoment' : 'Laat de makelaar mij bellen'
   const greet = name ? `${name}, ` : ''
+
+  // Direct-contact pad: bezoeker vroeg expliciet om contact via de "Even
+  // contact opnemen" macro-chip. We slaan de observatie-gebaseerde copy
+  // over (het is geen soft-overgang vanaf gedrag, maar een directe
+  // aanvraag) en geven een korte neutrale variant terug. Geen value-
+  // bullets want de bezoeker vraagt om actie, niet om een verkoop-pitch
+  // over wat een gesprek allemaal kan opleveren.
+  if (directContact) {
+    const headlineRaw = name
+      ? `${name}, hoe wil je het liefst contact?`
+      : 'Hoe wil je het liefst contact?'
+    return {
+      tag: 'Contact',
+      headline: headlineRaw,
+      body: '',
+      value: [],
+      primaryCta,
+    }
+  }
+
   const signalIds = new Set(signals.map((s) => s.id))
   const hasCalc = signalIds.has('rentability_calc') || signalIds.has('mortgage_calc')
   const hasMultiUnit = signalIds.has('unit_detail_multi')
@@ -28,13 +54,6 @@ export function buildHandoffCopy(persona, project, { signals = [], name = '', ha
     : observation
     ? `${greet}${observation}`
     : greet.trim() || 'Even kort schakelen'
-
-  // Bewust generiek: "de makelaar" in plaats van een naam. De repName komt
-  // pas weer in beeld in de outcome-strip ("Ik bel je vandaag terug" — eerste
-  // persoon want het is dezelfde Jesse die ook de chat doet). Dit voorkomt
-  // dat een naam (Jann/Jesse/...) uit het niets in de chip-tekst opduikt
-  // voor wie de personalia nog niet plaatst.
-  const primaryCta = phoneDeclined ? 'Plan een belmoment' : 'Laat de makelaar mij bellen'
 
   return {
     // Tag is bewust een neutrale "wat is dit"-marker, niet een marketing-claim.

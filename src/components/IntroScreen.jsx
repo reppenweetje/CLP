@@ -30,7 +30,7 @@ export default function IntroScreen({ onStart }) {
       <div className="mx-auto w-full max-w-md lg:max-w-2xl px-4 lg:px-6 pt-6 lg:pt-10 flex-1 flex flex-col">
         <div className="space-y-4 lg:space-y-6 fade-up">
           <h1 className="text-[22px] lg:text-[28px] leading-tight font-semibold text-ink">
-            Welkom. Bekijk hier de brochure en de prijzen die het beste bij jouw wensen passen.
+            Welkom. Via een korte chat krijg je direct de brochure en de prijzen te zien die het beste bij jouw wensen passen.
           </h1>
 
           <div className="grid grid-cols-3 gap-2 lg:gap-3 pt-1">
@@ -44,7 +44,7 @@ export default function IntroScreen({ onStart }) {
           <button
             onClick={() => onStart(ctaVariant)}
             data-cta-variant={ctaVariant}
-            className="w-full lg:max-w-md lg:mx-auto block rounded-full bg-neon text-midnite font-semibold py-4 lg:py-5 text-[16px] lg:text-[17px] hover:brightness-95 active:scale-[0.99] transition"
+            className="w-full lg:max-w-md lg:mx-auto block rounded-full bg-neon text-midnite font-semibold py-4 lg:py-5 text-[16px] lg:text-[17px] tracking-wider hover:brightness-95 active:scale-[0.99] transition"
           >
             {CTA_VARIANTS[ctaVariant]}
           </button>

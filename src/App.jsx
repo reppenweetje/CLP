@@ -134,6 +134,16 @@ function reducer(state, action) {
         currentQuestion: 'intent',
       }
     }
+    case 'RETURN_TO_INTRO':
+      // Terugnavigatie via het header-logo. Bewust géén reset van messages,
+      // answers of behaviors zodat de bezoeker via START CHAT direct verder
+      // kan met de bestaande sessie. Alleen de view-flag wisselt.
+      return { ...state, view: 'intro' }
+    case 'RESUME_CHAT':
+      // Tegenhanger van RETURN_TO_INTRO: vanaf intro terug naar chat zonder
+      // de welkomst-bubbles opnieuw op te bouwen. START_CHAT zou messages
+      // wissen, dat willen we hier niet.
+      return { ...state, view: 'chat' }
     case 'APPEND':
       return {
         ...state,
@@ -789,11 +799,30 @@ function Demo() {
   }, [])
 
   const start = (variant) => {
+    // Hervat-pad: bezoeker kwam via het header-logo terug naar intro met
+    // chat-historie nog intact. We schakelen alleen view om en bewaren de
+    // bestaande sessie + alle antwoorden zodat de chat verder loopt waar
+    // 'ie was. Geen nieuwe sessionId, geen tweede session-start tracking.
+    if (state.messages.length > 0) {
+      trackEvent('intro:resume-clicked', { variant, copyVariant })
+      dispatch({ type: 'RESUME_CHAT' })
+      return
+    }
+    // Cold start: eerste keer dat deze browser de chat opent.
     startNewSession()
     trackEvent('session:start', { variant, copyVariant })
     trackEvent('intro:cta-clicked', { variant, copyVariant })
     logSessionStartConsent()
     dispatch({ type: 'START_CHAT', bot: project.salesTeam?.bot, copyVariant })
+  }
+
+  // Klik op REPP-logo in de header tijdens chat: terugnavigatie naar de
+  // IntroScreen zonder progress-verlies. start() detecteert daarna de
+  // bestaande messages en hervat de chat ipv 'em opnieuw te beginnen.
+  const onLogoClick = () => {
+    if (state.view !== 'chat') return
+    trackEvent('header:logo-clicked', { messagesCount: state.messages.length })
+    dispatch({ type: 'RETURN_TO_INTRO' })
   }
 
   // Helper: maakt een answer-value met _msgCountBefore zodat ROLLBACK
@@ -1092,14 +1121,12 @@ function Demo() {
       //   b) "Eerst rondkijken" → opent de moreInfo-fase met persona-relevante
       //      chip-cluster (4 stuks ipv 11)
       if (opt.id === '__contact_now') {
-        // Hergebruik dezelfde logica als de __callback chip in moreInfo,
-        // anders krijgen we copy-duplicatie. We dispatchen ANSWER + setten
-        // currentQuestion = 'moreInfo' zodat de bestaande handoff-bubble logic
-        // direct erna kan inhaken.
+        // Bezoeker vraagt expliciet om contact direct na de aanbeveling. We
+        // tonen meteen de contact-bubble zonder bridge-tekst (die zou hier
+        // alleen nog observatie-language toevoegen) en zonder de value-
+        // bullets in de bubble zelf. Bezoeker vroeg om actie, niet om een
+        // verkoop-pitch over wat een gesprek allemaal kan opleveren.
         dispatch({ type: 'ANSWER', key: 'postRecommendation', value: answerValue(opt), next: 'moreInfo' })
-        // Direct daarna de __callback-flow triggeren door 'm onderhands aan te
-        // roepen — we doen dat door de chip-handler opnieuw aan te roepen met
-        // een synthetische __callback opt.
         const personaForCard =
           buying.inferredPersona !== 'onbekend' ? buying.inferredPersona : persona
         const lead = state.answers.lead || {}
@@ -1111,14 +1138,10 @@ function Demo() {
           persona: personaForCard,
           temperature: buying.temperature,
           score: buying.score,
-        })
-        const bridge = buildHandoffBridge(personaForCard, project, {
-          signals: buying.signals,
-          name: lead.firstName || '',
+          directContact: true,
         })
         dispatch({ type: 'WARM_HANDOFF_SHOWN' })
         sendSequence(userTextFromOpt(opt), [
-          { kind: 'bot-text', text: bridge },
           {
             kind: 'warm-handoff',
             payload: {
@@ -1127,6 +1150,7 @@ function Demo() {
                 name: lead.firstName || '',
                 hasPhone: !!lead.phone,
                 phoneDeclined,
+                directContact: true,
               }),
               salesTeam: project.salesTeam,
               hasPhone: !!lead.phone,
@@ -2223,6 +2247,7 @@ function Demo() {
       onPhoneClick={onPhoneClick}
       showAnswersButton={showAnswersButton}
       onAnswersOpen={() => setAnswersOpen(true)}
+      onLogoClick={state.view === 'chat' ? onLogoClick : undefined}
     >
       {state.view === 'intro' && <IntroScreen onStart={start} />}
 

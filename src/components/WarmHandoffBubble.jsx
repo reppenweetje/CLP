@@ -50,11 +50,14 @@ export default function WarmHandoffBubble({
             </div>
           </div>
           <div className="px-4 py-3.5 space-y-3">
-            <p className="text-[14.5px] text-ink leading-relaxed">{safeCopy.body}</p>
+            {safeCopy.body && (
+              <p className="text-[14.5px] text-ink leading-relaxed">{safeCopy.body}</p>
+            )}
 
             {/* Commitment-strip: vertel vooraf wat de bezoeker krijgt als hij
                 klikt. Zo heeft de "Bel me" CTA al een verwachting voor de klik
-                ipv pas na de klik in een outcome-strip. */}
+                ipv pas na de klik in een outcome-strip. Bij directContact-pad
+                is de body leeg en valt deze strip mooi vlak onder de header. */}
             <div className="rounded-xl bg-paper border border-mist-light px-3 py-2.5">
               <div className="text-[11px] tracking-[0.16em] text-ink-mute uppercase mb-1">
                 Wat je krijgt
