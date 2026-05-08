@@ -1,16 +1,19 @@
-# Supabase backend — REPP CLP
+# Supabase backend, REPP CLP
 
-Briefing for **Tharwat**. Status as of 2026-05-07: prepared, **frontend wired behind feature-flag**, awaiting Phase 2 stabilization + service-role key delivery.
+Briefing for **Tharwat** plus rollout-historie. Status as of 2026-05-08: **Phase 2 live**. Pipeline produceert lead-rijen vanuit `dehofman.clp.repp.nl` naar Supabase plus Brevo via de `lead-upsert` Edge Function. RLS bewust nog niet geactiveerd, dat is Phase 3.
 
-## Status snapshot (2026-05-07)
+## Status snapshot (2026-05-08)
 
-- ✅ Project URL ontvangen: `https://vgdwgjthvltucabqfysd.supabase.co`
-- ✅ Anon key ontvangen (in Vercel env, niet in repo)
+- ✅ Project URL: `https://vgdwgjthvltucabqfysd.supabase.co`
+- ✅ Anon key + URL in Vercel env (Production en Preview)
 - ✅ Frontend client (`src/lib/api.js`) wired in `App.jsx` op alle flow:complete-momenten
-- ✅ Master-switch `VITE_SUPABASE_ENABLED=false` → calls zijn no-op tot dit op `true` gezet wordt
-- ⏳ Pending: migrations apply + RLS rollout + Edge Function deploy (Tharwat)
-- ⏳ Pending: service-role key (Tharwat houdt achter tot final deployment step)
-- ⏳ Pending: Phase 2 stabilization-bevestiging
+- ✅ Migrations applied (`extend_leads` + `create_consent_log`) door Tharwat
+- ✅ Edge Function `lead-upsert` deployed plus geconfigureerd met `ALLOWED_ORIGINS` + Brevo secrets
+- ✅ Pre/post pand-counts gelijk gebleven, smoke-test groen, smoke-data opgeruimd
+- ✅ `VITE_SUPABASE_ENABLED=true` op 2026-05-08 geflipt plus production redeploy gedraaid
+- ✅ End-to-end verificatie: eerste echte chat-sessie geland in `public.leads` plus `public.consent_log`
+- ⏸️ RLS bewust niet geactiveerd om CRM/dashboard-flow niet te raken (Phase 3)
+- ⏸️ Slack-relay via Edge Function uit, eigen `/api/slack-hot.js` blijft `#hot-clp-leads` voeden
 
 ## What this is
 
@@ -79,18 +82,18 @@ supabase/
 - Service-role key rotation strategie (gedeeld met n8n; aparte runbook nodig)
 - consent_log retentie-cron (60 mnd cleanup; eerste cleanup pas in 2031)
 
-## Phase 2 wachtmoment
+## Phase 2 rollout (afgerond 2026-05-08)
 
-Tharwat's volgorde-aanbeveling (brief 2026-05-07):
+Tharwat's volgorde-aanbeveling (brief 2026-05-07), achteraf gemarkeerd:
 
-1. ✅ Frontend wired achter feature-flag (klaar)
-2. ⏳ Phase 2 stabilisatie afronden (Tharwat's huidige sprint)
-3. ⏳ Production operational flow valideren
-4. ⏳ Migrations + RLS apply (Tharwat draait, wij valideren)
-5. ⏳ Edge Function deploy + service-role key activatie
-6. ⏳ Frontend feature-flag flip → live
+1. ✅ Frontend wired achter feature-flag
+2. ✅ Phase 2 stabilisatie afgerond
+3. ✅ Production operational flow gevalideerd
+4. ✅ Migrations applied (RLS bewust uitgesteld naar Phase 3)
+5. ✅ Edge Function deployed plus secrets geconfigureerd
+6. ✅ Frontend feature-flag flip live (Vercel redeploy 2026-05-08)
 
-Onze frontend-deploy van vandaag bevat de wiring achter `VITE_SUPABASE_ENABLED=false`. Bij stap 6 zetten we 'em op `true` in Vercel — geen rebuild nodig.
+Eerste echte lead-rij is geland en bevestigd in `public.leads`. Lokale localStorage-queue wordt automatisch geflusht bij elke volgende app-mount.
 
 ## Migration runbook (in order)
 
@@ -248,16 +251,32 @@ DELETE FROM public.leads        WHERE source = 'clp_smoketest';
 
 ## Frontend wiring
 
-The frontend client is ready in `src/lib/api.js` (see the wiring instructions at the top of that file). It is **not yet imported** anywhere — no breaking change for the current demo. We will do the wiring in `App.jsx` once the Edge Function is live.
+De frontend client zit in `src/lib/api.js` en wordt aangeroepen in `App.jsx` op alle flow:complete-momenten (zie `pushSnapshot()` plus de email-gate in de useEffect-dependencies). Email-gate betekent: er wordt pas een rij gepushed zodra `lead.email` bestaat, zodat we geen orphan-rijen creëren.
 
-Vercel env vars to add on the CLP project (Production + Preview):
+`VITE_SUPABASE_ENABLED` (master-switch) staat sinds 2026-05-08 op `true` op Production en Preview. Bij `false` doet `pushLead()` niets en retourneert `{ ok: true, queued: false, skipped: true }`.
+
+Vercel env vars op de CLP project (Production + Preview):
 
 ```
-VITE_SUPABASE_URL          = https://xxx.supabase.co
+VITE_SUPABASE_URL          = https://vgdwgjthvltucabqfysd.supabase.co
 VITE_SUPABASE_ANON_KEY     = eyJ...
 VITE_LEAD_UPSERT_PATH      = /functions/v1/lead-upsert    # default
 VITE_CLP_SOURCE            = clp_dehofman                  # per project
+VITE_SUPABASE_ENABLED      = true                          # geflipt op 2026-05-08
 ```
+
+### localStorage queue + admin diagnostiek
+
+Bij netwerkfouten of 5xx-responses van de Edge Function valt `pushLead()` terug op een localStorage-queue (`clp-lead-queue-v1`, max 50 items, max 5 retries per item). Deze wordt automatisch geflusht bij app-mount en bij `online`-event.
+
+Voor monitoring is in het admin-paneel (Settings-sectie) een `SupabaseQueueTile` widget zichtbaar. Die toont:
+- Of de feature-flag actief is (`isApiConfigured()`)
+- Aantal items in de queue (`pendingCount()`)
+- Voor de oudste 3 items: leeftijd, retry-count, persona/email-fragment
+- Knop om handmatig te flushen
+- Knop om de queue te wissen (debug)
+
+Zie `src/components/admin/SupabaseQueueTile.jsx`.
 
 ## Questions / contact
 
@@ -267,5 +286,6 @@ Jann — direct on WhatsApp.
 
 | Date        | What                                           |
 |-------------|------------------------------------------------|
-| 2026-05-06  | Initial — migrations + Edge Function prepared. |
+| 2026-05-06  | Initial, migrations + Edge Function prepared. |
 | 2026-05-07  | Tharwat brief verwerkt: baseline counts bumped (393), Phase 2 sectie + scope-sectie + openstaande vragen toegevoegd. Frontend (App.jsx + api.js + consent.js) gewired achter `VITE_SUPABASE_ENABLED=false`. Anon key + URL ontvangen, in Vercel env gezet. Service-role key + Edge Function deployment pending Phase 2-validation. |
+| 2026-05-08  | **Phase 2 live**. Tharwat heeft migrations + Edge Function deployed plus Brevo secrets + ALLOWED_ORIGINS geconfigureerd. Pre/post counts gelijk gebleven, smoke-test groen. Wij hebben `VITE_SUPABASE_ENABLED=true` in Vercel geflipt en productie geredeployed. Eerste echte lead-rij geland en bevestigd in `public.leads`. Lokaal nieuwe admin-widget `SupabaseQueueTile` gemaakt die `pendingCount()` + `inspectQueue()` zichtbaar maakt voor diagnostiek (settings-sectie). RLS blijft uit voor CRM/dashboard-compatibiliteit, Phase 3 follow-up. |

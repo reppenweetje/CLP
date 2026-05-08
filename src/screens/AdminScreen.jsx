@@ -33,6 +33,7 @@ import CohortHeatmap from '../components/admin/CohortHeatmap.jsx'
 import AIWeeklySummary from '../components/admin/AIWeeklySummary.jsx'
 import AdminSidebar, { useActiveSection } from '../components/admin/AdminSidebar.jsx'
 import AdminSettings from '../components/admin/AdminSettings.jsx'
+import SupabaseQueueTile from '../components/admin/SupabaseQueueTile.jsx'
 
 // Sectie-definities. id matcht het DOM-element-id van de wrapper, label is
 // wat de sidebar laat zien. Labels zijn kort gehouden (≤14 chars) zodat
@@ -48,6 +49,7 @@ const SECTIONS = [
   { id: 'handoff',  label: 'Warm handoff' },
   { id: 'afhaak',   label: 'Afhaak' },
   { id: 'sessies',  label: 'Sessies' },
+  { id: 'supabase', label: 'Supabase' },
   { id: 'settings', label: 'Settings' },
 ]
 
@@ -256,6 +258,9 @@ function AdminScreenInner() {
           <section id="sessies" className="scroll-mt-24">
             <SessionsList sessions={sessions} onOpen={openReplay} />
           </section>
+
+          {/* Supabase pipeline diagnose */}
+          <SupabaseQueueTile />
 
           {/* Settings */}
           <AdminSettings />
