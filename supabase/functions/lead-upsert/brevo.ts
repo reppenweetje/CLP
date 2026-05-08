@@ -89,10 +89,22 @@ function buildAttributes(lead: BrevoLeadInput): Record<string, unknown> {
   return attrs
 }
 
+async function postBrevoContact(body: Record<string, unknown>, apiKey: string): Promise<Response> {
+  return fetch('https://api.brevo.com/v3/contacts', {
+    method: 'POST',
+    headers: {
+      'api-key': apiKey,
+      'content-type': 'application/json',
+      accept: 'application/json',
+    },
+    body: JSON.stringify(body),
+  })
+}
+
 export async function upsertBrevoContact(lead: BrevoLeadInput): Promise<void> {
   const apiKey = Deno.env.get('BREVO_API_KEY')
   if (!apiKey) {
-    // Brevo niet geconfigureerd — stille skip. Zelfde patroon als Slack:
+    // Brevo niet geconfigureerd, stille skip. Zelfde patroon als Slack:
     // dev/preview-omgevingen hebben geen Brevo-key nodig.
     return
   }
@@ -104,9 +116,10 @@ export async function upsertBrevoContact(lead: BrevoLeadInput): Promise<void> {
   const listIdRaw = Deno.env.get('BREVO_LIST_ID')
   const listId = listIdRaw ? Number.parseInt(listIdRaw, 10) : NaN
 
+  const attrs = buildAttributes(lead)
   const body: Record<string, unknown> = {
     email: lead.email,
-    attributes: buildAttributes(lead),
+    attributes: attrs,
     updateEnabled: true,
   }
   if (Number.isFinite(listId) && listId > 0) {
@@ -114,15 +127,35 @@ export async function upsertBrevoContact(lead: BrevoLeadInput): Promise<void> {
   }
 
   try {
-    const res = await fetch('https://api.brevo.com/v3/contacts', {
-      method: 'POST',
-      headers: {
-        'api-key': apiKey,
-        'content-type': 'application/json',
-        accept: 'application/json',
-      },
-      body: JSON.stringify(body),
-    })
+    let res = await postBrevoContact(body, apiKey)
+
+    // Retry-zonder-SMS bij Brevo's duplicate_parameter conflict. Brevo
+    // enforced uniqueness op het SMS-attribuut: als het 06-nummer al aan
+    // een ander contact gekoppeld is (bv. WhatsApp-bot leads of oude
+    // campagne-data) wordt de hele upsert geweigerd, ook email plus
+    // overige attributes komen dan niet binnen. Wij willen het contact
+    // alsnog landen in de marketing-lijst, dus halen we de SMS eruit
+    // en proberen we opnieuw. Het 06-nummer blijft wel in Supabase
+    // bewaard, daar is geen uniqueness-eis.
+    if (res.status === 400 && typeof attrs.SMS === 'string') {
+      const detail = await res.clone().json().catch(() => null) as
+        | { code?: string; metadata?: { duplicate_identifiers?: string[] } }
+        | null
+      const isSmsDuplicate =
+        detail?.code === 'duplicate_parameter' &&
+        Array.isArray(detail?.metadata?.duplicate_identifiers) &&
+        detail.metadata.duplicate_identifiers.includes('SMS')
+      if (isSmsDuplicate) {
+        const attrsRetry = { ...attrs }
+        delete attrsRetry.SMS
+        const bodyRetry = { ...body, attributes: attrsRetry }
+        res = await postBrevoContact(bodyRetry, apiKey)
+        if (res.ok) {
+          console.warn('[brevo] retry zonder SMS geslaagd voor', lead.email, '(SMS al aan ander contact gekoppeld)')
+        }
+      }
+    }
+
     if (!res.ok) {
       const detail = await res.text().catch(() => '')
       console.error('[brevo] non-2xx', res.status, detail.slice(0, 300))
