@@ -3,11 +3,29 @@
 // In demo-mode (wanneer URL nog REPLACE bevat) doen we een console.log
 // zodat developers zien wat er gestuurd zou worden zonder echt POST'en.
 //
-// Payload-structuur: alle relevante lead-velden staan top-level zodat
-// Zapier's Catch Hook ze als losse parameters kan oppikken. Een eerdere
-// versie nestte ze onder `lead: {...}` waardoor Zapier de fields niet
-// als losse trigger-velden zag en de Zap een lege payload kreeg.
-// `_lead` blijft als volledig object meegestuurd voor debug-mogelijkheid.
+// CORS-strategie: Zapier's Catch Hook honoreert geen preflight voor
+// JSON-content-type cross-origin POSTs vanuit de browser. Eerdere versies
+// stuurden Content-Type application/json en sneuvelden op CORS preflight
+// waardoor Zapier ofwel niks of een lege body ontving. Nu gebruiken we
+// FormData (simple request, geen preflight) plus mode: 'no-cors' zodat
+// de browser de POST gegarandeerd verstuurt. De response is dan opaque
+// (status 0) maar dat is OK: we hebben de response niet nodig, alleen
+// de delivery telt. Zapier parse't form-fields top-level zoals gewenst.
+
+function toFormData(payload) {
+  const fd = new FormData()
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value === null || value === undefined) return
+    if (typeof value === 'object') {
+      // Geneste objecten zoals _lead als JSON-string opslaan zodat Zapier
+      // ze als raw veld kan oppikken indien nodig voor debug.
+      try { fd.append(key, JSON.stringify(value)) } catch { /* skip */ }
+      return
+    }
+    fd.append(key, String(value))
+  })
+  return fd
+}
 
 export async function sendCredionLead(lead, project, extras = {}) {
   const url = project?.credionWebhookUrl
@@ -34,13 +52,15 @@ export async function sendCredionLead(lead, project, extras = {}) {
   }
 
   try {
-    const res = await fetch(url, {
+    await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: toFormData(payload),
+      mode: 'no-cors',
       keepalive: true,
     })
-    return { ok: res.ok, status: res.status, mode: 'live' }
+    // Response is opaque door no-cors, dus we kunnen status niet lezen.
+    // Geen news = goed news: de POST is daadwerkelijk verstuurd.
+    return { ok: true, mode: 'live-opaque' }
   } catch (e) {
     if (typeof console !== 'undefined') {
       console.warn('[credion] webhook failed', e)
