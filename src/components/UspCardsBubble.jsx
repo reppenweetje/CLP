@@ -1,8 +1,12 @@
 import Avatar from './Avatar.jsx'
 import ImpressionNote from './ImpressionNote.jsx'
 
-// Horizontale snap-carousel met 6 USP-kaarten, persona-aware volgorde.
-// Elke kaart is zelfstandig leesbaar: tag + titel + body + image.
+// Horizontale snap-carousel met USP-kaarten, persona-aware volgorde.
+// Elke kaart is zelfstandig leesbaar: tag + titel + body + image of video.
+// Een kaart kan optioneel een `video` veld hebben (path naar mp4); dan
+// renderen we een autoplay-muted-loop <video> ipv een statische <img>.
+// `image` blijft als poster zodat de eerste frame al direct in beeld is
+// voor de video geladen is.
 export default function UspCardsBubble({ cards, intro }) {
   return (
     <div className="flex gap-2.5 items-start fade-up">
@@ -22,12 +26,26 @@ export default function UspCardsBubble({ cards, intro }) {
                 className="snap-start shrink-0 w-[78%] rounded-2xl overflow-hidden bg-canvas-2 border border-mist-light"
               >
                 <div className="relative aspect-[4/3] overflow-hidden bg-mist-light">
-                  <img
-                    src={card.image}
-                    alt=""
-                    className="w-full h-full object-cover"
-                    loading={i === 0 ? 'eager' : 'lazy'}
-                  />
+                  {card.video ? (
+                    <video
+                      src={card.video}
+                      poster={card.image}
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      preload="metadata"
+                      className="w-full h-full object-cover"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <img
+                      src={card.image}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      loading={i === 0 ? 'eager' : 'lazy'}
+                    />
+                  )}
                 </div>
                 <div className="p-4">
                   <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium">{card.tag}</div>

@@ -37,7 +37,11 @@ export const project = {
       tag: 'Locatie',
       title: '3 minuten van de A9',
       body: 'Goed bereikbaar richting Haarlem, Amsterdam, Schiphol en Alkmaar.',
+      // Timelapse-video van de rit vanaf de A9 naar de Hofman, zodat bezoekers
+      // de bereikbaarheid visueel ervaren ipv alleen lezen. Image-veld blijft
+      // als poster: eerste frame is direct zichtbaar tot de video laadt.
       image: '/images/hero.jpg',
+      video: '/videos/a9-haarlem.mp4',
     },
     {
       id: 'availability',
