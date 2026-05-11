@@ -895,9 +895,14 @@ function Demo() {
         botMessages.push(
           { kind: 'bot-text', text: 'Hier zijn de 14 units met de actuele status. Tik op een unit voor meer informatie over die unit.' },
           { kind: 'site-plan', payload: { sitePlan: project.sitePlan, units: project.units, persona } },
-          // 8s rust voordat de brochure-vraag komt — bezoeker scant en
-          // tikt eerst op units zonder dat de chips eronder al verschijnen.
-          { kind: 'pause', ms: 8000 },
+          // Twee-fase wachten voor menselijk gevoel:
+          //   silent 8s = bezoeker scant plattegrond in stilte, geen typing
+          //               indicator zodat 't niet voelt alsof de bot druk is
+          //   typing 5s = daarna verschijnt de typing-indicator zodat de
+          //               bezoeker weet dat er nog iets gaat komen
+          // Daarna stuurt de bot pas de brochure-vraag.
+          { kind: 'pause', ms: 8000, silent: true },
+          { kind: 'pause', ms: 5000 },
         )
       }
       botMessages.push({ kind: 'bot-text', text: getLabel('brochureTrigger', copyVariant) })
@@ -2257,7 +2262,18 @@ function Demo() {
         <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-md">
           <ChatThread
             messages={state.messages}
-            showTyping={(state.messageQueue || []).some((m) => m.kind !== 'pause')}
+            showTyping={(() => {
+              // Typing-indicator-zichtbaarheid op basis van het wachtende item.
+              // Bij een silent-pause (bewuste stilte na bv. site-plan) blijft
+              // de indicator uit zodat de bezoeker rust krijgt om de bubble
+              // te scannen. Anders: zichtbaar als er nog een bubble in de
+              // queue staat zodat de bezoeker weet dat er iets aankomt.
+              const queue = state.messageQueue || []
+              if (queue.length === 0) return false
+              const head = queue[0]
+              if (head.kind === 'pause' && head.silent) return false
+              return queue.some((m) => m.kind !== 'pause')
+            })()}
             onBrochure={onBrochure}
             onUnitView={onUnitView}
             onCalcInteract={onCalcInteract}
