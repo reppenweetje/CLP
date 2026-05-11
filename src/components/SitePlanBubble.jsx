@@ -35,7 +35,7 @@ export default function SitePlanBubble({ sitePlan, units, persona, onUnitView, o
                 <span><span className="font-semibold text-ink">{stats.sold_ov}</span> verkocht ov</span>
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-mist" />
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
                 <span><span className="font-semibold text-ink">{stats.sold}</span> verkocht</span>
               </span>
             </div>
@@ -190,7 +190,11 @@ function stateClasses(state) {
     case 'sold_ov':
       return 'bg-orange-50 border-orange-300 text-orange-900 hover:bg-orange-100'
     case 'sold':
-      return 'bg-canvas-2 border-mist text-ink-mute opacity-60'
+      // Rose ipv mist-grey: sold-units springen meer in het oog wat de
+      // schaarste benadrukt. Bewust rose ipv vol-red zodat het bij REPP's
+      // professionele toon past en geen alarm-associatie geeft. Geen
+      // opacity-60 meer want die zou de rode kleur uitspoelen.
+      return 'bg-rose-50 border-rose-300 text-rose-900'
     case 'coming_soon':
       return 'bg-paper border-mist text-ink-soft border-dashed'
     default:
@@ -203,7 +207,7 @@ function dotClasses(state) {
     case 'available': return 'bg-emerald-300 border-emerald-400'
     case 'reserved': return 'bg-amber-300 border-amber-400'
     case 'sold_ov': return 'bg-orange-300 border-orange-400'
-    case 'sold': return 'bg-mist border-mist'
+    case 'sold': return 'bg-rose-300 border-rose-400'
     case 'coming_soon': return 'bg-paper border-dashed border-mist'
     default: return 'bg-mist border-mist'
   }
@@ -214,7 +218,7 @@ function pillClasses(state) {
     case 'available': return 'bg-emerald-100 text-emerald-900'
     case 'reserved': return 'bg-amber-100 text-amber-900'
     case 'sold_ov': return 'bg-orange-100 text-orange-900'
-    case 'sold': return 'bg-mist-light text-ink-soft'
+    case 'sold': return 'bg-rose-100 text-rose-900'
     case 'coming_soon': return 'bg-paper text-ink-soft border border-dashed border-mist'
     default: return 'bg-mist-light text-ink-soft'
   }
