@@ -76,7 +76,7 @@ export const project = {
       tag: 'Belegging',
       title: 'Schaarste en verhuurbaarheid',
       body: 'Kleinschalig, nieuwbouw en op een gevestigde bedrijvenlocatie in Haarlem. Bij belaste verhuur kunnen fiscale aandachtspunten spelen. Laat je daarover goed adviseren.',
-      image: '/images/exterieur.jpg',
+      image: '/images/werkplaats.jpg',
     },
     // Beleggers-specifieke kaarten op basis van het projectinformatie- en marktindicatie-document.
     {
@@ -84,14 +84,14 @@ export const project = {
       tag: 'Rendement',
       title: 'Indicatief 6,7% tot 9,0% BAR',
       body: 'Bruto aanvangsrendement op basis van een markthuur van €150 tot €200 per m² per jaar in de Waarderpolder. Indicatief, geen prognose.',
-      image: '/images/exterieur.jpg',
+      image: '/images/xxl-woning.jpg',
     },
     {
       id: 'schaarste-pro',
       tag: 'Schaarste',
       title: 'Beperkt aanbod in Waarderpolder',
       body: 'Ruim duizend bedrijven gevestigd, weinig nieuwe bouwgrond. Vergelijkbare units komen slechts beperkt beschikbaar.',
-      image: '/images/exterieur.jpg',
+      image: '/images/combi.jpg',
     },
     {
       id: 'all-in',

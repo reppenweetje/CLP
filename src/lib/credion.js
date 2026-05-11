@@ -30,6 +30,16 @@ function toFormData(payload) {
 export async function sendCredionLead(lead, project, extras = {}) {
   const url = project?.credionWebhookUrl
   const safeLead = lead && typeof lead === 'object' ? lead : {}
+  // Calc-snapshot (slider-waarden uit MortgageCalc of RentabilityCalc) wordt
+  // flat meegestuurd met een calc_ prefix zodat Credion in Zapier elk veld
+  // als losse trigger-parameter ziet: calc_kind, calc_downPayment, etc.
+  const calc = extras.calc && typeof extras.calc === 'object' ? extras.calc : null
+  const calcFlat = {}
+  if (calc) {
+    Object.entries(calc).forEach(([key, val]) => {
+      calcFlat['calc_' + key] = val
+    })
+  }
   const payload = {
     source:    'REPP CLP',
     project:   project?.displayName || project?.name || null,
@@ -40,6 +50,7 @@ export async function sendCredionLead(lead, project, extras = {}) {
     intent:    extras.intent ?? null,
     size:      extras.size ?? null,
     timeline:  extras.timeline ?? null,
+    ...calcFlat,
     timestamp: new Date().toISOString(),
     _lead:     safeLead,
   }

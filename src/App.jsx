@@ -236,6 +236,12 @@ function reducer(state, action) {
       }
       return state
     }
+    case 'BEHAVIOR_CREDION_CALC':
+      // Snapshot van de calc-sliders (maandlast of rendement) op het
+      // moment dat de bezoeker op de Credion-knop tikte. Wordt later in
+      // sendCredionLead meegestuurd zodat Credion de aanvraag al kan
+      // beoordelen met de cijfers waarmee de bezoeker speelde.
+      return { ...state, behaviors: { ...(state.behaviors || EMPTY_BEHAVIORS), credionCalcData: action.payload } }
     case 'BEHAVIOR_CREDION_REQUESTED': {
       // Vlag dat bezoeker via de calc-link Credion heeft aangevraagd.
       // Lead-capture handlers checken deze flag om na de phone-stap
@@ -1440,6 +1446,7 @@ function Demo() {
           intent: state.answers.intent?.label,
           size: state.answers.size?.label,
           timeline: state.answers.timeline?.label,
+          calc: state.behaviors?.credionCalcData || null,
         })
         sendSequence(userTextFromOpt(opt), [
           { kind: 'bot-text', text: 'Top. We delen je gegevens met Credion. Zij nemen vrijblijvend contact met je op.' },
@@ -1789,6 +1796,7 @@ function Demo() {
         intent: state.answers.intent?.label,
         size: state.answers.size?.label,
         timeline: state.answers.timeline?.label,
+        calc: state.behaviors?.credionCalcData || null,
       })
       // Eén compacte bevestiging die Credion-belofte plus brochure-mailing
       // combineert. De Credion-deelmelding stond al na email-invoer dus dit
@@ -1921,8 +1929,15 @@ function Demo() {
   // Klik op de Credion-link in de calc opent eerst een confirm-dialog tegen
   // misclicks (sliders en knoppen liggen dichtbij elkaar). Pas bij bevestigen
   // start de echte flow via runCredionRequest.
-  const onCredionRequest = () => {
-    trackEvent('credion:confirm-shown', {})
+  const onCredionRequest = (calcData) => {
+    // calcData komt mee vanuit MortgageCalc of RentabilityCalc met de
+    // actuele slider-waarden op het moment van klik. Bewaren in behaviors
+    // zodat sendCredionLead 'em later kan meesturen naar Zapier ook als
+    // de bezoeker ondertussen nog naam plus 06 invult.
+    if (calcData && typeof calcData === 'object') {
+      dispatch({ type: 'BEHAVIOR_CREDION_CALC', payload: calcData })
+    }
+    trackEvent('credion:confirm-shown', { calcKind: calcData?.kind || 'unknown' })
     setCredionConfirmOpen(true)
   }
 

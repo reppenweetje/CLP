@@ -65,7 +65,14 @@ export default function RentabilityCalc({ price, size, indicative = false, onInt
       {onCredionRequest && (
         <button
           type="button"
-          onClick={onCredionRequest}
+          onClick={() => onCredionRequest({
+            kind: 'rentability',
+            marktHuur,
+            yearlyRent,
+            bar: Number(bar.toFixed(2)),
+            price,
+            size,
+          })}
           className="mt-3 w-full flex items-center justify-between gap-2 rounded-2xl border border-mist hover:border-midnite bg-paper hover:bg-canvas-2 active:scale-[0.99] px-3.5 py-2.5 transition group"
         >
           <div className="flex flex-col items-start min-w-0 text-left">
