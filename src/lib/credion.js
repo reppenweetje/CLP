@@ -3,14 +3,14 @@
 // In demo-mode (wanneer URL nog REPLACE bevat) doen we een console.log
 // zodat developers zien wat er gestuurd zou worden zonder echt POST'en.
 //
-// CORS-strategie: Zapier's Catch Hook honoreert geen preflight voor
-// JSON-content-type cross-origin POSTs vanuit de browser. Eerdere versies
-// stuurden Content-Type application/json en sneuvelden op CORS preflight
-// waardoor Zapier ofwel niks of een lege body ontving. Nu gebruiken we
-// FormData (simple request, geen preflight) plus mode: 'no-cors' zodat
-// de browser de POST gegarandeerd verstuurt. De response is dan opaque
-// (status 0) maar dat is OK: we hebben de response niet nodig, alleen
-// de delivery telt. Zapier parse't form-fields top-level zoals gewenst.
+// CORS-strategie: Zapier's Catch Hook accepteert multipart/form-data
+// cross-origin zonder preflight (FormData is een CORS-safelisted
+// content-type) plus geeft Access-Control-Allow-Origin terug, dus
+// browser laat de response gewoon door. Eerdere versies probeerden
+// Content-Type application/json (triggert preflight die Zapier niet
+// honoreert) of mode no-cors (gaf opaque false-503 errors in Chrome's
+// DevTools). Met plain FormData + default cors-mode lopen requests
+// soepel door en kunnen we Zapier's success-response zelfs lezen.
 
 function toFormData(payload) {
   const fd = new FormData()
@@ -63,15 +63,19 @@ export async function sendCredionLead(lead, project, extras = {}) {
   }
 
   try {
-    await fetch(url, {
+    const res = await fetch(url, {
       method: 'POST',
       body: toFormData(payload),
-      mode: 'no-cors',
       keepalive: true,
     })
-    // Response is opaque door no-cors, dus we kunnen status niet lezen.
-    // Geen news = goed news: de POST is daadwerkelijk verstuurd.
-    return { ok: true, mode: 'live-opaque' }
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '')
+      if (typeof console !== 'undefined') {
+        console.warn('[credion] non-2xx', res.status, detail.slice(0, 200))
+      }
+      return { ok: false, status: res.status, mode: 'live' }
+    }
+    return { ok: true, status: res.status, mode: 'live' }
   } catch (e) {
     if (typeof console !== 'undefined') {
       console.warn('[credion] webhook failed', e)
