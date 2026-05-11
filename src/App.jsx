@@ -424,19 +424,25 @@ function moreInfoChips(persona, seen, temperature, callbackArranged = false) {
   return [...inlineChips, callbackPlain]
 }
 
-function buildMoreInfoMessages(id, persona) {
+function buildMoreInfoMessages(id, persona, opts = {}) {
   switch (id) {
     case 'location':
       return [{ kind: 'location', payload: { location: project.location, projectName: project.displayName } }]
-    case 'sitePlan':
+    case 'sitePlan': {
       // Site-plan is een visueel rijke bubble waar de bezoeker per unit kan
-      // tikken voor m², prijs en status. Direct daarna de chip-bar tonen
-      // voelt te druk — we gunnen 8 seconden om de plattegrond te scannen
-      // en een unit aan te tikken voor er een volgende prompt komt.
-      return [
+      // tikken voor m², prijs en status. Bij de eerste vertoning gunnen
+      // we 8 seconden om de plattegrond te scannen voor de chip-bar weer
+      // verschijnt. Bij herhaling (bezoeker zag 'em al in de
+      // availabilityCheck-flow vroeg in de chat) kennen ze de plattegrond
+      // al, dus chips komen meteen, geen pauze nodig.
+      const messages = [
         { kind: 'site-plan', payload: { sitePlan: project.sitePlan, units: project.units, persona } },
-        { kind: 'pause', ms: 8000 },
       ]
+      if (!opts.sitePlanAlreadyShown) {
+        messages.push({ kind: 'pause', ms: 8000 })
+      }
+      return messages
+    }
     case 'gallery':
       return [{
         kind: 'gallery',
@@ -1413,7 +1419,14 @@ function Demo() {
         }
       }
 
-      sendSequence(userTextFromOpt(opt), [...buildMoreInfoMessages(opt.id, persona), ...trailingMessages])
+      // Detect of de site-plan al eerder is getoond zodat buildMoreInfoMessages
+      // de scan-pauze kan overslaan bij een herhaling. Treedt op wanneer
+      // bezoeker eerder 'ja' koos op availabilityCheck en nu via moreInfo
+      // opnieuw de plattegrond opvraagt.
+      const moreInfoOpts = {
+        sitePlanAlreadyShown: state.messages.some((m) => m.kind === 'site-plan'),
+      }
+      sendSequence(userTextFromOpt(opt), [...buildMoreInfoMessages(opt.id, persona, moreInfoOpts), ...trailingMessages])
       return
     }
 
