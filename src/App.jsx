@@ -873,14 +873,19 @@ function Demo() {
       const microIntro = pickMicroIntro(personaNext)
       const cards = uspCardOrder(personaNext)
       dispatch({ type: 'ANSWER', key: 'intent', value: answerValue(opt), next: 'availabilityCheck' })
-      // Aankondiging vóór de carousel zodat de bezoeker begrijpt dat
-      // 't om meerdere kaarten gaat en weet dat 'ie naar rechts kan
-      // vegen. Voorkomt dat de eerste kaart als enige bron wordt
-      // gezien.
+      // Drie bubbles plus twee pauzes. Voorheen kwamen er vier bubbles in
+      // rap tempo (microIntro plus aankondiging plus carousel plus
+      // availability-vraag), wat overweldigend voelde. De expliciete
+      // aankondiging is verwijderd want de carousel toont zelf al "Veeg"
+      // plus pagination-dots dus die tekst was redundant. Daarna een
+      // silent-pauze van 8s om door de kaarten te vegen zonder dat de
+      // typing-indicator druk-doet, en 3s typing-pauze zodat de
+      // availability-vraag niet uit het niets komt.
       sendSequence(userTextFromOpt(opt), [
         { kind: 'bot-text', text: microIntro },
-        { kind: 'bot-text', text: 'Ik laat je een paar kaarten zien met meer uitleg en de belangrijke aspecten van het project. Veeg naar rechts om ze allemaal te bekijken.' },
         { kind: 'usp-cards', payload: { cards } },
+        { kind: 'pause', ms: 8000, silent: true },
+        { kind: 'pause', ms: 3000 },
         { kind: 'bot-text', text: flow.questions.availabilityCheck.label },
       ])
       return
