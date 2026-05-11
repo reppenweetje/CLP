@@ -1582,15 +1582,14 @@ function Demo() {
     if (draft.firstName) {
       dispatch({ type: 'LEAD_DRAFT', draft })
 
-      // Credion-eerst-pad heeft 06 nodig (geen Yes/No-vraag). Focus op de
-      // belofte dat Credion belt; brochure is bonus. Email-adres expliciet
-      // tonen zodat bezoeker een typo direct kan opmerken.
+      // Credion-eerst-pad waarbij bezoeker email plus naam in 1 invoer gaf
+      // ("ik ben Jan, jan@example.com"). 06 nog nodig voor de scan. Zelfde
+      // structuur als het email-only pad: Credion-deelmelding plus reden
+      // waarom we ook nummer vragen, daarna direct de nummer-vraag.
       if (state.behaviors?.credionRequested && !draft.phone) {
         sendSequence(text, [
-          { kind: 'bot-text', text: `Dank. We sturen de brochure naar ${draft.email}.` },
-          { kind: 'bot-text', text: 'We delen je gegevens met Credion zodat ze je kunnen bellen voor de financieringsscan. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).' },
-          { kind: 'bot-text', text: `Top, ${draft.firstName}.` },
-          { kind: 'bot-text', text: 'Tot slot je 06, zodat Credion je kan bereiken voor de scan.' },
+          { kind: 'bot-text', text: 'Dank. We delen je gegevens met Credion zodat ze je kunnen bellen voor de financieringsscan. Daarvoor hebben we alleen nog even je nummer nodig. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).' },
+          { kind: 'bot-text', text: 'Wat is je nummer?' },
         ])
         dispatch({ type: 'SET_QUESTION', next: 'lead-phone' })
         return
@@ -1634,11 +1633,12 @@ function Demo() {
       return
     }
     // Credion-pad: focus op de financieringsscan-belofte ipv enkel brochure.
-    // Brochure is bonus zodat de bezoeker iets te lezen heeft tot Credion belt.
+    // We melden de Credion-deelovereenkomst direct na de email zodat bezoeker
+    // weet waarom we ook naam en 06 vragen, niet pas na alle drie de velden.
+    // De brochure-belofte komt aan het eind als we daadwerkelijk versturen.
     if (state.behaviors?.credionRequested) {
       sendSequence(text, [
-        { kind: 'bot-text', text: `Dank. We sturen de brochure naar ${draft.email}.` },
-        { kind: 'bot-text', text: 'We delen je gegevens met Credion zodat ze je kunnen bellen voor de financieringsscan. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).' },
+        { kind: 'bot-text', text: 'Dank. We delen je gegevens met Credion zodat ze je kunnen bellen voor de financieringsscan. Daarvoor hebben we alleen nog even je naam en nummer nodig. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).' },
         { kind: 'bot-text', text: 'Wat is je naam?' },
       ])
       dispatch({ type: 'SET_QUESTION', next: 'lead-name' })
@@ -1676,11 +1676,12 @@ function Demo() {
 
     // Credion-eerst-pad: 06 is voor de financieringsscan essentieel
     // (Credion belt om door cijfers te lopen). Skip dus de Yes/No-vraag
-    // en vraag direct het nummer.
+    // en vraag direct het nummer. Geen losse "Top, X" bubble meer, de
+    // Credion-deelmelding stond al na email plus de bezoeker weet inmiddels
+    // dat naam plus nummer beide nodig zijn.
     if (state.behaviors?.credionRequested && !draft.phone) {
       sendSequence(text, [
-        { kind: 'bot-text', text: `Top, ${firstName}.` },
-        { kind: 'bot-text', text: 'Tot slot je 06, zodat Credion je zo snel mogelijk kan bellen voor de financieringsscan.' },
+        { kind: 'bot-text', text: 'Wat is je nummer?' },
       ])
       dispatch({ type: 'SET_QUESTION', next: 'lead-phone' })
       return
@@ -1766,14 +1767,11 @@ function Demo() {
         size: state.answers.size?.label,
         timeline: state.answers.timeline?.label,
       })
-      // Email expliciet in de bevestiging tonen zodat bezoeker een typo nog
-      // kan opmerken — extra mini-vertrouwenscheck. Fallback voor zeldzaam
-      // geval dat email leeg is (defensive, finishLead vereist em maar
-      // belt&breaks-compliant).
-      const emailDisplay = lead.email || 'het opgegeven e-mailadres'
+      // Eén compacte bevestiging die Credion-belofte plus brochure-mailing
+      // combineert. De Credion-deelmelding stond al na email-invoer dus dit
+      // is een afsluiting van de capture-flow, niet een nieuwe melding.
       const credionConfirmation = [
-        { kind: 'bot-text', text: 'Top. We delen je gegevens met Credion zodat ze je zo snel mogelijk kunnen bellen voor de financieringsscan.' },
-        { kind: 'bot-text', text: `De brochure sturen we naar ${emailDisplay}, zodat je het project alvast rustig kunt doorlezen.` },
+        { kind: 'bot-text', text: 'Top. We delen je gegevens met Credion zodat ze je zo snel mogelijk kunnen bellen voor de financieringsscan. En zullen je tevens alvast de brochure mailen, zodat je het project alvast rustig kunt doorlezen.' },
       ]
       const sizeTail = sizeDone
         ? []
