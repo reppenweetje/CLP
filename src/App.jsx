@@ -889,17 +889,23 @@ function Demo() {
       const microIntro = pickMicroIntro(personaNext)
       const cards = uspCardOrder(personaNext)
       dispatch({ type: 'ANSWER', key: 'intent', value: answerValue(opt), next: 'availabilityCheck' })
-      // Drie bubbles plus twee pauzes. Voorheen kwamen er vier bubbles in
-      // rap tempo (microIntro plus aankondiging plus carousel plus
-      // availability-vraag), wat overweldigend voelde. De expliciete
-      // aankondiging is verwijderd want de carousel toont zelf al "Veeg"
-      // plus pagination-dots dus die tekst was redundant. Daarna een
-      // silent-pauze van 8s om door de kaarten te vegen zonder dat de
-      // typing-indicator druk-doet, en 3s typing-pauze zodat de
-      // availability-vraag niet uit het niets komt.
+      // Flow van intent naar availabilityCheck met natuurlijke pauzes:
+      //   1. microIntro (persona-specifieke welkomstzin)
+      //   2. USP-carousel (overzichtskaarten, incl. A9-teaser)
+      //   3. 5s silent-pauze voor scan door de carousel
+      //   4. LocationBubble met aerial-foto en tabs (Reistijden, Omgeving,
+      //      Kaart). Geeft direct het "waar in de Waarderpolder"-antwoord
+      //      voor bezoekers die zich afvragen waar het pand precies ligt.
+      //      Voorheen was deze pas via moreInfo bereikbaar, daardoor zagen
+      //      veel bezoekers de locatie-context nooit
+      //   5. 8s silent-pauze voor scan van de locatie-bubble plus tab-tik
+      //   6. 3s typing-pauze zodat de availability-vraag niet uit het niets
+      //      komt
       sendSequence(userTextFromOpt(opt), [
         { kind: 'bot-text', text: microIntro },
         { kind: 'usp-cards', payload: { cards } },
+        { kind: 'pause', ms: 5000, silent: true },
+        { kind: 'location', payload: { location: project.location, projectName: project.displayName } },
         { kind: 'pause', ms: 8000, silent: true },
         { kind: 'pause', ms: 3000 },
         { kind: 'bot-text', text: flow.questions.availabilityCheck.label },
