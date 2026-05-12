@@ -103,7 +103,7 @@ export const project = {
   ],
 
   location: {
-    address: 'A. Hofmanweg, Waarderpolder, Haarlem',
+    address: 'A. Hofmanweg 23-27, Waarderpolder, Haarlem',
     city: 'Haarlem',
     district: 'Waarderpolder',
     aerialImage: '/images/exterieur.jpg',

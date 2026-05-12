@@ -889,23 +889,16 @@ function Demo() {
       const microIntro = pickMicroIntro(personaNext)
       const cards = uspCardOrder(personaNext)
       dispatch({ type: 'ANSWER', key: 'intent', value: answerValue(opt), next: 'availabilityCheck' })
-      // Flow van intent naar availabilityCheck met natuurlijke pauzes:
+      // Flow van intent naar availabilityCheck met rustig ritme:
       //   1. microIntro (persona-specifieke welkomstzin)
       //   2. USP-carousel (overzichtskaarten, incl. A9-teaser)
-      //   3. 5s silent-pauze voor scan door de carousel
-      //   4. LocationBubble met aerial-foto en tabs (Reistijden, Omgeving,
-      //      Kaart). Geeft direct het "waar in de Waarderpolder"-antwoord
-      //      voor bezoekers die zich afvragen waar het pand precies ligt.
-      //      Voorheen was deze pas via moreInfo bereikbaar, daardoor zagen
-      //      veel bezoekers de locatie-context nooit
-      //   5. 8s silent-pauze voor scan van de locatie-bubble plus tab-tik
-      //   6. 3s typing-pauze zodat de availability-vraag niet uit het niets
-      //      komt
+      //   3. 8s silent-pauze voor scan door de carousel
+      //   4. 3s typing-pauze zodat de availability-vraag niet uit het niets
+      //      komt. De vraag heeft drie chips: ja-laat-zien, liever-niet,
+      //      en vertel-meer-over-de-locatie (zie flow.questions.availabilityCheck).
       sendSequence(userTextFromOpt(opt), [
         { kind: 'bot-text', text: microIntro },
         { kind: 'usp-cards', payload: { cards } },
-        { kind: 'pause', ms: 5000, silent: true },
-        { kind: 'location', payload: { location: project.location, projectName: project.displayName } },
         { kind: 'pause', ms: 8000, silent: true },
         { kind: 'pause', ms: 3000 },
         { kind: 'bot-text', text: flow.questions.availabilityCheck.label },
@@ -917,6 +910,22 @@ function Demo() {
     // voor het brochure-moment; dat geeft urgentie en concrete context.
     if (q === 'availabilityCheck') {
       trackEvent('availability-check:answered', { id: opt.id, label: opt.label })
+
+      // Locatie-keuze: bezoeker wil eerst de plek zien voor 'ie kiest om
+      // de plattegrond te bekijken of niet. Toon LocationBubble en stel de
+      // availability-vraag opnieuw. currentQuestion blijft op
+      // 'availabilityCheck' zodat de chips automatisch teruggekomen,
+      // alleen zonder de locatie-optie (zie chipQuestion-filter onderaan).
+      if (opt.id === 'locatie') {
+        sendSequence(userTextFromOpt(opt), [
+          { kind: 'location', payload: { location: project.location, projectName: project.displayName } },
+          { kind: 'pause', ms: 5000, silent: true },
+          { kind: 'pause', ms: 2500 },
+          { kind: 'bot-text', text: flow.questions.availabilityCheck.label },
+        ])
+        return
+      }
+
       const botMessages = []
       if (opt.id === 'ja') {
         botMessages.push(
@@ -2198,7 +2207,15 @@ function Demo() {
   let chipQuestion = null
   let inputConfig = null
   if (state.currentQuestion === 'intent') chipQuestion = flow.questions.intent
-  else if (state.currentQuestion === 'availabilityCheck') chipQuestion = flow.questions.availabilityCheck
+  else if (state.currentQuestion === 'availabilityCheck') {
+    // Filter de 'locatie'-chip zodra LocationBubble al eens getoond is om
+    // herhaalde clicks te voorkomen. Bezoeker houdt dan alleen ja/nee
+    // opties over om de availability-flow af te ronden.
+    const locationShown = state.messages.some((m) => m.kind === 'location')
+    chipQuestion = locationShown
+      ? { ...flow.questions.availabilityCheck, options: flow.questions.availabilityCheck.options.filter((o) => o.id !== 'locatie') }
+      : flow.questions.availabilityCheck
+  }
   else if (state.currentQuestion === 'brochureTrigger') {
     // Voor beleggers en de "beide"-persona bieden we een 3e optie aan om
     // eerst meer over het rendement te horen voordat ze de brochure-keuze

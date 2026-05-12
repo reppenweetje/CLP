@@ -60,9 +60,16 @@ export const flow = {
     availabilityCheck: {
       key: 'availabilityCheck',
       label: 'Wil je nu zien welke units nog beschikbaar zijn?',
+      // Derde optie locatie zit hier zodat bezoekers ook direct kunnen
+      // doorklikken naar de LocationBubble met aerial-foto plus tabs voor
+      // Reistijden / Omgeving / Kaart. App.jsx filtert de locatie-optie
+      // eruit zodra de LocationBubble al een keer getoond is om herhaling
+      // te voorkomen, en houdt bezoeker op availabilityCheck zodat de
+      // ja/nee chips daarna alsnog komen.
       options: [
         { id: 'ja', label: 'Ja, laat zien' },
         { id: 'nee', label: 'Liever niet' },
+        { id: 'locatie', label: 'Vertel meer over de locatie' },
       ],
     },
 
