@@ -572,8 +572,12 @@ function computeReleaseDelay(message) {
   // bubble gerendered, alleen gebruikt om tijd te kopen tussen bubbles.
   if (message.kind === 'pause') return Math.max(0, message.ms || 0)
   if (message.kind === 'bot-text') {
+    // Bandbreedte verhoogd voor rustiger ritme tussen opeenvolgende bot-
+    // bubbles. Kortste delay 700ms, langste 1500ms (was 450-900ms). Per
+    // karakter +12ms ipv +9ms zodat lange zinnen daadwerkelijk leestijd
+    // krijgen voor de volgende bubble verschijnt.
     const len = message.text?.length || 30
-    return Math.max(450, Math.min(900, 350 + len * 9))
+    return Math.max(700, Math.min(1500, 500 + len * 12))
   }
   // Rich cards en interactieve bubbles vragen iets meer aandacht. Lijst is
   // synchroon met ChatThread renderkinds; nieuwe rich bubbles hier toevoegen.
@@ -913,12 +917,14 @@ function Demo() {
           { kind: 'bot-text', text: 'Hier zijn de 14 units met de actuele status. Tik op een unit voor meer informatie over die unit.' },
           { kind: 'site-plan', payload: { sitePlan: project.sitePlan, units: project.units, persona } },
           // Twee-fase wachten voor menselijk gevoel:
-          //   silent 8s = bezoeker scant plattegrond in stilte, geen typing
-          //               indicator zodat 't niet voelt alsof de bot druk is
-          //   typing 5s = daarna verschijnt de typing-indicator zodat de
-          //               bezoeker weet dat er nog iets gaat komen
-          // Daarna stuurt de bot pas de brochure-vraag.
-          { kind: 'pause', ms: 8000, silent: true },
+          //   silent 13s = bezoeker scant plattegrond in stilte, geen typing
+          //                indicator zodat 't niet voelt alsof de bot druk
+          //                is. Verlengd van 8 naar 13s zodat bezoekers ruim
+          //                tijd hebben om units aan te tikken
+          //   typing 5s  = daarna verschijnt de typing-indicator zodat de
+          //                bezoeker weet dat er nog iets gaat komen
+          // Daarna stuurt de bot pas de brochure-vraag (totaal 18s).
+          { kind: 'pause', ms: 13000, silent: true },
           { kind: 'pause', ms: 5000 },
         )
       }

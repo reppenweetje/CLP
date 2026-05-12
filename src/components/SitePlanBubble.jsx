@@ -41,39 +41,67 @@ export default function SitePlanBubble({ sitePlan, units, persona, onUnitView, o
             </div>
 
             <div className="mt-3 relative">
-              <div className="text-[9px] tracking-[0.22em] text-ink-mute uppercase mb-1.5 text-center">a hofmanweg</div>
-              <div className="rounded-2xl bg-canvas-2 border border-mist-light p-3">
-                {sitePlan.rows.map((row, ri) => (
-                  <div key={ri} className={`grid grid-cols-7 gap-1 ${ri === 0 ? 'mb-1' : ''}`}>
-                    {row.units.map((u) => {
-                      const isSel = selectedNumber === u.number
-                      return (
-                        <button
-                          key={u.number}
-                          onClick={() => {
-                            const next = isSel ? null : u.number
-                            setSelectedNumber(next)
-                            if (next !== null) {
-                              trackEvent('unit:detail-opened', { number: u.number, type: u.type, state: u.state })
-                              if (onUnitView) onUnitView({ number: u.number, type: u.type, state: u.state })
-                            }
-                          }}
-                          className={`relative aspect-[3/4] rounded-md border transition active:scale-95 ${stateClasses(u.state)} ${
-                            isSel ? 'ring-2 ring-midnite ring-offset-2 ring-offset-canvas-2' : ''
-                          }`}
-                          title={`unit ${u.number} ${u.type.toLowerCase()}`}
-                        >
-                          <span className="absolute top-1 left-1.5 text-[9px] tracking-wider font-medium opacity-70">
-                            {u.type.toLowerCase()}
-                          </span>
-                          <span className="absolute inset-0 flex items-center justify-center text-[14px] font-semibold">
-                            {u.number}
-                          </span>
-                        </button>
-                      )
-                    })}
+              {/* Boven-label "a hofmanweg" verwijderd, want de weg ligt
+                  feitelijk rechts van het pand niet erboven. Subtiele weg-
+                  plus recreatie-aanduiding staat nu naast de tegels via een
+                  flex-layout. "waarderpolder" onder blijft als wijk-context. */}
+              <div className="rounded-2xl bg-canvas-2 border border-mist-light p-3 flex gap-2 items-stretch">
+                <div className="flex-1 min-w-0">
+                  {sitePlan.rows.map((row, ri) => (
+                    <div key={ri} className={`grid grid-cols-7 gap-1 ${ri === 0 ? 'mb-1' : ''}`}>
+                      {row.units.map((u) => {
+                        const isSel = selectedNumber === u.number
+                        return (
+                          <button
+                            key={u.number}
+                            onClick={() => {
+                              const next = isSel ? null : u.number
+                              setSelectedNumber(next)
+                              if (next !== null) {
+                                trackEvent('unit:detail-opened', { number: u.number, type: u.type, state: u.state })
+                                if (onUnitView) onUnitView({ number: u.number, type: u.type, state: u.state })
+                              }
+                            }}
+                            className={`relative aspect-[3/4] rounded-md border transition active:scale-95 ${stateClasses(u.state)} ${
+                              isSel ? 'ring-2 ring-midnite ring-offset-2 ring-offset-canvas-2' : ''
+                            }`}
+                            title={`unit ${u.number} ${u.type.toLowerCase()}`}
+                          >
+                            <span className="absolute top-1 left-1.5 text-[9px] tracking-wider font-medium opacity-70">
+                              {u.type.toLowerCase()}
+                            </span>
+                            <span className="absolute inset-0 flex items-center justify-center text-[14px] font-semibold">
+                              {u.number}
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  ))}
+                </div>
+                {/* Orientatie-strook rechts: dashed weg-lijn met label
+                    A. Hofmanweg plus een smal emerald-tintje voor het
+                    aangrenzende recreatiegebied. Beide ~12px breed dus de
+                    tegelgrid blijft ruim dominant. */}
+                <div className="shrink-0 flex gap-1">
+                  <div className="w-3 relative flex items-center justify-center">
+                    <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px border-l border-dashed border-mist" aria-hidden />
+                    <span
+                      className="relative text-[7px] tracking-[0.2em] text-ink-mute uppercase whitespace-nowrap"
+                      style={{ writingMode: 'vertical-rl' }}
+                    >
+                      A. Hofmanweg
+                    </span>
                   </div>
-                ))}
+                  <div className="w-3 relative flex items-center justify-center bg-emerald-50/70 rounded-sm">
+                    <span
+                      className="text-[7px] tracking-[0.2em] text-emerald-700/80 uppercase whitespace-nowrap"
+                      style={{ writingMode: 'vertical-rl' }}
+                    >
+                      Recreatie
+                    </span>
+                  </div>
+                </div>
               </div>
               <div className="text-[9px] tracking-[0.22em] text-ink-mute uppercase mt-1.5 text-center">waarderpolder</div>
             </div>
