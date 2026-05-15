@@ -1796,6 +1796,20 @@ function Demo() {
       [{ scope: 'brochure-en-opvolging', granted: true, detail: { from: 'finishLead' } }],
       lead,
     )
+    
+    // Meta Pixel: Lead-event. Vuurt af zodra de gegevens compleet zijn —
+    // dit is het conversie-moment voor Ads Manager attributie. Geen PII
+    // meegeven in customData; Meta matched op fbp/fbc-cookies plus de
+    // browser-fingerprint. Try/catch zodat een geblokkeerde pixel
+    // (ad-blocker, no-consent) de flow niet breekt.
+    try {
+      if (typeof window !== 'undefined' && typeof window.fbq === 'function') {
+        window.fbq('track', 'Lead', {
+          content_name: project?.name || 'CLP',
+          content_category: state.persona?.label || 'onbekend',
+        })
+      }
+    } catch (_) { /* pixel niet beschikbaar — stilletjes negeren */ }
 
     // prependMessages bevat user-text + eventueel een bot-bevestiging.
     // Splits: user-text direct, bot-bubbles in de queue.
