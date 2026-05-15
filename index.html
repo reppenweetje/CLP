@@ -54,12 +54,15 @@
       fbq('init', '2003219213613252');
       fbq('track', 'PageView');
     </script>
-    <noscript><img height="1" width="1" style="display:none"
-      src="https://www.facebook.com/tr?id=2003219213613252&ev=PageView&noscript=1"
-    /></noscript>
     <!-- End Meta Pixel Code -->
   </head>
   <body class="bg-canvas text-ink">
+    <!-- Meta Pixel <noscript> fallback: in body, niet in head, omdat <img> binnen
+         <noscript> in <head> niet HTML-spec-conform is en Vite's HTML-parser de
+         build laat falen met "startTagInHeadNoScript". -->
+    <noscript><img height="1" width="1" style="display:none"
+      src="https://www.facebook.com/tr?id=2003219213613252&ev=PageView&noscript=1"
+    /></noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
