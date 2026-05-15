@@ -511,13 +511,34 @@ function isValidPhoneText(text) {
 function trackNewLeadFields(prevDraft, newDraft) {
   if (newDraft.email && newDraft.email !== prevDraft.email) {
     trackEvent('lead-email:submitted', { email: newDraft.email })
+    fireMetaLead('email')
   }
   if (newDraft.firstName && newDraft.firstName !== prevDraft.firstName) {
     trackEvent('lead-name:submitted', { firstName: newDraft.firstName })
   }
   if (newDraft.phone && newDraft.phone !== prevDraft.phone) {
     trackEvent('lead-phone:submitted', { phone: newDraft.phone })
+    fireMetaLead('phone')
   }
+}
+
+// Meta Pixel Lead-event helper, gedededupliceerd op sessie-niveau. Vuurt
+// 1× per browser-tab zodra een bezoeker een conversie-signaal afgeeft —
+// e-mail of telefoon achtergelaten, WhatsApp-klik, expliciet callback-
+// verzoek, of zelf-bel-klik. Meta optimaliseert Ad Sets op dit event,
+// dus eerder vuren > later vuren (eerste signaal is sterk genoeg). Geen
+// PII in customData; Meta matched op fbp/fbc-cookies plus browser-
+// fingerprint. Try/catch zodat een geblokkeerde pixel (ad-blocker, no-
+// consent) de flow niet breekt.
+function fireMetaLead(source, extra = {}) {
+  if (typeof window === 'undefined') return
+  if (window.__metaLeadFired) return
+  window.__metaLeadFired = true
+  try {
+    if (typeof window.fbq === 'function') {
+      window.fbq('track', 'Lead', { source, ...extra })
+    }
+  } catch (_) { /* pixel niet beschikbaar — stilletjes negeren */ }
 }
 
 function capitalize(s) {
@@ -1253,6 +1274,7 @@ function Demo() {
           signalCount: buying.signals.length,
           signalIds: buying.signals.map((s) => s.id),
         })
+        fireMetaLead('callback-chip', { persona: personaForCard, temperature: buying.temperature })
 
         const bridge = buildHandoffBridge(personaForCard, project, {
           signals: buying.signals,
@@ -1796,20 +1818,15 @@ function Demo() {
       [{ scope: 'brochure-en-opvolging', granted: true, detail: { from: 'finishLead' } }],
       lead,
     )
-    
-    // Meta Pixel: Lead-event. Vuurt af zodra de gegevens compleet zijn —
-    // dit is het conversie-moment voor Ads Manager attributie. Geen PII
-    // meegeven in customData; Meta matched op fbp/fbc-cookies plus de
-    // browser-fingerprint. Try/catch zodat een geblokkeerde pixel
-    // (ad-blocker, no-consent) de flow niet breekt.
-    try {
-      if (typeof window !== 'undefined' && typeof window.fbq === 'function') {
-        window.fbq('track', 'Lead', {
-          content_name: project?.name || 'CLP',
-          content_category: state.persona?.label || 'onbekend',
-        })
-      }
-    } catch (_) { /* pixel niet beschikbaar — stilletjes negeren */ }
+
+    // Meta Pixel: Lead-event als safety-net. Op dit punt is het lead
+    // sowieso compleet. Meestal is het event al gevuurd vanuit
+    // trackNewLeadFields (zodra email of phone binnenkwam), maar
+    // fireMetaLead dededupliceert dus dubbele tellingen zijn uitgesloten.
+    fireMetaLead('lead-complete', {
+      content_name: project?.name || 'CLP',
+      content_category: state.persona?.label || 'onbekend',
+    })
 
     // prependMessages bevat user-text + eventueel een bot-bevestiging.
     // Splits: user-text direct, bot-bubbles in de queue.
@@ -1908,6 +1925,7 @@ function Demo() {
   // beschrijving van de situatie op het moment dat de bubble werd getoond.
   const requestWhatsAppOpen = (e, summary, source) => {
     trackEvent('cta:whatsapp-clicked', { location: source })
+    fireMetaLead('whatsapp', { location: source })
     if (e && e.preventDefault) e.preventDefault()
     const lead = state.answers.lead || {}
     if (lead.firstName) {
@@ -1935,6 +1953,7 @@ function Demo() {
     // bezoeker nog geen naam heeft achtergelaten ("Hoi REPP, ik heb interesse
     // in De Hofman."). Bij wel-bekende naam komt die er natuurlijk in.
     trackEvent('cta:whatsapp-clicked', { location: 'header' })
+    fireMetaLead('whatsapp', { location: 'header' })
     if (e && e.preventDefault) e.preventDefault()
     const lead = state.answers.lead || {}
     const wa = whatsAppDeeplink(project, lead.firstName || '', '')
@@ -2119,6 +2138,7 @@ function Demo() {
 
   const onPhoneClick = () => {
     trackEvent('cta:phone-clicked', { location: 'header' })
+    fireMetaLead('phone-tap', { location: 'header' })
   }
 
   const onPortalClick = () => {
