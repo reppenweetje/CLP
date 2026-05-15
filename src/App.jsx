@@ -2450,6 +2450,7 @@ function Demo() {
             // 'flow:complete' met stage sales_ready). De bezoeker krijgt
             // de service-card / handoff zonder extra UI te bouwen.
             trackEvent('direct-contact:requested', { from: 'rescue-nudge' })
+            fireMetaLead('direct-contact', { from: 'rescue-nudge' })
             const lead = state.answers.lead || {}
             if (project.phoneNumber) {
               window.open(buildPhoneLink(project.phoneNumber), '_self')
