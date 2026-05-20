@@ -98,6 +98,28 @@ export default function SuggestedChips({ options, onPick, hint }) {
                   </span>
                 )
               }
+              if (opt.variant === 'portal') {
+                // Outlined CTA chip naar het externe verkoop-portal (dehofman.nl).
+                // Midnite accent + external-link icoon zodat 't duidelijk een
+                // afwijkende actie is: weg uit de chat richting de site, niet
+                // weer een chat-antwoord. Wordt alleen getoond aan leads die
+                // minimaal hun e-mail hebben doorgegeven (zie moreInfoChips
+                // in App.jsx, hasEmail-gate).
+                return (
+                  <button
+                    key={opt.id}
+                    onClick={() => onPick(opt)}
+                    className="rounded-full bg-paper border border-midnite text-midnite hover:bg-midnite hover:text-paper text-[14.5px] px-3.5 py-2 transition leading-snug active:scale-[0.98] font-medium inline-flex items-center gap-1.5"
+                  >
+                    <span>{opt.label}</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                      <polyline points="15 3 21 3 21 9" />
+                      <line x1="10" y1="14" x2="21" y2="3" />
+                    </svg>
+                  </button>
+                )
+              }
               return (
                 <button
                   key={opt.id}
