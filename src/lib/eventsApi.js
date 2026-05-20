@@ -51,8 +51,12 @@ const TENANT_MAP = {
   clp_dehofman: 'dehofman',
 }
 
+// Default fallback per-repo: De Hofman gebruikt 'clp_dehofman' als
+// VITE_CLP_SOURCE niet expliciet is gezet in Vercel. clp-didamdesk
+// gebruikt 'clp_uitgifte' als default. Beide mappen via TENANT_MAP
+// naar de juiste tenant-string in de clp_events tabel.
 function tenant() {
-  const source = readEnv('VITE_CLP_SOURCE', 'clp_uitgifte')
+  const source = readEnv('VITE_CLP_SOURCE', 'clp_dehofman')
   return TENANT_MAP[source] || null
 }
 
