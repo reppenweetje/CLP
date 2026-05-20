@@ -30,7 +30,6 @@ import {
 import { sendCredionLead } from './lib/credion.js'
 import { computeBuyingSignals, EMPTY_BEHAVIORS, getCallbackPromise, getTimeContext } from './lib/buyingSignals.js'
 import { buildHandoffCopy, buildHandoffBridge, resolveMicroIntro, resolveRecommendCopy } from './lib/handoffCopy.js'
-
 import AppShell from './components/AppShell.jsx'
 import IntroScreen from './components/IntroScreen.jsx'
 import ChatThread from './components/ChatThread.jsx'
@@ -46,12 +45,9 @@ import RescueNudge from './components/RescueNudge.jsx'
 import ExitIntentPrompt from './components/ExitIntentPrompt.jsx'
 import { useSmartResume, useInactivityRescue, useExitIntent, getOrAssignVariant } from './lib/engagement.js'
 import { detectCurrentIp } from './lib/ipExclusion.js'
-
 let _id = 0
 const nextId = () => ++_id
-
 const STORAGE_KEY = 'clp-state-v5'
-
 const initial = {
   view: 'intro',
   messages: [],
@@ -63,7 +59,6 @@ const initial = {
   behaviors: EMPTY_BEHAVIORS,
   debugOpen: false,
 }
-
 function loadPersisted() {
   if (typeof window === 'undefined') return null
   try {
@@ -76,7 +71,6 @@ function loadPersisted() {
     return null
   }
 }
-
 function persist(state) {
   if (typeof window === 'undefined') return
   try {
@@ -93,25 +87,21 @@ function persist(state) {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave))
   } catch {}
 }
-
 function clearPersisted() {
   if (typeof window === 'undefined') return
   try {
     window.localStorage.removeItem(STORAGE_KEY)
   } catch {}
 }
-
 // Volgorde van de antwoord-keys voor downstream-clearing bij rollback.
 // Lead is bewust niet in deze lijst zodat naam/mail/06 behouden blijven
 // tenzij de bezoeker ze expliciet vergeet via de antwoorden-sheet.
 const ANSWER_ORDER = ['intent', 'availabilityCheck', 'brochureTrigger', 'afhaakReason', 'rentRange', 'size', 'timeline', 'followup']
-
 function downstreamKeys(fromKey) {
   const idx = ANSWER_ORDER.indexOf(fromKey)
   if (idx === -1) return [fromKey]
   return ANSWER_ORDER.slice(idx)
 }
-
 function reducer(state, action) {
   switch (action.type) {
     case 'START_CHAT': {
@@ -236,6 +226,12 @@ function reducer(state, action) {
       }
       return state
     }
+    case 'BEHAVIOR_CREDION_CALC':
+      // Snapshot van de calc-sliders (maandlast of rendement) op het
+      // moment dat de bezoeker op de Credion-knop tikte. Wordt later in
+      // sendCredionLead meegestuurd zodat Credion de aanvraag al kan
+      // beoordelen met de cijfers waarmee de bezoeker speelde.
+      return { ...state, behaviors: { ...(state.behaviors || EMPTY_BEHAVIORS), credionCalcData: action.payload } }
     case 'BEHAVIOR_CREDION_REQUESTED': {
       // Vlag dat bezoeker via de calc-link Credion heeft aangevraagd.
       // Lead-capture handlers checken deze flag om na de phone-stap
@@ -289,15 +285,12 @@ function reducer(state, action) {
       return state
   }
 }
-
 function pickMicroIntro(persona) {
   return resolveMicroIntro(persona, project)
 }
-
 function userTextFromOpt(opt) {
   return opt.label
 }
-
 function buildAnswerSummary(answers) {
   const parts = []
   if (answers.intent) parts.push(answers.intent.label)
@@ -305,7 +298,6 @@ function buildAnswerSummary(answers) {
   if (answers.timeline) parts.push(answers.timeline.label)
   return parts.join(', ')
 }
-
 // Volgorde-hint bij definitie wordt door moreInfoChips() per persona herschikt.
 // Personas-filter beperkt tot relevante doelgroep wanneer aanwezig.
 const MORE_INFO_DEFS = {
@@ -321,7 +313,6 @@ const MORE_INFO_DEFS = {
   investor: { label: 'Belegger voordelen', personas: ['belegger', 'beide', 'onbekend'] },
   financing: { label: 'Financiering' },
 }
-
 // Per persona welke moreInfo-content het meest relevant is. Eerste in de lijst
 // verschijnt het eerst in de chip-rij, zodat bezoekers de inhoud zien die voor
 // hun situatie ertoe doet zonder dat ze door 11 chips hoeven te scrollen.
@@ -331,13 +322,11 @@ const MORE_INFO_PERSONA_ORDER = {
   beide: ['location', 'priceCompare', 'investor', 'sitePlan', 'highlights', 'gallery', 'price', 'planning', 'financing', 'process', 'brochure'],
   onbekend: ['highlights', 'location', 'sitePlan', 'gallery', 'price', 'planning', 'process', 'brochure', 'priceCompare', 'financing'],
 }
-
 // Drempel voor de "all_seen"-fase: zodra de bezoeker N unieke moreInfo-chips
 // heeft bekeken, gaat de bot van "discovery" naar "specifieke onderwerpen".
 // Op 5 chips heeft de bezoeker een volledig beeld van het project zonder dat
 // het te laat voelt om de "is er nog iets specifieks?"-vraag te stellen.
 const ALL_SEEN_THRESHOLD = 5
-
 // Telt hoeveel moreInfo-chips beschikbaar zijn voor deze persona. Wordt
 // gebruikt om de wrap-up-trigger ("alle chips bekeken") te detecteren.
 function countAvailableMoreInfo(persona) {
@@ -351,13 +340,11 @@ function countAvailableMoreInfo(persona) {
   }
   return count
 }
-
 // Hoeveel info-chips we standaard inline tonen bij moreInfo. De rest is
 // bereikbaar via een "Bekijk alle onderwerpen" chip die de bottom-sheet
 // opent. 4 voelt als het juiste aantal: niet overweldigend, wel keuze.
 const PRIMARY_CHIP_COUNT = 4
-
-function moreInfoChips(persona, seen, temperature, callbackArranged = false) {
+function moreInfoChips(persona, seen, temperature, callbackArranged = false, hasEmail = false) {
   const order = MORE_INFO_PERSONA_ORDER[persona] || MORE_INFO_PERSONA_ORDER.onbekend
   const opts = []
   for (const id of order) {
@@ -367,7 +354,6 @@ function moreInfoChips(persona, seen, temperature, callbackArranged = false) {
     if (def.personas && !def.personas.includes(persona)) continue
     opts.push({ id, label: def.label })
   }
-
   // Wanneer bezoeker al "Laat de makelaar mij bellen" heeft gekozen én
   // een 06 heeft achtergelaten, vervangen we de actieve callback-chip
   // door een non-clickable bevestigings-chip. Voorkomt dubbele-aanvraag
@@ -389,24 +375,28 @@ function moreInfoChips(persona, seen, temperature, callbackArranged = false) {
   const callbackPlain = callbackArranged
     ? callbackConfirmed
     : { id: '__callback', label: 'Laat de makelaar mij bellen' }
-
+  // Portal-chip: pas zichtbaar zodra een e-mail bekend is. Geeft de bezoeker
+  // een uitnodiging om zelf verder te kijken op dehofman.nl waar 'ie automatisch
+  // ingelogd is via de portal-token. Alleen voor genuine-interest leads — niet
+  // afhakers — vandaar dat we 'm alleen in moreInfo tonen en niet in afhaak/etc.
+  const portalChip = hasEmail
+    ? { id: '__portal', label: 'Bekijk op dehofman.nl', variant: 'portal' }
+    : null
   // All-seen-fase: bezoeker is voorbij de discovery-drempel. Naast de
   // resterende info-chips bieden we een expliciete "Ik heb genoeg gezien"-
   // chip aan zodat de bezoeker zelf het einde kan triggeren in plaats van
   // af te moeten wachten tot de laatste chip op is.
   const inAllSeenFase = seen.length >= ALL_SEEN_THRESHOLD
   const doneChip = { id: '__done', label: 'Ik heb genoeg gezien' }
-
   // Splits info-chips in primary (4 zichtbaar inline) + secondary (rest in
   // bottom-sheet). Niet doen in all-seen-fase want daar willen we juist alle
   // resterende opties tonen zodat de bezoeker er één kan kiezen.
   if (inAllSeenFase) {
     if (temperature === 'hot' || temperature === 'warm') {
-      return [callbackPrimary, ...opts, doneChip]
+      return [callbackPrimary, ...opts, ...(portalChip ? [portalChip] : []), doneChip]
     }
-    return [...opts, callbackPlain, doneChip]
+    return [...opts, callbackPlain, ...(portalChip ? [portalChip] : []), doneChip]
   }
-
   const primaryOpts = opts.slice(0, PRIMARY_CHIP_COUNT)
   const secondaryOpts = opts.slice(PRIMARY_CHIP_COUNT)
   // 'expand'-chip opent de OptionsSheet bottom-sheet. Toon 'em alleen als er
@@ -414,29 +404,36 @@ function moreInfoChips(persona, seen, temperature, callbackArranged = false) {
   const expandChip = secondaryOpts.length > 0
     ? { id: '__expand_options', label: `Bekijk alle onderwerpen`, variant: 'ghost' }
     : null
-
   const inlineChips = [...primaryOpts]
+  // PortalChip komt vóór de expand-chip zodat 'Bekijk op dehofman.nl' visueel
+  // naast de info-chips staat en niet ná 'Bekijk alle onderwerpen' (zou anders
+  // verwarrend zijn — beide hebben "bekijk" in de label).
+  if (portalChip) inlineChips.push(portalChip)
   if (expandChip) inlineChips.push(expandChip)
-
   if (temperature === 'hot' || temperature === 'warm') {
     return [callbackPrimary, ...inlineChips]
   }
   return [...inlineChips, callbackPlain]
 }
-
-function buildMoreInfoMessages(id, persona) {
+function buildMoreInfoMessages(id, persona, opts = {}) {
   switch (id) {
     case 'location':
       return [{ kind: 'location', payload: { location: project.location, projectName: project.displayName } }]
-    case 'sitePlan':
+    case 'sitePlan': {
       // Site-plan is een visueel rijke bubble waar de bezoeker per unit kan
-      // tikken voor m², prijs en status. Direct daarna de chip-bar tonen
-      // voelt te druk — we gunnen 8 seconden om de plattegrond te scannen
-      // en een unit aan te tikken voor er een volgende prompt komt.
-      return [
+      // tikken voor m², prijs en status. Bij de eerste vertoning gunnen
+      // we 8 seconden om de plattegrond te scannen voor de chip-bar weer
+      // verschijnt. Bij herhaling (bezoeker zag 'em al in de
+      // availabilityCheck-flow vroeg in de chat) kennen ze de plattegrond
+      // al, dus chips komen meteen, geen pauze nodig.
+      const messages = [
         { kind: 'site-plan', payload: { sitePlan: project.sitePlan, units: project.units, persona } },
-        { kind: 'pause', ms: 8000 },
       ]
+      if (!opts.sitePlanAlreadyShown) {
+        messages.push({ kind: 'pause', ms: 8000 })
+      }
+      return messages
+    }
     case 'gallery':
       return [{
         kind: 'gallery',
@@ -480,39 +477,57 @@ function buildMoreInfoMessages(id, persona) {
       return []
   }
 }
-
 // tel-link voor de header en cta-card. Strip alles behalve cijfers en plus.
 function buildPhoneLink(num) {
   if (!num) return null
   const cleaned = String(num).replace(/[^\d+]/g, '')
   return `tel:${cleaned}`
 }
-
 function isValidPhoneText(text) {
   const stripped = (text || '').replace(/[\s-]/g, '')
   return /^(?:\+316\d{8}|316\d{8}|06\d{8})$/.test(stripped)
 }
-
 // Track lead-velden zodra ze voor het eerst herkend zijn, ongeacht in welke
 // stap. Wanneer een bezoeker bv. naam en mailadres in dezelfde input geeft,
 // vuren we beide events los van elkaar.
 function trackNewLeadFields(prevDraft, newDraft) {
   if (newDraft.email && newDraft.email !== prevDraft.email) {
     trackEvent('lead-email:submitted', { email: newDraft.email })
+    fireMetaLead('email', { hasName: !!newDraft.firstName })
   }
   if (newDraft.firstName && newDraft.firstName !== prevDraft.firstName) {
     trackEvent('lead-name:submitted', { firstName: newDraft.firstName })
   }
   if (newDraft.phone && newDraft.phone !== prevDraft.phone) {
     trackEvent('lead-phone:submitted', { phone: newDraft.phone })
+    fireMetaLead('phone', { hasEmail: !!newDraft.email })
   }
 }
-
 function capitalize(s) {
   if (!s) return s
   return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
 }
-
+// Vuurt Meta Pixel "Lead" event af met een unieke event-ID zodat de
+// browser-Pixel niet dubbel met server-side CAPI telt. Faalt stil als de
+// Pixel niet geladen is (consent geweigerd, script geblokkeerd, etc.).
+function fireMetaLead(reason, extra = {}) {
+  if (typeof window === 'undefined') return
+  if (typeof window.fbq !== 'function') return
+  try {
+    const eventId = `lead-${reason}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+    window.fbq(
+      'track',
+      'Lead',
+      {
+        content_name: reason,
+        ...extra,
+      },
+      { eventID: eventId },
+    )
+  } catch {
+    // Pixel-fouten mogen de UX nooit blokkeren.
+  }
+}
 // Lichtgewicht string-hash (DJB2 variant). Gebruikt om copy-variaties
 // deterministisch te kiezen op basis van session-id, zodat zelfde bezoeker
 // steeds dezelfde nudge-tekst ziet maar nieuwe sessies wel afwisseling
@@ -522,7 +537,6 @@ function hashString(s) {
   for (let i = 0; i < s.length; i++) h = ((h << 5) + h) ^ s.charCodeAt(i)
   return h | 0
 }
-
 // Persona-aware sortering van de gallery. Belegger ziet eerst exterieur
 // (vastgoed-perspectief: hoe ziet het pand er uit, ligging), eigen-gebruiker
 // eerst interieur (hoe gebruik ik dit als bedrijfsruimte). Voorkomt dat
@@ -550,7 +564,6 @@ function orderGalleryForPersona(gallery, persona) {
   }
   return gallery
 }
-
 // Hoe lang we wachten voordat de volgende bot-bubble verschijnt. Korter voor
 // korte tekst, langer voor lange tekst en rich cards. Levert een typing-bubble
 // gevoel zonder te traag te worden.
@@ -560,8 +573,12 @@ function computeReleaseDelay(message) {
   // bubble gerendered, alleen gebruikt om tijd te kopen tussen bubbles.
   if (message.kind === 'pause') return Math.max(0, message.ms || 0)
   if (message.kind === 'bot-text') {
+    // Bandbreedte verhoogd voor rustiger ritme tussen opeenvolgende bot-
+    // bubbles. Kortste delay 700ms, langste 1500ms (was 450-900ms). Per
+    // karakter +12ms ipv +9ms zodat lange zinnen daadwerkelijk leestijd
+    // krijgen voor de volgende bubble verschijnt.
     const len = message.text?.length || 30
-    return Math.max(450, Math.min(900, 350 + len * 9))
+    return Math.max(700, Math.min(1500, 500 + len * 12))
   }
   // Rich cards en interactieve bubbles vragen iets meer aandacht. Lijst is
   // synchroon met ChatThread renderkinds; nieuwe rich bubbles hier toevoegen.
@@ -570,17 +587,14 @@ function computeReleaseDelay(message) {
   }
   return 500
 }
-
 function isAdminRoute() {
   if (typeof window === 'undefined') return false
   return window.location.pathname.startsWith('/admin')
 }
-
 export default function App() {
   if (isAdminRoute()) return <AdminScreen />
   return <Demo />
 }
-
 function Demo() {
   const [state, dispatch] = useReducer(reducer, initial, (init) => {
     const loaded = loadPersisted()
@@ -599,38 +613,22 @@ function Demo() {
   const [optionsSheetOpen, setOptionsSheetOpen] = useState(false)
   const [credionConfirmOpen, setCredionConfirmOpen] = useState(false)
   const [showRescue, setShowRescue] = useState(false)
-
-  // Portal-token: opaque UUID per lead, gegenereerd door Supabase
-  // (gen_random_uuid()::text DEFAULT op `leads.portal_token`). De Edge
-  // Function geeft 'em terug in de upsert-response; we vangen 'em hier
-  // op zodat de CTA-card aan het einde van de chat een magic-link kan
-  // bouwen naar de dehofman.nl-portaal. Token blijft één session levend
-  // (sessionStorage) — voor langere persistentie is er de mail-link.
-  const [portalToken, setPortalToken] = useState(() => {
-    if (typeof window === 'undefined') return null
-    try { return window.sessionStorage.getItem('clp:portal_token') || null }
-    catch { return null }
-  })
   const chatActive = state.view === 'chat'
   const flowComplete = state.messages.some((m) => m.kind === 'cta-card')
-
   // Smart resume: bezoeker komt terug na ≥4u in onvoltooide chat MET
   // progressie (≥1 beantwoorde vraag). Banner toont count zodat user
   // weet wat er bewaard is — geen lege belofte bij nul antwoorden.
   const { offerResume, ageMs, answersCount, dismissResume } = useSmartResume(chatActive && !flowComplete)
-
   // Inactiviteit rescue: 30s niets gedaan → floating nudge.
   useInactivityRescue({
     active: chatActive && !flowComplete && !showRescue,
     onTrigger: () => setShowRescue(true),
   })
-
   // Exit intent: cursor verlaat top of tab gaat hidden → why-leaving prompt.
   // Alleen actief als bezoeker iets heeft gedaan en nog niet voltooid is —
   // anders is het te invasief op een verse pageview.
   const exitActive = chatActive && !flowComplete && Object.keys(state.answers).length >= 2
   const { showPrompt: showExitPrompt, dismiss: dismissExitPrompt } = useExitIntent({ active: exitActive })
-
   // Bewaart de currentQuestion van vóór een lead-edit zodat we na het
   // bijwerken van email/naam/06 terug kunnen naar waar de bezoeker was.
   const [editReturnQuestion, setEditReturnQuestion] = useState(null)
@@ -638,11 +636,27 @@ function Demo() {
   // we een WA-klik onderbreken om eerst de naam op te halen. Na de naam
   // bouwen we de WA-link met de juiste naam en openen 'm alsnog.
   const [pendingWa, setPendingWa] = useState(null)
-
+  // Portal-token: identificeert de bezoeker bij dehofman.nl zodat ze automatisch
+  // ingelogd zijn als ze vanaf de CLP doorklikken. Hydrate uit sessionStorage zodat
+  // de token een soft reload overleeft. Edge function "lead-upsert" levert deze
+  // token terug op pushLead-responses en we updaten 'm dan via .then() op pushSnapshot.
+  const [portalToken, setPortalToken] = useState(() => {
+    if (typeof window === 'undefined') return null
+    try {
+      return window.sessionStorage.getItem('clp-portal-token') || null
+    } catch {
+      return null
+    }
+  })
+  // Bouwt de portal-URL waar we naartoe linken vanaf cta-cards en warm-handoff
+  // bubbles. Met token = auto-login op dehofman.nl. Zonder token = kale portal-URL
+  // (bezoeker krijgt dan het guest-view en kan zelf een sessie starten).
+  const portalUrlForCta = portalToken
+    ? `${project.portalUrl}?t=${portalToken}`
+    : project.portalUrl
   useEffect(() => {
     if (state.view === 'chat') persist(state)
   }, [state])
-
   // Sequential bot-bubble reveal. Eén bot-bericht per tick, met delay op basis
   // van de inhoud. De bezoeker ziet de typing-indicator onderaan zolang de queue
   // nog items heeft, en de chip-bar verschijnt pas als de laatste vraag is
@@ -655,7 +669,6 @@ function Demo() {
     const t = setTimeout(() => dispatch({ type: 'RELEASE_NEXT' }), delay)
     return () => clearTimeout(t)
   }, [state.messageQueue?.length])
-
   useEffect(() => {
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
@@ -664,13 +677,11 @@ function Demo() {
     // Faalt-soft als netwerk weigert; gewoon doorgaan met tracking aan.
     detectCurrentIp().catch(() => {})
   }, [])
-
   const persona = derivePersona(state.answers)
   const score = computeScore(state.answers)
   const stage = deriveStage(state.answers)
   const temperature = deriveTemperature(stage)
   const buying = computeBuyingSignals(state.answers, state.behaviors)
-
   // De handoff bubble is "actief" zodra hij getoond is en de bezoeker nog
   // niets heeft gekozen. Tijdens deze fase verbergen we chip-bar, input en
   // header-shortcuts zodat de bubble zelf de enige interactie is.
@@ -688,7 +699,6 @@ function Demo() {
   // bubble hebben uit de oude flow. Detect 'em zodat de UI-blokkering klopt
   // bij replay. Nieuwe sessies maken geen service-cards meer aan.
   const serviceCardActive = state.messages.some((m) => m.kind === 'service-card' && !m.payload?.outcome)
-
   // Slack hot-lead notificatie. Triggert alleen bij een expliciete callback-
   // aanvraag, niet meer op behavioral score-thresholds. Bron: bezoeker heeft
   // op de "Laat de makelaar mij bellen" chip of op de callback-knop in de
@@ -725,23 +735,10 @@ function Demo() {
     state.behaviors?.warmHandoffOutcome,
     state.answers.lead?.phone,
   ])
-
   // Sticky copy-variant voor flow-questions (intent/brochureTrigger/timeline).
   // Onafhankelijk van CTA-variant voor de IntroScreen-knop, zodat we
   // beide A/B-experimenten orthogonaal kunnen analyseren in Plausible.
   const copyVariant = getOrAssignVariant()
-
-  // Portal-handover URL voor de eind-CTA. Voorkeur: token-magic-link naar
-  // de nieuwe dehofman.nl-portaal (geen login nodig, lead-gegevens al bekend
-  // server-side). Geen token (nog) → fallback op project.portalUrl, zodat
-  // bestaande bezoekers tijdens de rollout-fase niet stranden.
-  // PORTAL_BASE komt uit VITE_PORTAL_URL (Vercel/build-env); default is de
-  // productie-host.
-  const PORTAL_BASE = (import.meta?.env?.VITE_PORTAL_URL || 'https://dehofman.nl').replace(/\/+$/, '')
-  const portalUrlForCta = portalToken
-    ? `${PORTAL_BASE}/portal?t=${encodeURIComponent(portalToken)}`
-    : (project.portalUrl || null)
-
   // Supabase lead-upsert: synchroniseert de actuele state als één snapshot
   // naar de Edge Function. Idempotent dankzij upsert op (source, session_id),
   // dus we mogen dit meerdere keren in de flow aanroepen — elke call upsert
@@ -799,26 +796,20 @@ function Demo() {
           credionRequested:   !!state.behaviors?.credionRequested,
           rentMatchRequested: !!state.behaviors?.rentMatchRequested,
           rendementInfoShown: !!state.behaviors?.rendementInfoShown,
-          // brochureRequested wordt door de outbound-dispatcher meegenomen
-          // in de hash-input voor ai_followup_message — staleness-check
-          // klopt alleen als deze waarde meekomt in de snapshot.
-          brochureRequested:  state.answers.brochureTrigger?.id === 'ja',
         },
       },
       consents: extraConsents,
     }).then((res) => {
-      // Edge Function geeft `portal_token` mee in de response-body
-      // (zowel bij 200 als 207). pushLead reikt 'em verbatim door als
-      // res.result.portal_token. Als 'ie verschilt van wat we al hadden
-      // (eerste call van de sessie, of na token-rotatie aan DB-zijde)
-      // pakken we 'm op en spiegelen we 'em in sessionStorage zodat een
-      // re-render hem nog kan oppikken zonder nieuwe API-call.
-      const tok = res && res.result && typeof res.result.portal_token === 'string'
-        ? res.result.portal_token
-        : null
-      if (tok && tok !== portalToken) {
-        setPortalToken(tok)
-        try { window.sessionStorage.setItem('clp:portal_token', tok) } catch {}
+      // Edge function geeft een portal_token terug bij succesvolle upsert.
+      // Pak 'm op zodat we vanaf nu portal-links met ?t= kunnen bouwen en
+      // de bezoeker dus automatisch ingelogd op dehofman.nl landt.
+      if (res && res.portal_token && res.portal_token !== portalToken) {
+        setPortalToken(res.portal_token)
+        try {
+          window.sessionStorage.setItem('clp-portal-token', res.portal_token)
+        } catch {
+          // sessionStorage kan vol/dicht staan — niet erg, token leeft dan alleen in-memory.
+        }
       }
     }).catch((err) => {
       // pushLead vangt zelf 4xx/5xx + queue af; eventuele uncaught errors
@@ -826,7 +817,6 @@ function Demo() {
       console.warn('[pushSnapshot] failed', err)
     })
   }
-
   // Bij app-mount + zodra het netwerk weer up is: probeer de localStorage
   // retry-queue te legen. Werkt alleen als de feature-flag aan staat (anders
   // skipt flushPending zelf). Geen useEffect-deps nodig — de helpers zijn
@@ -838,7 +828,6 @@ function Demo() {
     window.addEventListener('online', onOnline)
     return () => window.removeEventListener('online', onOnline)
   }, [])
-
   const start = (variant) => {
     // Hervat-pad: bezoeker kwam via het header-logo terug naar intro met
     // chat-historie nog intact. We schakelen alleen view om en bewaren de
@@ -856,7 +845,6 @@ function Demo() {
     logSessionStartConsent()
     dispatch({ type: 'START_CHAT', bot: project.salesTeam?.bot, copyVariant })
   }
-
   // Klik op REPP-logo in de header tijdens chat: terugnavigatie naar de
   // IntroScreen zonder progress-verlies. start() detecteert daarna de
   // bestaande messages en hervat de chat ipv 'em opnieuw te beginnen.
@@ -865,14 +853,12 @@ function Demo() {
     trackEvent('header:logo-clicked', { messagesCount: state.messages.length })
     dispatch({ type: 'RETURN_TO_INTRO' })
   }
-
   // Helper: maakt een answer-value met _msgCountBefore zodat ROLLBACK
   // weet tot waar in de messages array geknipt moet worden.
   const answerValue = (opt) => ({
     ...opt,
     _msgCountBefore: state.messages.length,
   })
-
   // User-bubble gaat direct, bot-bubbles in de release-queue zodat ze met
   // typing-pauzes verschijnen. Voorkomt dat een vraag direct na een rich card
   // onder het scherm valt.
@@ -888,15 +874,12 @@ function Demo() {
       dispatch({ type: 'ENQUEUE', messages: botMessages })
     }
   }
-
   const onChipPick = (opt) => {
     const q = state.currentQuestion
     if (!q) return
-
     if (q === 'intent') {
       const personaNext = opt.persona || 'onbekend'
       trackEvent('intent:answered', { id: opt.id, label: opt.label, persona: personaNext })
-
       // Huur-intentie: De Hofman is een koop-project, dus wij kanaliseren
       // huur-interesse direct naar de rent-match queue. Geen availability,
       // geen brochure-ja, geen size/timeline; meteen huurprijs-range vragen
@@ -910,35 +893,58 @@ function Demo() {
         ])
         return
       }
-
       const microIntro = pickMicroIntro(personaNext)
       const cards = uspCardOrder(personaNext)
       dispatch({ type: 'ANSWER', key: 'intent', value: answerValue(opt), next: 'availabilityCheck' })
-      // Aankondiging vóór de carousel zodat de bezoeker begrijpt dat
-      // 't om meerdere kaarten gaat en weet dat 'ie naar rechts kan
-      // vegen. Voorkomt dat de eerste kaart als enige bron wordt
-      // gezien.
+      // Flow van intent naar availabilityCheck met rustig ritme:
+      //   1. microIntro (persona-specifieke welkomstzin)
+      //   2. USP-carousel (overzichtskaarten, incl. A9-teaser)
+      //   3. 8s silent-pauze voor scan door de carousel
+      //   4. 3s typing-pauze zodat de availability-vraag niet uit het niets
+      //      komt. De vraag heeft drie chips: ja-laat-zien, liever-niet,
+      //      en vertel-meer-over-de-locatie (zie flow.questions.availabilityCheck).
       sendSequence(userTextFromOpt(opt), [
         { kind: 'bot-text', text: microIntro },
-        { kind: 'bot-text', text: 'Ik laat je een paar kaarten zien met meer uitleg en de belangrijke aspecten van het project. Veeg naar rechts om ze allemaal te bekijken.' },
         { kind: 'usp-cards', payload: { cards } },
+        { kind: 'pause', ms: 8000, silent: true },
+        { kind: 'pause', ms: 3000 },
         { kind: 'bot-text', text: flow.questions.availabilityCheck.label },
       ])
       return
     }
-
     // Live beschikbaarheid eerder in de flow: bezoeker ziet de situatietekening
     // voor het brochure-moment; dat geeft urgentie en concrete context.
     if (q === 'availabilityCheck') {
       trackEvent('availability-check:answered', { id: opt.id, label: opt.label })
+      // Locatie-keuze: bezoeker wil eerst de plek zien voor 'ie kiest om
+      // de plattegrond te bekijken of niet. Toon LocationBubble en stel de
+      // availability-vraag opnieuw. currentQuestion blijft op
+      // 'availabilityCheck' zodat de chips automatisch teruggekomen,
+      // alleen zonder de locatie-optie (zie chipQuestion-filter onderaan).
+      if (opt.id === 'locatie') {
+        sendSequence(userTextFromOpt(opt), [
+          { kind: 'location', payload: { location: project.location, projectName: project.displayName } },
+          { kind: 'pause', ms: 5000, silent: true },
+          { kind: 'pause', ms: 2500 },
+          { kind: 'bot-text', text: flow.questions.availabilityCheck.label },
+        ])
+        return
+      }
       const botMessages = []
       if (opt.id === 'ja') {
         botMessages.push(
           { kind: 'bot-text', text: 'Hier zijn de 14 units met de actuele status. Tik op een unit voor meer informatie over die unit.' },
           { kind: 'site-plan', payload: { sitePlan: project.sitePlan, units: project.units, persona } },
-          // 8s rust voordat de brochure-vraag komt — bezoeker scant en
-          // tikt eerst op units zonder dat de chips eronder al verschijnen.
-          { kind: 'pause', ms: 8000 },
+          // Twee-fase wachten voor menselijk gevoel:
+          //   silent 13s = bezoeker scant plattegrond in stilte, geen typing
+          //                indicator zodat 't niet voelt alsof de bot druk
+          //                is. Verlengd van 8 naar 13s zodat bezoekers ruim
+          //                tijd hebben om units aan te tikken
+          //   typing 5s  = daarna verschijnt de typing-indicator zodat de
+          //                bezoeker weet dat er nog iets gaat komen
+          // Daarna stuurt de bot pas de brochure-vraag (totaal 18s).
+          { kind: 'pause', ms: 13000, silent: true },
+          { kind: 'pause', ms: 5000 },
         )
       }
       botMessages.push({ kind: 'bot-text', text: getLabel('brochureTrigger', copyVariant) })
@@ -946,7 +952,6 @@ function Demo() {
       sendSequence(userTextFromOpt(opt), botMessages)
       return
     }
-
     if (q === 'brochureTrigger') {
       // Optionele rendement-uitleg voor beleggers en "beide". Bezoeker
       // krijgt een korte toelichting + de InvestorBubble en daarna komt
@@ -971,16 +976,13 @@ function Demo() {
         ])
         return
       }
-
       trackEvent('brochure-trigger:answered', { id: opt.id, label: opt.label, isAfhaak: !!opt.afhaak })
-
       // Bezoeker zegt ja tegen de brochure: dat is impliciete toestemming
       // voor verwerking van zijn gegevens voor brochure-mailen plus
       // sales-opvolging. Vastleggen ten behoeve van AVG-art 7 verantwoording.
       if (!opt.afhaak) {
         logBrochureConsent()
       }
-
       if (opt.afhaak) {
         dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: answerValue(opt), next: 'afhaakReasons' })
         sendSequence(userTextFromOpt(opt), [
@@ -989,7 +991,6 @@ function Demo() {
         ])
         return
       }
-
       // Brochure-ja, lead al bekend? Sla lead-capture over en spring naar size.
       if (state.answers.lead) {
         dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: answerValue(opt), next: 'size' })
@@ -999,7 +1000,6 @@ function Demo() {
         ])
         return
       }
-
       dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: answerValue(opt), next: 'lead-email' })
       // Privacy-claim is bewust verplaatst naar NA de email-input
       // (zie handleLeadEmailText). Voor de input tonen voelt drempel-
@@ -1009,11 +1009,9 @@ function Demo() {
       ])
       return
     }
-
     // Afhaak-pad: registreer reden, sluit af met sterke WhatsApp-uitnodiging.
     if (q === 'afhaakReasons') {
       trackEvent('afhaak-reason:answered', { id: opt.id, label: opt.label })
-
       // Rent-match sub-flow: bezoeker zoekt huur, niet koop. Slaan we de
       // huurprijs-range op zodat we later kunnen koppelen aan beleggers
       // in De Hofman die hun unit willen verhuren.
@@ -1026,7 +1024,6 @@ function Demo() {
         ])
         return
       }
-
       trackEvent('flow:complete', { stage: 'afhaak', persona })
       const customerSummary = customerAfhaakSummary(opt.id)
       const wa = whatsAppDeeplink(project, state.answers.lead?.firstName || '', customerSummary)
@@ -1046,7 +1043,6 @@ function Demo() {
       ])
       return
     }
-
     // Rent-match: huurprijs-range vastleggen voor toekomstige
     // matchmaking met beleggers. Deze data is goud voor REPP.
     if (q === 'rentRange') {
@@ -1057,7 +1053,6 @@ function Demo() {
       //     "we bewaren je voorkeur"-belofte niet waarmaken
       const lead = state.answers.lead || {}
       const hasLead = !!lead.email && !!lead.firstName
-
       if (hasLead) {
         trackEvent('flow:complete', { stage: 'rent-match', persona })
         const customerSummary = customerRentSummary(opt.label)
@@ -1073,7 +1068,6 @@ function Demo() {
         ])
         return
       }
-
       // Pad B: geen lead — antwoord opslaan, dan e-mail + naam vragen
       // zodat we daadwerkelijk contact kunnen opnemen bij een match.
       // De rentMatchRequested-flag laat finishLead het rent-match-pad
@@ -1087,7 +1081,6 @@ function Demo() {
       ])
       return
     }
-
     if (q === 'lead-phoneAsk') {
       trackEvent('lead-phone-ask:answered', { id: opt.id, label: opt.label })
       if (opt.id === 'yes') {
@@ -1104,7 +1097,6 @@ function Demo() {
       }
       return
     }
-
     if (q === 'size') {
       trackEvent('size:answered', { id: opt.id, label: opt.label })
       dispatch({ type: 'ANSWER', key: 'size', value: answerValue(opt), next: 'timeline' })
@@ -1113,7 +1105,6 @@ function Demo() {
       ])
       return
     }
-
     if (q === 'timeline') {
       const merged = { ...state.answers, timeline: opt }
       const unit = recommendUnit(merged, project)
@@ -1121,7 +1112,6 @@ function Demo() {
       const copy = recommendCopy(personaNext, project)
       const confidence = leadConfidence(merged)
       trackEvent('timeline:answered', { id: opt.id, label: opt.label, recommendedUnit: unit.primary?.type })
-
       // Eén consistente flow voor alle temperaturen. Voorheen kreeg een hot-
       // bezoeker hier een merged service-card te zien (foto + specs + handoff
       // CTA-ladder in één bubble) maar die voelde als "ze willen me direct
@@ -1155,7 +1145,6 @@ function Demo() {
       pushSnapshot()
       return
     }
-
     if (q === 'postRecommendation') {
       // Macro-keuze direct na unit-aanbeveling. Twee paden:
       //   a) "Even contact" → triggert direct de warm-handoff bubble
@@ -1216,7 +1205,6 @@ function Demo() {
       }
       return
     }
-
     if (q === 'moreInfo') {
       if (opt.id === '__expand_options') {
         // Bezoeker tikt op "Bekijk alle onderwerpen" — open de bottom-sheet.
@@ -1243,7 +1231,6 @@ function Demo() {
         const summary = buildCustomerWaSummary(state.answers, project)
         const wa = whatsAppDeeplink(project, lead.firstName || '', summary)
         const phoneLink = buildPhoneLink(project.phoneNumber)
-
         trackEvent('warm-handoff:opened-via-chip', {
           persona: personaForCard,
           temperature: buying.temperature,
@@ -1251,12 +1238,11 @@ function Demo() {
           signalCount: buying.signals.length,
           signalIds: buying.signals.map((s) => s.id),
         })
-
+        fireMetaLead('callback-chip', { persona: personaForCard, temperature: buying.temperature })
         const bridge = buildHandoffBridge(personaForCard, project, {
           signals: buying.signals,
           name: lead.firstName || '',
         })
-
         dispatch({ type: 'WARM_HANDOFF_SHOWN' })
         sendSequence(userTextFromOpt(opt), [
           { kind: 'bot-text', text: bridge },
@@ -1279,6 +1265,18 @@ function Demo() {
             },
           },
         ])
+        return
+      }
+      if (opt.id === '__portal') {
+        // Bezoeker klikt op "Bekijk op dehofman.nl". Open het portaal in een
+        // nieuw venster zodat de chat-sessie open blijft (kunnen later
+        // terugkeren). Géén flow:complete dispatchen — bezoeker is nog niet
+        // klaar met de CLP, hij neemt alleen een zijstap.
+        trackEvent('cta:portal-clicked', { from: 'moreInfo-chip' })
+        fireMetaLead('portal-tap', { location: 'moreInfo-chip' })
+        if (typeof window !== 'undefined') {
+          window.open(portalUrlForCta, '_blank', 'noopener,noreferrer')
+        }
         return
       }
       if (opt.id === '__contact') {
@@ -1363,12 +1361,10 @@ function Demo() {
       trackEvent('more-info:viewed', { id: opt.id, label: opt.label })
       dispatch({ type: 'MORE_INFO_SEEN', id: opt.id })
       dispatch({ type: 'BEHAVIOR_MORE_INFO_VIEWED', id: opt.id })
-
       // Conversational nudges + fase-detectie. seenCountAfter is wat er staat
       // NA deze pick (state.moreInfoSeen heeft 'm nog niet, dispatch is async).
       const seenCountAfter = state.moreInfoSeen.length + 1
       const totalAvailable = countAvailableMoreInfo(persona)
-
       const trailingMessages = []
       if (seenCountAfter === ALL_SEEN_THRESHOLD) {
         // Drempel-moment: bezoeker heeft N chips bekeken. Bot benoemt dat
@@ -1443,11 +1439,16 @@ function Demo() {
           )
         }
       }
-
-      sendSequence(userTextFromOpt(opt), [...buildMoreInfoMessages(opt.id, persona), ...trailingMessages])
+      // Detect of de site-plan al eerder is getoond zodat buildMoreInfoMessages
+      // de scan-pauze kan overslaan bij een herhaling. Treedt op wanneer
+      // bezoeker eerder 'ja' koos op availabilityCheck en nu via moreInfo
+      // opnieuw de plattegrond opvraagt.
+      const moreInfoOpts = {
+        sitePlanAlreadyShown: state.messages.some((m) => m.kind === 'site-plan'),
+      }
+      sendSequence(userTextFromOpt(opt), [...buildMoreInfoMessages(opt.id, persona, moreInfoOpts), ...trailingMessages])
       return
     }
-
     if (q === 'financingAsk') {
       // Beide uitkomsten loggen we als consent-event: een 'nee' is ook een
       // expliciete keuze die we moeten kunnen aantonen bij audit.
@@ -1458,6 +1459,7 @@ function Demo() {
           intent: state.answers.intent?.label,
           size: state.answers.size?.label,
           timeline: state.answers.timeline?.label,
+          calc: state.behaviors?.credionCalcData || null,
         })
         sendSequence(userTextFromOpt(opt), [
           { kind: 'bot-text', text: 'Top. We delen je gegevens met Credion. Zij nemen vrijblijvend contact met je op.' },
@@ -1470,7 +1472,6 @@ function Demo() {
       dispatch({ type: 'SET_QUESTION', next: 'moreInfo' })
       return
     }
-
     if (q === 'followup') {
       const merged = { ...state.answers, followup: opt }
       const personaNext = derivePersona(merged)
@@ -1485,18 +1486,11 @@ function Demo() {
       sendSequence(userTextFromOpt(opt), [
         { kind: 'bot-text', text: tc.lead },
         { kind: 'bot-text', text: tc.body },
-        // Portal-link helemaal aan het einde van de chat: bezoeker heeft
-        // alle vragen beantwoord, lead is in Supabase, token is via de
-        // upsert-response binnengekomen. Geen aparte mail-stap nodig —
-        // doorklik met token-querystring volstaat. Fallback op de oude
-        // project.portalUrl als portalToken nog niet binnen is (offline-
-        // queue, of feature-flag uit).
-        { kind: 'cta-card', payload: { waLink: wa, summary: customerSummary, portalUrl: portalUrlForCta } },
+        { kind: 'cta-card', payload: { waLink: wa, summary: customerSummary } },
       ])
       return
     }
   }
-
   const onChatInputSend = (text) => {
     const q = state.currentQuestion
     if (q === 'lead-email') return handleLeadEmailText(text)
@@ -1507,7 +1501,6 @@ function Demo() {
     if (q === 'lead-edit-name') return handleLeadEditField('name', text)
     if (q === 'lead-edit-phone') return handleLeadEditField('phone', text)
   }
-
   // Naam invoer specifiek vóór een WhatsApp-klik. Slaat de naam op,
   // bouwt de WhatsApp-link opnieuw met de zojuist gegeven naam, opent
   // de link in een nieuw venster en herstelt de currentQuestion.
@@ -1521,7 +1514,6 @@ function Demo() {
       ])
       return
     }
-
     const newDraft = {
       ...state.leadDraft,
       firstName,
@@ -1531,7 +1523,6 @@ function Demo() {
     const newLead = { ...(state.answers.lead || {}), firstName }
     if (parsed.email && !state.answers.lead?.email) newLead.email = parsed.email
     if (parsed.phone && !state.answers.lead?.phone) newLead.phone = parsed.phone
-
     trackNewLeadFields(state.leadDraft, newDraft)
     dispatch({ type: 'LEAD_DRAFT', draft: newDraft })
     dispatch({
@@ -1540,11 +1531,9 @@ function Demo() {
       value: newLead,
       next: pendingWa?.returnQuestion ?? null,
     })
-
     sendSequence(text, [
       { kind: 'bot-text', text: `Top, ${firstName}. We openen WhatsApp voor je.` },
     ])
-
     if (pendingWa && typeof window !== 'undefined') {
       const wa = whatsAppDeeplink(project, firstName, pendingWa.summary)
       // window.open in een keypress/click handler is een directe gebruiker-
@@ -1554,7 +1543,6 @@ function Demo() {
     }
     setPendingWa(null)
   }
-
   // Eén handler voor alle drie de lead-edit-stappen. Valideert het veld,
   // werkt leadDraft en answers.lead bij, en stuurt de bezoeker terug
   // naar de oorspronkelijke currentQuestion.
@@ -1562,7 +1550,6 @@ function Demo() {
     const parsed = parseLeadInput(text)
     let value = null
     let error = null
-
     if (field === 'email') {
       if (parsed.email) value = parsed.email
       else error = 'Het mailadres lijkt niet helemaal te kloppen. Kun je het opnieuw tikken?'
@@ -1574,20 +1561,16 @@ function Demo() {
       if (parsed.phone) value = parsed.phone
       else error = 'Daar zat geen geldig 06-nummer in. Kun je het opnieuw tikken?'
     }
-
     if (error) {
       sendSequence(text, [{ kind: 'bot-text', text: error }])
       return
     }
-
     const draftKey = field === 'name' ? 'firstName' : field
     const trackEventName =
       field === 'email' ? 'lead-email:submitted' : field === 'name' ? 'lead-name:submitted' : 'lead-phone:submitted'
     trackEvent(trackEventName, { [draftKey]: value })
-
     const newDraft = { ...state.leadDraft, [draftKey]: value }
     const newLead = { ...(state.answers.lead || {}), [draftKey]: value }
-
     dispatch({ type: 'LEAD_DRAFT', draft: newDraft })
     dispatch({
       type: 'ANSWER',
@@ -1598,12 +1581,10 @@ function Demo() {
     setEditReturnQuestion(null)
     sendSequence(text, [{ kind: 'bot-text', text: 'Bijgewerkt.' }])
   }
-
   function handleLeadEmailText(text) {
     const parsed = parseLeadInput(text)
     const draft = mergeLead(state.leadDraft, parsed)
     const triedEmail = text.includes('@')
-
     if (!draft.email) {
       dispatch({ type: 'LEAD_DRAFT', draft })
       // Naam of telefoon kan toch al binnen zijn ondanks geen geldig mailadres
@@ -1618,31 +1599,25 @@ function Demo() {
       ])
       return
     }
-
     trackNewLeadFields(state.leadDraft, draft)
-
     // Privacy-claim staat NA de email-input, in dezelfde bubble-set als
     // de bevestiging dat de brochure verstuurd wordt. Daarmee komt 'ie
     // op een natuurlijk moment ipv als drempel ervoor.
     const privacyClaim = 'We mailen je de brochure en bewaren je voorkeur. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).'
-
     if (draft.firstName) {
       dispatch({ type: 'LEAD_DRAFT', draft })
-
-      // Credion-eerst-pad heeft 06 nodig (geen Yes/No-vraag). Focus op de
-      // belofte dat Credion belt; brochure is bonus. Email-adres expliciet
-      // tonen zodat bezoeker een typo direct kan opmerken.
+      // Credion-eerst-pad waarbij bezoeker email plus naam in 1 invoer gaf
+      // ("ik ben Jan, jan@example.com"). 06 nog nodig voor de scan. Zelfde
+      // structuur als het email-only pad: Credion-deelmelding plus reden
+      // waarom we ook nummer vragen, daarna direct de nummer-vraag.
       if (state.behaviors?.credionRequested && !draft.phone) {
         sendSequence(text, [
-          { kind: 'bot-text', text: `Dank. We sturen de brochure naar ${draft.email}.` },
-          { kind: 'bot-text', text: 'We delen je gegevens met Credion zodat ze je kunnen bellen voor de financieringsscan. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).' },
-          { kind: 'bot-text', text: `Top, ${draft.firstName}.` },
-          { kind: 'bot-text', text: 'Tot slot je 06, zodat Credion je kan bereiken voor de scan.' },
+          { kind: 'bot-text', text: 'Dank. We delen je gegevens met Credion zodat ze je kunnen bellen voor de financieringsscan. Daarvoor hebben we alleen nog even je nummer nodig. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).' },
+          { kind: 'bot-text', text: 'Wat is je nummer?' },
         ])
         dispatch({ type: 'SET_QUESTION', next: 'lead-phone' })
         return
       }
-
       // Rent-match-pad heeft 06 nodig zodat we daadwerkelijk contact kunnen
       // opnemen zodra er een match is — geen Yes/No-vraag, want zonder 06
       // kunnen we de "we bewaren je voorkeur"-belofte niet waarmaken.
@@ -1656,7 +1631,6 @@ function Demo() {
         dispatch({ type: 'SET_QUESTION', next: 'lead-phone' })
         return
       }
-
       sendSequence(text, [
         { kind: 'bot-text', text: `Dank. We sturen de brochure naar ${draft.email}.` },
         { kind: 'bot-text', text: privacyClaim },
@@ -1666,7 +1640,6 @@ function Demo() {
       dispatch({ type: 'SET_QUESTION', next: 'lead-phoneAsk' })
       return
     }
-
     dispatch({ type: 'LEAD_DRAFT', draft })
     // Rent-match-pad: geen brochure-belofte want we slaan een huur-voorkeur op,
     // niet een koop-aanvraag. Aparte copy voorkomt verwarring.
@@ -1681,11 +1654,12 @@ function Demo() {
       return
     }
     // Credion-pad: focus op de financieringsscan-belofte ipv enkel brochure.
-    // Brochure is bonus zodat de bezoeker iets te lezen heeft tot Credion belt.
+    // We melden de Credion-deelovereenkomst direct na de email zodat bezoeker
+    // weet waarom we ook naam en 06 vragen, niet pas na alle drie de velden.
+    // De brochure-belofte komt aan het eind als we daadwerkelijk versturen.
     if (state.behaviors?.credionRequested) {
       sendSequence(text, [
-        { kind: 'bot-text', text: `Dank. We sturen de brochure naar ${draft.email}.` },
-        { kind: 'bot-text', text: 'We delen je gegevens met Credion zodat ze je kunnen bellen voor de financieringsscan. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).' },
+        { kind: 'bot-text', text: 'Dank. We delen je gegevens met Credion zodat ze je kunnen bellen voor de financieringsscan. Daarvoor hebben we alleen nog even je naam en nummer nodig. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).' },
         { kind: 'bot-text', text: 'Wat is je naam?' },
       ])
       dispatch({ type: 'SET_QUESTION', next: 'lead-name' })
@@ -1699,19 +1673,16 @@ function Demo() {
     ])
     dispatch({ type: 'SET_QUESTION', next: 'lead-name' })
   }
-
   function handleLeadNameText(text) {
     const parsed = parseLeadInput(text)
     const fallbackFirst = text.trim().split(/\s+/)[0]
     const firstName = parsed.firstName || (fallbackFirst ? capitalize(fallbackFirst) : null)
-
     if (!firstName) {
       sendSequence(text, [
         { kind: 'bot-text', text: 'Kreeg je naam niet helemaal mee. Kun je het opnieuw typen?' },
       ])
       return
     }
-
     const draft = {
       ...state.leadDraft,
       firstName,
@@ -1720,19 +1691,18 @@ function Demo() {
     }
     trackNewLeadFields(state.leadDraft, draft)
     dispatch({ type: 'LEAD_DRAFT', draft })
-
     // Credion-eerst-pad: 06 is voor de financieringsscan essentieel
     // (Credion belt om door cijfers te lopen). Skip dus de Yes/No-vraag
-    // en vraag direct het nummer.
+    // en vraag direct het nummer. Geen losse "Top, X" bubble meer, de
+    // Credion-deelmelding stond al na email plus de bezoeker weet inmiddels
+    // dat naam plus nummer beide nodig zijn.
     if (state.behaviors?.credionRequested && !draft.phone) {
       sendSequence(text, [
-        { kind: 'bot-text', text: `Top, ${firstName}.` },
-        { kind: 'bot-text', text: 'Tot slot je 06, zodat Credion je zo snel mogelijk kan bellen voor de financieringsscan.' },
+        { kind: 'bot-text', text: 'Wat is je nummer?' },
       ])
       dispatch({ type: 'SET_QUESTION', next: 'lead-phone' })
       return
     }
-
     // Rent-match-pad: 06 is essentieel om "we nemen contact op zodra er een
     // match is" waar te maken. Skip de Yes/No-vraag en vraag direct het 06.
     if (state.behaviors?.rentMatchRequested && !draft.phone) {
@@ -1743,14 +1713,12 @@ function Demo() {
       dispatch({ type: 'SET_QUESTION', next: 'lead-phone' })
       return
     }
-
     sendSequence(text, [
       { kind: 'bot-text', text: `Top, ${firstName}.` },
       { kind: 'bot-text', text: 'We houden bij dit soort projecten vaak kort contact via WhatsApp, bijvoorbeeld over beschikbaarheid of als je nog vragen hebt. Vind je dat prettig?' },
     ])
     dispatch({ type: 'SET_QUESTION', next: 'lead-phoneAsk' })
   }
-
   function handleLeadPhoneText(text) {
     const parsed = parseLeadInput(text)
     if (!parsed.phone) {
@@ -1763,10 +1731,9 @@ function Demo() {
     trackNewLeadFields(state.leadDraft, lead)
     finishLead(lead, [{ kind: 'user-text', text }])
   }
-
   function finishLead(lead, prependMessages = []) {
+    fireMetaLead('lead-complete', { hasPhone: !!lead?.phone })
     dispatch({ type: 'LEAD_DRAFT', draft: lead })
-
     // Volgende stap hangt af van waar de bezoeker in de flow zit. Wanneer
     // size en timeline al beantwoord zijn (bijv. via warm-handoff callback
     // na timeline), niet terugsturen naar size — dan blijft de bezoeker op
@@ -1779,9 +1746,7 @@ function Demo() {
     if (sizeDone && timelineDone && !followupDone) next = 'moreInfo'
     else if (sizeDone && !timelineDone) next = 'timeline'
     else if (sizeDone && timelineDone && followupDone) next = null
-
     dispatch({ type: 'ANSWER', key: 'lead', value: lead, next })
-
     // Eerste Supabase-push: lead is nu compleet (e-mail + naam + evt. 06).
     // Inclusief alle tot dusver geregistreerde consent-momenten zodat de
     // server-side audit-trail meteen vol is. lead-arg expliciet meegeven
@@ -1791,7 +1756,6 @@ function Demo() {
       [{ scope: 'brochure-en-opvolging', granted: true, detail: { from: 'finishLead' } }],
       lead,
     )
-
     // prependMessages bevat user-text + eventueel een bot-bevestiging.
     // Splits: user-text direct, bot-bubbles in de queue.
     const userMsgs = prependMessages.filter((m) => m.kind === 'user-text')
@@ -1799,7 +1763,6 @@ function Demo() {
     if (userMsgs.length > 0) {
       dispatch({ type: 'APPEND', messages: userMsgs })
     }
-
     // Credion-eerst-pad: bezoeker klikte op de Credion-link in de calc
     // VÓÓR de standaard lead-capture. Nu data binnen is, sturen we direct
     // naar Credion (geen extra Yes/No-vraag — de klik op de link was het
@@ -1812,15 +1775,13 @@ function Demo() {
         intent: state.answers.intent?.label,
         size: state.answers.size?.label,
         timeline: state.answers.timeline?.label,
+        calc: state.behaviors?.credionCalcData || null,
       })
-      // Email expliciet in de bevestiging tonen zodat bezoeker een typo nog
-      // kan opmerken — extra mini-vertrouwenscheck. Fallback voor zeldzaam
-      // geval dat email leeg is (defensive, finishLead vereist em maar
-      // belt&breaks-compliant).
-      const emailDisplay = lead.email || 'het opgegeven e-mailadres'
+      // Eén compacte bevestiging die Credion-belofte plus brochure-mailing
+      // combineert. De Credion-deelmelding stond al na email-invoer dus dit
+      // is een afsluiting van de capture-flow, niet een nieuwe melding.
       const credionConfirmation = [
-        { kind: 'bot-text', text: 'Top. We delen je gegevens met Credion zodat ze je zo snel mogelijk kunnen bellen voor de financieringsscan.' },
-        { kind: 'bot-text', text: `De brochure sturen we naar ${emailDisplay}, zodat je het project alvast rustig kunt doorlezen.` },
+        { kind: 'bot-text', text: 'Top. We delen je gegevens met Credion zodat ze je zo snel mogelijk kunnen bellen voor de financieringsscan. En zullen je tevens alvast de brochure mailen, zodat je het project alvast rustig kunt doorlezen.' },
       ]
       const sizeTail = sizeDone
         ? []
@@ -1831,7 +1792,6 @@ function Demo() {
       dispatch({ type: 'ENQUEUE', messages: [...botPrepend, ...credionConfirmation, ...sizeTail] })
       return
     }
-
     // Rent-match-pad: bezoeker registreerde zijn huur-voorkeur zonder lead.
     // Nu naam, mail en 06 binnen zijn, sluiten we de huur-flow direct af met
     // bevestiging plus CTA-card. We slaan de standaard size-vraag over want
@@ -1852,7 +1812,6 @@ function Demo() {
       dispatch({ type: 'ENQUEUE', messages: [...botPrepend, ...tail] })
       return
     }
-
     // Bevestigings-bubbel + size-vraag horen alleen bij het pad waarin size
     // nog moet komen. Als size al beantwoord is, alleen botPrepend tonen.
     const tail = sizeDone
@@ -1861,13 +1820,11 @@ function Demo() {
           { kind: 'bot-text', text: 'Goed. Nog even, zodat we de juiste prijslijst en plattegronden meesturen.' },
           { kind: 'bot-text', text: flow.questions.size.label },
         ]
-
     dispatch({
       type: 'ENQUEUE',
       messages: [...botPrepend, ...tail],
     })
   }
-
   const onBrochure = () => {
     trackEvent('cta:brochure-clicked', { location: state.currentQuestion || 'thankyou' })
     dispatch({ type: 'BEHAVIOR_BROCHURE_CLICKED' })
@@ -1875,7 +1832,6 @@ function Demo() {
       window.open(project.brochureUrl, '_blank', 'noopener,noreferrer')
     }
   }
-
   // Centrale WA-handler. Twee paden:
   //
   //  1. Naam bekend: link altijd rebuilden met de huidige voornaam plus de
@@ -1891,6 +1847,7 @@ function Demo() {
   // beschrijving van de situatie op het moment dat de bubble werd getoond.
   const requestWhatsAppOpen = (e, summary, source) => {
     trackEvent('cta:whatsapp-clicked', { location: source })
+    fireMetaLead('whatsapp', { location: source })
     if (e && e.preventDefault) e.preventDefault()
     const lead = state.answers.lead || {}
     if (lead.firstName) {
@@ -1910,7 +1867,6 @@ function Demo() {
     })
     trackEvent('whatsapp-name-prompt:shown', { source })
   }
-
   const onWaClick = (e) => {
     // Header WhatsApp-icoon: bewust GEEN naam-vraag eerst. De header is een
     // escape-route — onderbreken voor lead-capture is een afhaak-moment.
@@ -1918,6 +1874,7 @@ function Demo() {
     // bezoeker nog geen naam heeft achtergelaten ("Hoi REPP, ik heb interesse
     // in De Hofman."). Bij wel-bekende naam komt die er natuurlijk in.
     trackEvent('cta:whatsapp-clicked', { location: 'header' })
+    fireMetaLead('whatsapp', { location: 'header' })
     if (e && e.preventDefault) e.preventDefault()
     const lead = state.answers.lead || {}
     const wa = whatsAppDeeplink(project, lead.firstName || '', '')
@@ -1925,17 +1882,14 @@ function Demo() {
       window.open(wa, '_blank', 'noopener,noreferrer')
     }
   }
-
   // Behavior callbacks vanuit de site-plan en calc-componenten.
   const onUnitView = ({ number }) => {
     dispatch({ type: 'BEHAVIOR_UNIT_VIEWED', number })
   }
-
   const onCalcInteract = (calcType) => {
     trackEvent(calcType === 'rentability' ? 'calc:rentability-interaction' : 'calc:mortgage-interaction', {})
     dispatch({ type: 'BEHAVIOR_CALC_INTERACTED', calcType })
   }
-
   // Credion-link in de mortgage-calculator. Twee paden afhankelijk van
   // of we al lead-gegevens hebben:
   //  A. lead compleet (e-mail + naam) → bestaande financingAsk Yes/No
@@ -1947,32 +1901,34 @@ function Demo() {
   // Klik op de Credion-link in de calc opent eerst een confirm-dialog tegen
   // misclicks (sliders en knoppen liggen dichtbij elkaar). Pas bij bevestigen
   // start de echte flow via runCredionRequest.
-  const onCredionRequest = () => {
-    trackEvent('credion:confirm-shown', {})
+  const onCredionRequest = (calcData) => {
+    // calcData komt mee vanuit MortgageCalc of RentabilityCalc met de
+    // actuele slider-waarden op het moment van klik. Bewaren in behaviors
+    // zodat sendCredionLead 'em later kan meesturen naar Zapier ook als
+    // de bezoeker ondertussen nog naam plus 06 invult.
+    if (calcData && typeof calcData === 'object') {
+      dispatch({ type: 'BEHAVIOR_CREDION_CALC', payload: calcData })
+    }
+    trackEvent('credion:confirm-shown', { calcKind: calcData?.kind || 'unknown' })
     setCredionConfirmOpen(true)
   }
-
   const cancelCredionRequest = () => {
     trackEvent('credion:confirm-cancelled', {})
     setCredionConfirmOpen(false)
   }
-
   const confirmCredionRequest = () => {
     setCredionConfirmOpen(false)
     runCredionRequest()
   }
-
   const runCredionRequest = () => {
     trackEvent('credion:requested-from-calc', {
       hasEmail: !!state.answers.lead?.email,
       hasName: !!state.answers.lead?.firstName,
       hasPhone: !!state.answers.lead?.phone,
     })
-
     const lead = state.answers.lead || {}
     const hasEmail = !!lead.email
     const hasName  = !!lead.firstName
-
     // Pad A: gegevens al binnen → bestaande Yes/No-vraag
     if (hasEmail && hasName) {
       sendSequence('Vraag financieringsscan via Credion', [
@@ -1982,7 +1938,6 @@ function Demo() {
       dispatch({ type: 'SET_QUESTION', next: 'financingAsk' })
       return
     }
-
     // Pad B: gecombineerde flow. We markeren credionRequested zodat
     // de lead-capture-handler na phone (of skip) automatisch naar
     // Credion stuurt en niet de normale brochureTrigger-flow doorloopt.
@@ -2001,7 +1956,6 @@ function Demo() {
     // ANSWER dispatch heeft expliciet next: 'lead-email' nodig.
     dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: { id: 'ja', label: 'Ja, stuur maar', _msgCountBefore: state.messages.length, _viaCredion: true }, next: 'lead-email' })
   }
-
   // Wat de bezoeker met de service-card doet. Net als bij de losse
   // warm-handoff muteren we het bestaande bericht met de outcome zodat de
   // groene confirmatie-strook in de card verschijnt zonder extra bubble.
@@ -2035,7 +1989,6 @@ function Demo() {
       dispatch({ type: 'SET_MESSAGES', messages: newMessages })
     }
   }
-
   // Inline 06-input vanuit de service-card. Geen chat-input flow nodig;
   // we werken direct lead.phone bij en zetten de outcome op callback.
   const onServiceCardSubmitPhone = (msgId, text) => {
@@ -2062,7 +2015,6 @@ function Demo() {
     })
     dispatch({ type: 'SET_MESSAGES', messages: newMessages })
   }
-
   // Wat de bezoeker met de warm-handoff bubble doet. We muteren het bestaande
   // bericht zodat de visuele feedback (groen vinkje, "Ik bel je vandaag")
   // direct in de chat verschijnt zonder extra bubble.
@@ -2080,7 +2032,6 @@ function Demo() {
     })
     // We bouwen om dit te dispatchen via een SET_MESSAGES action.
     dispatch({ type: 'SET_MESSAGES', messages: newMessages })
-
     // Bij callback en geen telefoon-nummer in lead: ask phone.
     if (outcome === 'callback' && !state.answers.lead?.phone) {
       dispatch({
@@ -2092,15 +2043,13 @@ function Demo() {
       dispatch({ type: 'SET_QUESTION', next: 'lead-phone' })
     }
   }
-
   const onPhoneClick = () => {
     trackEvent('cta:phone-clicked', { location: 'header' })
+    fireMetaLead('phone-tap', { location: 'header' })
   }
-
   const onPortalClick = () => {
     trackEvent('cta:portal-clicked', { location: 'cta-card' })
   }
-
   // Mini-TOC voor de wrap-up CTA-card. Geeft de bezoeker een snelle
   // terugkeer-route naar al bekeken kaarten zonder dat 'ie door een lange
   // chat moet scrollen. Bouwt op moreInfoSeen + de message-IDs van de
@@ -2123,7 +2072,6 @@ function Demo() {
       return { id, label: def.label, messageId: msg.id }
     })
     .filter(Boolean)
-
   const onTopicJump = (topicId) => {
     const topic = seenTopics.find((t) => t.id === topicId)
     if (!topic || typeof document === 'undefined') return
@@ -2138,10 +2086,8 @@ function Demo() {
       scroller.scrollTo({ top: Math.max(0, elTop - 12), behavior: 'smooth' })
     }
   }
-
   const headerWaLink = whatsAppDeeplink(project, state.answers.lead?.firstName || '', 'Graag info over De Hofman')
   const headerPhoneLink = buildPhoneLink(project.phoneNumber)
-
   // Wijzig een eerder gegeven antwoord vanuit de antwoorden-sheet.
   // De flow rolt terug naar het punt vlak voor de oude user-bubble; de
   // originele bot-vraag staat nog in de thread, dus de bezoeker ziet
@@ -2150,7 +2096,6 @@ function Demo() {
     trackEvent('answer:edit', { key })
     dispatch({ type: 'ROLLBACK', key })
   }
-
   const onForgetLead = () => {
     trackEvent('answer:forget-lead', {})
     // Het verzoek tot verwijdering ZELF eerst loggen voordat we de data
@@ -2158,7 +2103,6 @@ function Demo() {
     logErasureRequest()
     dispatch({ type: 'FORGET_LEAD' })
   }
-
   // Per-veld edit van lead. Veld wordt gewist en de bezoeker wordt
   // gevraagd het opnieuw in te tikken via de chat-input. Andere lead-velden
   // blijven bewaard. Na succes komt de bezoeker terug op zijn vorige
@@ -2169,7 +2113,6 @@ function Demo() {
     const newDraft = { ...state.leadDraft }
     delete newDraft[draftKey]
     dispatch({ type: 'LEAD_DRAFT', draft: newDraft })
-
     const newLead = { ...(state.answers.lead || {}) }
     delete newLead[draftKey]
     const hasOtherFields = newLead.firstName || newLead.email || newLead.phone
@@ -2179,10 +2122,8 @@ function Demo() {
       value: hasOtherFields ? newLead : undefined,
       next: state.currentQuestion,
     })
-
     setEditReturnQuestion(state.currentQuestion)
     dispatch({ type: 'SET_QUESTION', next: `lead-edit-${field}` })
-
     const label =
       field === 'email'
         ? 'Wat is je e-mailadres?'
@@ -2191,13 +2132,19 @@ function Demo() {
         : 'Wat is je 06-nummer?'
     dispatch({ type: 'ENQUEUE', messages: [{ kind: 'bot-text', text: label }] })
   }
-
   const toggleDebug = () => dispatch({ type: 'TOGGLE_DEBUG' })
-
   let chipQuestion = null
   let inputConfig = null
   if (state.currentQuestion === 'intent') chipQuestion = flow.questions.intent
-  else if (state.currentQuestion === 'availabilityCheck') chipQuestion = flow.questions.availabilityCheck
+  else if (state.currentQuestion === 'availabilityCheck') {
+    // Filter de 'locatie'-chip zodra LocationBubble al eens getoond is om
+    // herhaalde clicks te voorkomen. Bezoeker houdt dan alleen ja/nee
+    // opties over om de availability-flow af te ronden.
+    const locationShown = state.messages.some((m) => m.kind === 'location')
+    chipQuestion = locationShown
+      ? { ...flow.questions.availabilityCheck, options: flow.questions.availabilityCheck.options.filter((o) => o.id !== 'locatie') }
+      : flow.questions.availabilityCheck
+  }
   else if (state.currentQuestion === 'brochureTrigger') {
     // Voor beleggers en de "beide"-persona bieden we een 3e optie aan om
     // eerst meer over het rendement te horen voordat ze de brochure-keuze
@@ -2249,6 +2196,10 @@ function Demo() {
         // warm-handoff bubble plus 06 aanwezig. Zonder 06 kan de makelaar
         // niet bellen, dus geen reden om de chip al te muten.
         state.behaviors?.warmHandoffOutcome === 'callback' && !!state.answers.lead?.phone,
+        // Portal-chip pas tonen zodra we e-mail van de bezoeker hebben — anders
+        // sturen we een anonieme bezoeker naar het portaal zonder token, wat
+        // het hele "auto-login"-idee onderuit haalt.
+        !!state.answers.lead?.email,
       ),
     }
   } else if (state.currentQuestion === 'lead-phoneAsk') {
@@ -2276,14 +2227,11 @@ function Demo() {
   } else if (state.currentQuestion === 'lead-phone' || state.currentQuestion === 'lead-edit-phone') {
     inputConfig = { placeholder: '06 12 34 56 78', inputMode: 'tel', validate: isValidPhoneText }
   }
-
   const answeredCount = ['intent', 'brochureTrigger', 'lead', 'size', 'timeline', 'followup']
     .filter((k) => state.answers[k]).length
   const progress = state.view === 'chat' ? { current: Math.min(6, Math.max(1, answeredCount + 1)), total: 6 } : null
-
   // De aanpassen-knop tonen we vanaf het moment dat er minimaal 1 antwoord is gegeven.
   const showAnswersButton = state.view === 'chat' && Object.values(state.answers).some(Boolean)
-
   return (
     <AppShell
       progress={progress}
@@ -2297,16 +2245,25 @@ function Demo() {
       onLogoClick={state.view === 'chat' ? onLogoClick : undefined}
     >
       {state.view === 'intro' && <IntroScreen onStart={start} />}
-
       {offerResume && (
         <SmartResumeBanner ageMs={ageMs} answersCount={answersCount} onDismiss={dismissResume} />
       )}
-
       {state.view === 'chat' && (
         <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-md">
           <ChatThread
             messages={state.messages}
-            showTyping={(state.messageQueue || []).some((m) => m.kind !== 'pause')}
+            showTyping={(() => {
+              // Typing-indicator-zichtbaarheid op basis van het wachtende item.
+              // Bij een silent-pause (bewuste stilte na bv. site-plan) blijft
+              // de indicator uit zodat de bezoeker rust krijgt om de bubble
+              // te scannen. Anders: zichtbaar als er nog een bubble in de
+              // queue staat zodat de bezoeker weet dat er iets aankomt.
+              const queue = state.messageQueue || []
+              if (queue.length === 0) return false
+              const head = queue[0]
+              if (head.kind === 'pause' && head.silent) return false
+              return queue.some((m) => m.kind !== 'pause')
+            })()}
             onBrochure={onBrochure}
             onUnitView={onUnitView}
             onCalcInteract={onCalcInteract}
@@ -2336,7 +2293,6 @@ function Demo() {
           )}
         </div>
       )}
-
       <AnswersSheet
         open={answersOpen}
         answers={state.answers}
@@ -2350,14 +2306,12 @@ function Demo() {
           dispatch({ type: 'RESET' })
         }}
       />
-
       {/* Credion confirm-dialog tegen misclicks in de calc. */}
       <CredionConfirmDialog
         open={credionConfirmOpen}
         onConfirm={confirmCredionRequest}
         onCancel={cancelCredionRequest}
       />
-
       {/* OptionsSheet: bottom-sheet met alle moreInfo-onderwerpen. Wordt
           alleen gerenderd in moreInfo-state, buiten dat is de chip
           'Bekijk alle onderwerpen' niet zichtbaar dus geen trigger. */}
@@ -2381,7 +2335,6 @@ function Demo() {
           }}
         />
       )}
-
       <DebugPanel
         open={state.debugOpen}
         state={state}
@@ -2396,7 +2349,6 @@ function Demo() {
           dispatch({ type: 'RESET' })
         }}
       />
-
       {showRescue && (
         <RescueNudge
           project={project}
@@ -2407,6 +2359,7 @@ function Demo() {
             // 'flow:complete' met stage sales_ready). De bezoeker krijgt
             // de service-card / handoff zonder extra UI te bouwen.
             trackEvent('direct-contact:requested', { from: 'rescue-nudge' })
+            fireMetaLead('direct-contact', { from: 'rescue-nudge' })
             const lead = state.answers.lead || {}
             if (project.phoneNumber) {
               window.open(buildPhoneLink(project.phoneNumber), '_self')
@@ -2417,7 +2370,6 @@ function Demo() {
           }}
         />
       )}
-
       {showExitPrompt && (
         <ExitIntentPrompt onDismiss={dismissExitPrompt} />
       )}
