@@ -804,10 +804,16 @@ function Demo() {
       // Edge function geeft een portal_token terug bij succesvolle upsert.
       // Pak 'm op zodat we vanaf nu portal-links met ?t= kunnen bouwen en
       // de bezoeker dus automatisch ingelogd op dehofman.nl landt.
-      if (res && res.portal_token && res.portal_token !== portalToken) {
-        setPortalToken(res.portal_token)
+      //
+      // pushLead wrapt de Edge Function-response als { ok, queued, result }.
+      // De daadwerkelijke server-payload (en dus portal_token) zit op
+      // res.result, niet op res direct. Bij skipped (feature-flag uit) of bij
+      // een gequeued-bij-netwerkfout response is res.result undefined.
+      const newToken = res?.result?.portal_token
+      if (newToken && newToken !== portalToken) {
+        setPortalToken(newToken)
         try {
-          window.sessionStorage.setItem('clp-portal-token', res.portal_token)
+          window.sessionStorage.setItem('clp-portal-token', newToken)
         } catch {
           // sessionStorage kan vol/dicht staan — niet erg, token leeft dan alleen in-memory.
         }
