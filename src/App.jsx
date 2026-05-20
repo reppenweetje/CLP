@@ -21,6 +21,7 @@ import { parseLeadInput, mergeLead } from './lib/parseLead.js'
 import { startNewSession, trackEvent, getSessionId } from './lib/analytics.js'
 import { notifyHotLead } from './lib/slack.js'
 import { pushLead, flushPending, isApiConfigured } from './lib/api.js'
+import { attachEventsAutoFlush } from './lib/eventsApi.js'
 import {
   logSessionStartConsent,
   logBrochureConsent,
@@ -828,6 +829,14 @@ function Demo() {
     window.addEventListener('online', onOnline)
     return () => window.removeEventListener('online', onOnline)
   }, [])
+
+  // Supabase analytics: queue-flush op interval + pagehide + online.
+  // Skipt zichzelf als VITE_SUPABASE_ANALYTICS_ENABLED!='true'.
+  useEffect(() => {
+    const detach = attachEventsAutoFlush()
+    return detach
+  }, [])
+
   const start = (variant) => {
     // Hervat-pad: bezoeker kwam via het header-logo terug naar intro met
     // chat-historie nog intact. We schakelen alleen view om en bewaren de

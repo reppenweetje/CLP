@@ -10,6 +10,7 @@
 
 import { plausibleEvent } from './plausible.js'
 import { isTrackingSuppressed } from './ipExclusion.js'
+import { pushEvent as pushSupabaseEvent, isAnalyticsConfigured } from './eventsApi.js'
 
 const EVENTS_KEY = 'clp-events-v1'
 const SESSION_KEY = 'clp-session-id'
@@ -60,9 +61,37 @@ function autoSessionProps() {
   } catch { return {} }
 }
 
+// Mapt het lokale event-formaat naar de clp_events tabel-structuur:
+// flat-columns voor query-bare velden + rest van payload als JSONB.
+// Wordt alleen aangeroepen als VITE_SUPABASE_ANALYTICS_ENABLED='true'.
+function toSupabaseEvent(localEvent) {
+  const p = localEvent.payload || {}
+  const flatKeys = new Set([
+    'step', 'currentQuestion', 'persona', 'stage', 'temperature',
+    'score', 'ctaVariant', 'copyVariant',
+  ])
+  const restPayload = {}
+  for (const [k, v] of Object.entries(p)) {
+    if (!flatKeys.has(k)) restPayload[k] = v
+  }
+  return {
+    session_id:   localEvent.sessionId,
+    event_type:   localEvent.type,
+    step:         p.step ?? p.currentQuestion ?? null,
+    persona:      p.persona ?? null,
+    stage:        p.stage ?? null,
+    temperature:  p.temperature ?? null,
+    score:        typeof p.score === 'number' ? p.score : null,
+    cta_variant:  p.ctaVariant ?? null,
+    copy_variant: p.copyVariant ?? null,
+    url_path:     (typeof window !== 'undefined') ? window.location.pathname : null,
+    payload:      restPayload,
+  }
+}
+
 export function trackEvent(type, payload = {}) {
   // IP-uitsluiting: REPP-team-traffic mag analytics niet vervuilen.
-  // Skip ALLES — geen localStorage write, geen Plausible forward.
+  // Skip ALLES — geen localStorage write, geen Plausible forward, geen Supabase.
   if (isTrackingSuppressed()) return null
 
   const events = loadEvents()
@@ -81,6 +110,14 @@ export function trackEvent(type, payload = {}) {
   // Forward naar Plausible voor cross-session funnel-analyse. PII wordt
   // weggefilterd in safeProps() — zie src/lib/plausible.js.
   plausibleEvent(type, enriched)
+  // Forward naar Supabase clp_events tabel via batched queue. No-op als
+  // VITE_SUPABASE_ANALYTICS_ENABLED='false'. Queue flushed door
+  // attachEventsAutoFlush() in App.jsx (timer + pagehide + online).
+  if (isAnalyticsConfigured()) {
+    try { pushSupabaseEvent(toSupabaseEvent(event)) } catch (err) {
+      console.warn('[analytics] supabase event push failed', err)
+    }
+  }
   return event
 }
 
