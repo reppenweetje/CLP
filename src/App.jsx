@@ -236,12 +236,6 @@ function reducer(state, action) {
       }
       return state
     }
-    case 'BEHAVIOR_CREDION_CALC':
-      // Snapshot van de calc-sliders (maandlast of rendement) op het
-      // moment dat de bezoeker op de Credion-knop tikte. Wordt later in
-      // sendCredionLead meegestuurd zodat Credion de aanvraag al kan
-      // beoordelen met de cijfers waarmee de bezoeker speelde.
-      return { ...state, behaviors: { ...(state.behaviors || EMPTY_BEHAVIORS), credionCalcData: action.payload } }
     case 'BEHAVIOR_CREDION_REQUESTED': {
       // Vlag dat bezoeker via de calc-link Credion heeft aangevraagd.
       // Lead-capture handlers checken deze flag om na de phone-stap
@@ -430,25 +424,19 @@ function moreInfoChips(persona, seen, temperature, callbackArranged = false) {
   return [...inlineChips, callbackPlain]
 }
 
-function buildMoreInfoMessages(id, persona, opts = {}) {
+function buildMoreInfoMessages(id, persona) {
   switch (id) {
     case 'location':
       return [{ kind: 'location', payload: { location: project.location, projectName: project.displayName } }]
-    case 'sitePlan': {
+    case 'sitePlan':
       // Site-plan is een visueel rijke bubble waar de bezoeker per unit kan
-      // tikken voor m², prijs en status. Bij de eerste vertoning gunnen
-      // we 8 seconden om de plattegrond te scannen voor de chip-bar weer
-      // verschijnt. Bij herhaling (bezoeker zag 'em al in de
-      // availabilityCheck-flow vroeg in de chat) kennen ze de plattegrond
-      // al, dus chips komen meteen, geen pauze nodig.
-      const messages = [
+      // tikken voor m², prijs en status. Direct daarna de chip-bar tonen
+      // voelt te druk — we gunnen 8 seconden om de plattegrond te scannen
+      // en een unit aan te tikken voor er een volgende prompt komt.
+      return [
         { kind: 'site-plan', payload: { sitePlan: project.sitePlan, units: project.units, persona } },
+        { kind: 'pause', ms: 8000 },
       ]
-      if (!opts.sitePlanAlreadyShown) {
-        messages.push({ kind: 'pause', ms: 8000 })
-      }
-      return messages
-    }
     case 'gallery':
       return [{
         kind: 'gallery',
@@ -511,34 +499,13 @@ function isValidPhoneText(text) {
 function trackNewLeadFields(prevDraft, newDraft) {
   if (newDraft.email && newDraft.email !== prevDraft.email) {
     trackEvent('lead-email:submitted', { email: newDraft.email })
-    fireMetaLead('email')
   }
   if (newDraft.firstName && newDraft.firstName !== prevDraft.firstName) {
     trackEvent('lead-name:submitted', { firstName: newDraft.firstName })
   }
   if (newDraft.phone && newDraft.phone !== prevDraft.phone) {
     trackEvent('lead-phone:submitted', { phone: newDraft.phone })
-    fireMetaLead('phone')
   }
-}
-
-// Meta Pixel Lead-event helper, gedededupliceerd op sessie-niveau. Vuurt
-// 1× per browser-tab zodra een bezoeker een conversie-signaal afgeeft —
-// e-mail of telefoon achtergelaten, WhatsApp-klik, expliciet callback-
-// verzoek, of zelf-bel-klik. Meta optimaliseert Ad Sets op dit event,
-// dus eerder vuren > later vuren (eerste signaal is sterk genoeg). Geen
-// PII in customData; Meta matched op fbp/fbc-cookies plus browser-
-// fingerprint. Try/catch zodat een geblokkeerde pixel (ad-blocker, no-
-// consent) de flow niet breekt.
-function fireMetaLead(source, extra = {}) {
-  if (typeof window === 'undefined') return
-  if (window.__metaLeadFired) return
-  window.__metaLeadFired = true
-  try {
-    if (typeof window.fbq === 'function') {
-      window.fbq('track', 'Lead', { source, ...extra })
-    }
-  } catch (_) { /* pixel niet beschikbaar — stilletjes negeren */ }
 }
 
 function capitalize(s) {
@@ -593,12 +560,8 @@ function computeReleaseDelay(message) {
   // bubble gerendered, alleen gebruikt om tijd te kopen tussen bubbles.
   if (message.kind === 'pause') return Math.max(0, message.ms || 0)
   if (message.kind === 'bot-text') {
-    // Bandbreedte verhoogd voor rustiger ritme tussen opeenvolgende bot-
-    // bubbles. Kortste delay 700ms, langste 1500ms (was 450-900ms). Per
-    // karakter +12ms ipv +9ms zodat lange zinnen daadwerkelijk leestijd
-    // krijgen voor de volgende bubble verschijnt.
     const len = message.text?.length || 30
-    return Math.max(700, Math.min(1500, 500 + len * 12))
+    return Math.max(450, Math.min(900, 350 + len * 9))
   }
   // Rich cards en interactieve bubbles vragen iets meer aandacht. Lijst is
   // synchroon met ChatThread renderkinds; nieuwe rich bubbles hier toevoegen.
@@ -636,6 +599,18 @@ function Demo() {
   const [optionsSheetOpen, setOptionsSheetOpen] = useState(false)
   const [credionConfirmOpen, setCredionConfirmOpen] = useState(false)
   const [showRescue, setShowRescue] = useState(false)
+
+  // Portal-token: opaque UUID per lead, gegenereerd door Supabase
+  // (gen_random_uuid()::text DEFAULT op `leads.portal_token`). De Edge
+  // Function geeft 'em terug in de upsert-response; we vangen 'em hier
+  // op zodat de CTA-card aan het einde van de chat een magic-link kan
+  // bouwen naar de dehofman.nl-portaal. Token blijft één session levend
+  // (sessionStorage) — voor langere persistentie is er de mail-link.
+  const [portalToken, setPortalToken] = useState(() => {
+    if (typeof window === 'undefined') return null
+    try { return window.sessionStorage.getItem('clp:portal_token') || null }
+    catch { return null }
+  })
   const chatActive = state.view === 'chat'
   const flowComplete = state.messages.some((m) => m.kind === 'cta-card')
 
@@ -756,6 +731,17 @@ function Demo() {
   // beide A/B-experimenten orthogonaal kunnen analyseren in Plausible.
   const copyVariant = getOrAssignVariant()
 
+  // Portal-handover URL voor de eind-CTA. Voorkeur: token-magic-link naar
+  // de nieuwe dehofman.nl-portaal (geen login nodig, lead-gegevens al bekend
+  // server-side). Geen token (nog) → fallback op project.portalUrl, zodat
+  // bestaande bezoekers tijdens de rollout-fase niet stranden.
+  // PORTAL_BASE komt uit VITE_PORTAL_URL (Vercel/build-env); default is de
+  // productie-host.
+  const PORTAL_BASE = (import.meta?.env?.VITE_PORTAL_URL || 'https://dehofman.nl').replace(/\/+$/, '')
+  const portalUrlForCta = portalToken
+    ? `${PORTAL_BASE}/portal?t=${encodeURIComponent(portalToken)}`
+    : (project.portalUrl || null)
+
   // Supabase lead-upsert: synchroniseert de actuele state als één snapshot
   // naar de Edge Function. Idempotent dankzij upsert op (source, session_id),
   // dus we mogen dit meerdere keren in de flow aanroepen — elke call upsert
@@ -813,9 +799,27 @@ function Demo() {
           credionRequested:   !!state.behaviors?.credionRequested,
           rentMatchRequested: !!state.behaviors?.rentMatchRequested,
           rendementInfoShown: !!state.behaviors?.rendementInfoShown,
+          // brochureRequested wordt door de outbound-dispatcher meegenomen
+          // in de hash-input voor ai_followup_message — staleness-check
+          // klopt alleen als deze waarde meekomt in de snapshot.
+          brochureRequested:  state.answers.brochureTrigger?.id === 'ja',
         },
       },
       consents: extraConsents,
+    }).then((res) => {
+      // Edge Function geeft `portal_token` mee in de response-body
+      // (zowel bij 200 als 207). pushLead reikt 'em verbatim door als
+      // res.result.portal_token. Als 'ie verschilt van wat we al hadden
+      // (eerste call van de sessie, of na token-rotatie aan DB-zijde)
+      // pakken we 'm op en spiegelen we 'em in sessionStorage zodat een
+      // re-render hem nog kan oppikken zonder nieuwe API-call.
+      const tok = res && res.result && typeof res.result.portal_token === 'string'
+        ? res.result.portal_token
+        : null
+      if (tok && tok !== portalToken) {
+        setPortalToken(tok)
+        try { window.sessionStorage.setItem('clp:portal_token', tok) } catch {}
+      }
     }).catch((err) => {
       // pushLead vangt zelf 4xx/5xx + queue af; eventuele uncaught errors
       // mogen de chat-flow niet onderbreken. Log voor debugging.
@@ -910,18 +914,14 @@ function Demo() {
       const microIntro = pickMicroIntro(personaNext)
       const cards = uspCardOrder(personaNext)
       dispatch({ type: 'ANSWER', key: 'intent', value: answerValue(opt), next: 'availabilityCheck' })
-      // Flow van intent naar availabilityCheck met rustig ritme:
-      //   1. microIntro (persona-specifieke welkomstzin)
-      //   2. USP-carousel (overzichtskaarten, incl. A9-teaser)
-      //   3. 8s silent-pauze voor scan door de carousel
-      //   4. 3s typing-pauze zodat de availability-vraag niet uit het niets
-      //      komt. De vraag heeft drie chips: ja-laat-zien, liever-niet,
-      //      en vertel-meer-over-de-locatie (zie flow.questions.availabilityCheck).
+      // Aankondiging vóór de carousel zodat de bezoeker begrijpt dat
+      // 't om meerdere kaarten gaat en weet dat 'ie naar rechts kan
+      // vegen. Voorkomt dat de eerste kaart als enige bron wordt
+      // gezien.
       sendSequence(userTextFromOpt(opt), [
         { kind: 'bot-text', text: microIntro },
+        { kind: 'bot-text', text: 'Ik laat je een paar kaarten zien met meer uitleg en de belangrijke aspecten van het project. Veeg naar rechts om ze allemaal te bekijken.' },
         { kind: 'usp-cards', payload: { cards } },
-        { kind: 'pause', ms: 8000, silent: true },
-        { kind: 'pause', ms: 3000 },
         { kind: 'bot-text', text: flow.questions.availabilityCheck.label },
       ])
       return
@@ -931,37 +931,14 @@ function Demo() {
     // voor het brochure-moment; dat geeft urgentie en concrete context.
     if (q === 'availabilityCheck') {
       trackEvent('availability-check:answered', { id: opt.id, label: opt.label })
-
-      // Locatie-keuze: bezoeker wil eerst de plek zien voor 'ie kiest om
-      // de plattegrond te bekijken of niet. Toon LocationBubble en stel de
-      // availability-vraag opnieuw. currentQuestion blijft op
-      // 'availabilityCheck' zodat de chips automatisch teruggekomen,
-      // alleen zonder de locatie-optie (zie chipQuestion-filter onderaan).
-      if (opt.id === 'locatie') {
-        sendSequence(userTextFromOpt(opt), [
-          { kind: 'location', payload: { location: project.location, projectName: project.displayName } },
-          { kind: 'pause', ms: 5000, silent: true },
-          { kind: 'pause', ms: 2500 },
-          { kind: 'bot-text', text: flow.questions.availabilityCheck.label },
-        ])
-        return
-      }
-
       const botMessages = []
       if (opt.id === 'ja') {
         botMessages.push(
           { kind: 'bot-text', text: 'Hier zijn de 14 units met de actuele status. Tik op een unit voor meer informatie over die unit.' },
           { kind: 'site-plan', payload: { sitePlan: project.sitePlan, units: project.units, persona } },
-          // Twee-fase wachten voor menselijk gevoel:
-          //   silent 13s = bezoeker scant plattegrond in stilte, geen typing
-          //                indicator zodat 't niet voelt alsof de bot druk
-          //                is. Verlengd van 8 naar 13s zodat bezoekers ruim
-          //                tijd hebben om units aan te tikken
-          //   typing 5s  = daarna verschijnt de typing-indicator zodat de
-          //                bezoeker weet dat er nog iets gaat komen
-          // Daarna stuurt de bot pas de brochure-vraag (totaal 18s).
-          { kind: 'pause', ms: 13000, silent: true },
-          { kind: 'pause', ms: 5000 },
+          // 8s rust voordat de brochure-vraag komt — bezoeker scant en
+          // tikt eerst op units zonder dat de chips eronder al verschijnen.
+          { kind: 'pause', ms: 8000 },
         )
       }
       botMessages.push({ kind: 'bot-text', text: getLabel('brochureTrigger', copyVariant) })
@@ -1274,7 +1251,6 @@ function Demo() {
           signalCount: buying.signals.length,
           signalIds: buying.signals.map((s) => s.id),
         })
-        fireMetaLead('callback-chip', { persona: personaForCard, temperature: buying.temperature })
 
         const bridge = buildHandoffBridge(personaForCard, project, {
           signals: buying.signals,
@@ -1363,7 +1339,7 @@ function Demo() {
               phoneLink,
               phoneDisplay: project.phoneNumber,
               summary: customerSummary,
-              portalUrl: project.portalUrl,
+              portalUrl: portalUrlForCta,
               seenTopics: seenTopics.map((t) => ({ id: t.id, label: t.label })),
               hideBrochure: true,
               hideReset: true,
@@ -1429,7 +1405,7 @@ function Demo() {
               phoneLink,
               phoneDisplay: project.phoneNumber,
               summary: customerSummary,
-              portalUrl: project.portalUrl,
+              portalUrl: portalUrlForCta,
               seenTopics: seenTopics.map((t) => ({ id: t.id, label: t.label })),
               hideBrochure: true,
               hideReset: true,
@@ -1468,14 +1444,7 @@ function Demo() {
         }
       }
 
-      // Detect of de site-plan al eerder is getoond zodat buildMoreInfoMessages
-      // de scan-pauze kan overslaan bij een herhaling. Treedt op wanneer
-      // bezoeker eerder 'ja' koos op availabilityCheck en nu via moreInfo
-      // opnieuw de plattegrond opvraagt.
-      const moreInfoOpts = {
-        sitePlanAlreadyShown: state.messages.some((m) => m.kind === 'site-plan'),
-      }
-      sendSequence(userTextFromOpt(opt), [...buildMoreInfoMessages(opt.id, persona, moreInfoOpts), ...trailingMessages])
+      sendSequence(userTextFromOpt(opt), [...buildMoreInfoMessages(opt.id, persona), ...trailingMessages])
       return
     }
 
@@ -1489,7 +1458,6 @@ function Demo() {
           intent: state.answers.intent?.label,
           size: state.answers.size?.label,
           timeline: state.answers.timeline?.label,
-          calc: state.behaviors?.credionCalcData || null,
         })
         sendSequence(userTextFromOpt(opt), [
           { kind: 'bot-text', text: 'Top. We delen je gegevens met Credion. Zij nemen vrijblijvend contact met je op.' },
@@ -1517,7 +1485,13 @@ function Demo() {
       sendSequence(userTextFromOpt(opt), [
         { kind: 'bot-text', text: tc.lead },
         { kind: 'bot-text', text: tc.body },
-        { kind: 'cta-card', payload: { waLink: wa, summary: customerSummary } },
+        // Portal-link helemaal aan het einde van de chat: bezoeker heeft
+        // alle vragen beantwoord, lead is in Supabase, token is via de
+        // upsert-response binnengekomen. Geen aparte mail-stap nodig —
+        // doorklik met token-querystring volstaat. Fallback op de oude
+        // project.portalUrl als portalToken nog niet binnen is (offline-
+        // queue, of feature-flag uit).
+        { kind: 'cta-card', payload: { waLink: wa, summary: customerSummary, portalUrl: portalUrlForCta } },
       ])
       return
     }
@@ -1655,14 +1629,15 @@ function Demo() {
     if (draft.firstName) {
       dispatch({ type: 'LEAD_DRAFT', draft })
 
-      // Credion-eerst-pad waarbij bezoeker email plus naam in 1 invoer gaf
-      // ("ik ben Jan, jan@example.com"). 06 nog nodig voor de scan. Zelfde
-      // structuur als het email-only pad: Credion-deelmelding plus reden
-      // waarom we ook nummer vragen, daarna direct de nummer-vraag.
+      // Credion-eerst-pad heeft 06 nodig (geen Yes/No-vraag). Focus op de
+      // belofte dat Credion belt; brochure is bonus. Email-adres expliciet
+      // tonen zodat bezoeker een typo direct kan opmerken.
       if (state.behaviors?.credionRequested && !draft.phone) {
         sendSequence(text, [
-          { kind: 'bot-text', text: 'Dank. We delen je gegevens met Credion zodat ze je kunnen bellen voor de financieringsscan. Daarvoor hebben we alleen nog even je nummer nodig. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).' },
-          { kind: 'bot-text', text: 'Wat is je nummer?' },
+          { kind: 'bot-text', text: `Dank. We sturen de brochure naar ${draft.email}.` },
+          { kind: 'bot-text', text: 'We delen je gegevens met Credion zodat ze je kunnen bellen voor de financieringsscan. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).' },
+          { kind: 'bot-text', text: `Top, ${draft.firstName}.` },
+          { kind: 'bot-text', text: 'Tot slot je 06, zodat Credion je kan bereiken voor de scan.' },
         ])
         dispatch({ type: 'SET_QUESTION', next: 'lead-phone' })
         return
@@ -1706,12 +1681,11 @@ function Demo() {
       return
     }
     // Credion-pad: focus op de financieringsscan-belofte ipv enkel brochure.
-    // We melden de Credion-deelovereenkomst direct na de email zodat bezoeker
-    // weet waarom we ook naam en 06 vragen, niet pas na alle drie de velden.
-    // De brochure-belofte komt aan het eind als we daadwerkelijk versturen.
+    // Brochure is bonus zodat de bezoeker iets te lezen heeft tot Credion belt.
     if (state.behaviors?.credionRequested) {
       sendSequence(text, [
-        { kind: 'bot-text', text: 'Dank. We delen je gegevens met Credion zodat ze je kunnen bellen voor de financieringsscan. Daarvoor hebben we alleen nog even je naam en nummer nodig. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).' },
+        { kind: 'bot-text', text: `Dank. We sturen de brochure naar ${draft.email}.` },
+        { kind: 'bot-text', text: 'We delen je gegevens met Credion zodat ze je kunnen bellen voor de financieringsscan. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).' },
         { kind: 'bot-text', text: 'Wat is je naam?' },
       ])
       dispatch({ type: 'SET_QUESTION', next: 'lead-name' })
@@ -1749,12 +1723,11 @@ function Demo() {
 
     // Credion-eerst-pad: 06 is voor de financieringsscan essentieel
     // (Credion belt om door cijfers te lopen). Skip dus de Yes/No-vraag
-    // en vraag direct het nummer. Geen losse "Top, X" bubble meer, de
-    // Credion-deelmelding stond al na email plus de bezoeker weet inmiddels
-    // dat naam plus nummer beide nodig zijn.
+    // en vraag direct het nummer.
     if (state.behaviors?.credionRequested && !draft.phone) {
       sendSequence(text, [
-        { kind: 'bot-text', text: 'Wat is je nummer?' },
+        { kind: 'bot-text', text: `Top, ${firstName}.` },
+        { kind: 'bot-text', text: 'Tot slot je 06, zodat Credion je zo snel mogelijk kan bellen voor de financieringsscan.' },
       ])
       dispatch({ type: 'SET_QUESTION', next: 'lead-phone' })
       return
@@ -1819,15 +1792,6 @@ function Demo() {
       lead,
     )
 
-    // Meta Pixel: Lead-event als safety-net. Op dit punt is het lead
-    // sowieso compleet. Meestal is het event al gevuurd vanuit
-    // trackNewLeadFields (zodra email of phone binnenkwam), maar
-    // fireMetaLead dededupliceert dus dubbele tellingen zijn uitgesloten.
-    fireMetaLead('lead-complete', {
-      content_name: project?.name || 'CLP',
-      content_category: state.persona?.label || 'onbekend',
-    })
-
     // prependMessages bevat user-text + eventueel een bot-bevestiging.
     // Splits: user-text direct, bot-bubbles in de queue.
     const userMsgs = prependMessages.filter((m) => m.kind === 'user-text')
@@ -1848,13 +1812,15 @@ function Demo() {
         intent: state.answers.intent?.label,
         size: state.answers.size?.label,
         timeline: state.answers.timeline?.label,
-        calc: state.behaviors?.credionCalcData || null,
       })
-      // Eén compacte bevestiging die Credion-belofte plus brochure-mailing
-      // combineert. De Credion-deelmelding stond al na email-invoer dus dit
-      // is een afsluiting van de capture-flow, niet een nieuwe melding.
+      // Email expliciet in de bevestiging tonen zodat bezoeker een typo nog
+      // kan opmerken — extra mini-vertrouwenscheck. Fallback voor zeldzaam
+      // geval dat email leeg is (defensive, finishLead vereist em maar
+      // belt&breaks-compliant).
+      const emailDisplay = lead.email || 'het opgegeven e-mailadres'
       const credionConfirmation = [
-        { kind: 'bot-text', text: 'Top. We delen je gegevens met Credion zodat ze je zo snel mogelijk kunnen bellen voor de financieringsscan. En zullen je tevens alvast de brochure mailen, zodat je het project alvast rustig kunt doorlezen.' },
+        { kind: 'bot-text', text: 'Top. We delen je gegevens met Credion zodat ze je zo snel mogelijk kunnen bellen voor de financieringsscan.' },
+        { kind: 'bot-text', text: `De brochure sturen we naar ${emailDisplay}, zodat je het project alvast rustig kunt doorlezen.` },
       ]
       const sizeTail = sizeDone
         ? []
@@ -1925,7 +1891,6 @@ function Demo() {
   // beschrijving van de situatie op het moment dat de bubble werd getoond.
   const requestWhatsAppOpen = (e, summary, source) => {
     trackEvent('cta:whatsapp-clicked', { location: source })
-    fireMetaLead('whatsapp', { location: source })
     if (e && e.preventDefault) e.preventDefault()
     const lead = state.answers.lead || {}
     if (lead.firstName) {
@@ -1953,7 +1918,6 @@ function Demo() {
     // bezoeker nog geen naam heeft achtergelaten ("Hoi REPP, ik heb interesse
     // in De Hofman."). Bij wel-bekende naam komt die er natuurlijk in.
     trackEvent('cta:whatsapp-clicked', { location: 'header' })
-    fireMetaLead('whatsapp', { location: 'header' })
     if (e && e.preventDefault) e.preventDefault()
     const lead = state.answers.lead || {}
     const wa = whatsAppDeeplink(project, lead.firstName || '', '')
@@ -1983,15 +1947,8 @@ function Demo() {
   // Klik op de Credion-link in de calc opent eerst een confirm-dialog tegen
   // misclicks (sliders en knoppen liggen dichtbij elkaar). Pas bij bevestigen
   // start de echte flow via runCredionRequest.
-  const onCredionRequest = (calcData) => {
-    // calcData komt mee vanuit MortgageCalc of RentabilityCalc met de
-    // actuele slider-waarden op het moment van klik. Bewaren in behaviors
-    // zodat sendCredionLead 'em later kan meesturen naar Zapier ook als
-    // de bezoeker ondertussen nog naam plus 06 invult.
-    if (calcData && typeof calcData === 'object') {
-      dispatch({ type: 'BEHAVIOR_CREDION_CALC', payload: calcData })
-    }
-    trackEvent('credion:confirm-shown', { calcKind: calcData?.kind || 'unknown' })
+  const onCredionRequest = () => {
+    trackEvent('credion:confirm-shown', {})
     setCredionConfirmOpen(true)
   }
 
@@ -2138,7 +2095,6 @@ function Demo() {
 
   const onPhoneClick = () => {
     trackEvent('cta:phone-clicked', { location: 'header' })
-    fireMetaLead('phone-tap', { location: 'header' })
   }
 
   const onPortalClick = () => {
@@ -2241,15 +2197,7 @@ function Demo() {
   let chipQuestion = null
   let inputConfig = null
   if (state.currentQuestion === 'intent') chipQuestion = flow.questions.intent
-  else if (state.currentQuestion === 'availabilityCheck') {
-    // Filter de 'locatie'-chip zodra LocationBubble al eens getoond is om
-    // herhaalde clicks te voorkomen. Bezoeker houdt dan alleen ja/nee
-    // opties over om de availability-flow af te ronden.
-    const locationShown = state.messages.some((m) => m.kind === 'location')
-    chipQuestion = locationShown
-      ? { ...flow.questions.availabilityCheck, options: flow.questions.availabilityCheck.options.filter((o) => o.id !== 'locatie') }
-      : flow.questions.availabilityCheck
-  }
+  else if (state.currentQuestion === 'availabilityCheck') chipQuestion = flow.questions.availabilityCheck
   else if (state.currentQuestion === 'brochureTrigger') {
     // Voor beleggers en de "beide"-persona bieden we een 3e optie aan om
     // eerst meer over het rendement te horen voordat ze de brochure-keuze
@@ -2358,18 +2306,7 @@ function Demo() {
         <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-md">
           <ChatThread
             messages={state.messages}
-            showTyping={(() => {
-              // Typing-indicator-zichtbaarheid op basis van het wachtende item.
-              // Bij een silent-pause (bewuste stilte na bv. site-plan) blijft
-              // de indicator uit zodat de bezoeker rust krijgt om de bubble
-              // te scannen. Anders: zichtbaar als er nog een bubble in de
-              // queue staat zodat de bezoeker weet dat er iets aankomt.
-              const queue = state.messageQueue || []
-              if (queue.length === 0) return false
-              const head = queue[0]
-              if (head.kind === 'pause' && head.silent) return false
-              return queue.some((m) => m.kind !== 'pause')
-            })()}
+            showTyping={(state.messageQueue || []).some((m) => m.kind !== 'pause')}
             onBrochure={onBrochure}
             onUnitView={onUnitView}
             onCalcInteract={onCalcInteract}
@@ -2470,7 +2407,6 @@ function Demo() {
             // 'flow:complete' met stage sales_ready). De bezoeker krijgt
             // de service-card / handoff zonder extra UI te bouwen.
             trackEvent('direct-contact:requested', { from: 'rescue-nudge' })
-            fireMetaLead('direct-contact', { from: 'rescue-nudge' })
             const lead = state.answers.lead || {}
             if (project.phoneNumber) {
               window.open(buildPhoneLink(project.phoneNumber), '_self')
