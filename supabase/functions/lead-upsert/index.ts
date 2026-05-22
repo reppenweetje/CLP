@@ -28,7 +28,7 @@
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4'
-import { notifyHotLead } from './slack.ts'
+import { notifyHotLead, notifyError } from './slack.ts'
 import { upsertBrevoContact } from './brevo.ts'
 import { notifyZapierWalkin } from './zapier.ts'
 
@@ -234,7 +234,18 @@ serve(async (req: Request) => {
   const ua = req.headers.get('user-agent') ?? ''
 
   const lead = await upsertLead(supa, v.data)
-  if (lead.error) return json({ error: 'lead_upsert_failed', detail: lead.error }, 500, cors)
+  if (lead.error) {
+    // Kritiek: lead-data is hier nog niet weggeschreven. Sales moet
+    // dit weten zodat ze de bezoeker handmatig kunnen terugbellen.
+    keepAlive(notifyError('lead_upsert_failed (Supabase DB write)', {
+      source: v.data.source,
+      email: v.data.email,
+      first_name: v.data.first_name,
+      phone: v.data.phone,
+      detail: lead.error,
+    }))
+    return json({ error: 'lead_upsert_failed', detail: lead.error }, 500, cors)
+  }
 
   const cons = await appendConsents(supa, lead.id, v.data, ua)
   if (cons.error) {
@@ -255,6 +266,16 @@ serve(async (req: Request) => {
   keepAlive(
     upsertBrevoContact({ ...v.data, portal_token: lead.portal_token }).catch((err) => {
       console.error('[brevo] upsertBrevoContact failed', err)
+      // Brevo fail = automation/nurture-mails komen niet aan. Sales
+      // moet manueel het contact toevoegen.
+      return notifyError('Brevo upsert failed (contact niet in lijst)', {
+        source: v.data.source,
+        email: v.data.email,
+        first_name: v.data.first_name,
+        portal_token: lead.portal_token,
+        lead_id: lead.id,
+        error: String(err),
+      })
     }),
   )
 
@@ -266,6 +287,13 @@ serve(async (req: Request) => {
       lead.id,
     ).catch((err) => {
       console.error('[zapier] notifyZapierWalkin failed', err)
+      return notifyError('Zapier webhook failed (CRM trigger gemist)', {
+        source: v.data.source,
+        email: v.data.email,
+        portal_token: lead.portal_token,
+        lead_id: lead.id,
+        error: String(err),
+      })
     }),
   )
 

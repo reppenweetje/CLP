@@ -90,6 +90,32 @@ interface LeadRow {
   first_name: string | null
 }
 
+async function notifySlackError(message: string, context: Record<string, unknown>): Promise<void> {
+  const webhook = Deno.env.get('SLACK_ERRORS_WEBHOOK_URL')
+  if (!webhook) return
+  const lines = Object.entries(context)
+    .filter(([, v]) => v !== undefined && v !== null && v !== '')
+    .map(([k, v]) => `*${k}:* ${typeof v === 'string' ? v : JSON.stringify(v)}`)
+    .join('\n')
+  try {
+    await fetch(webhook, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        blocks: [
+          { type: 'header', text: { type: 'plain_text', text: '\u26a0\ufe0f Magic-link error', emoji: true } },
+          { type: 'section', text: { type: 'mrkdwn', text: `*${message}*` } },
+          ...(lines ? [{ type: 'section', text: { type: 'mrkdwn', text: lines } }] : []),
+          { type: 'context', elements: [{ type: 'mrkdwn', text: `at: \`${new Date().toISOString()}\`` }] },
+        ],
+        text: `\u26a0\ufe0f Magic-link error: ${message}`,
+      }),
+    })
+  } catch (err) {
+    console.error('[slack-error] fetch failed', err)
+  }
+}
+
 async function findLeadByEmail(email: string): Promise<LeadRow | null> {
   const url = Deno.env.get('SUPABASE_URL')
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -104,6 +130,12 @@ async function findLeadByEmail(email: string): Promise<LeadRow | null> {
     .maybeSingle()
   if (error) {
     console.error('[magic-link] lookup failed', error)
+    // Kritiek: lead vroeg inloglink aan, wij konden DB niet bevragen.
+    // Sales kan deze persoon manueel een mail sturen.
+    notifySlackError('Supabase lookup failed', {
+      email: email.slice(0, 3) + '***',
+      detail: error.message,
+    })
     return null
   }
   return data as LeadRow | null
@@ -181,11 +213,22 @@ async function sendMagicLinkMail(
     if (!res.ok) {
       const detail = await res.text().catch(() => '')
       console.error('[magic-link] brevo non-2xx', res.status, detail.slice(0, 300))
+      notifySlackError('Brevo SMTP send failed', {
+        email: email.slice(0, 3) + '***',
+        first_name: firstName,
+        status: res.status,
+        detail: detail.slice(0, 200),
+      })
       return { ok: false, detail: `brevo_${res.status}` }
     }
     return { ok: true }
   } catch (err) {
     console.error('[magic-link] brevo fetch failed', err)
+    notifySlackError('Brevo SMTP fetch threw', {
+      email: email.slice(0, 3) + '***',
+      first_name: firstName,
+      error: String(err),
+    })
     return { ok: false, detail: 'brevo_fetch_failed' }
   }
 }
