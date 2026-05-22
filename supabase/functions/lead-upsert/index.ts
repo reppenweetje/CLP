@@ -30,6 +30,7 @@ import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4'
 import { notifyHotLead } from './slack.ts'
 import { upsertBrevoContact } from './brevo.ts'
+import { notifyZapierWalkin } from './zapier.ts'
 
 // Supabase Edge Runtime global — declare here so TypeScript is happy.
 // Falls back to a no-op `.then(...)` if the global is missing (e.g. local
@@ -50,15 +51,26 @@ function keepAlive(promise: Promise<unknown>): void {
 }
 
 const DEFAULT_ALLOWED = [
+  // CLP (dehofman.clp.repp.nl + Vercel preview)
   'https://dehofman.clp.repp.nl',
   'https://clp-xi-tan.vercel.app',
   'http://localhost:5173',
   'http://localhost:4173',
+  // Portal (dehofman.nl + projectportal Vercel preview)
+  'https://dehofman.nl',
+  'https://www.dehofman.nl',
+  'https://projectportal.vercel.app',
+  'http://localhost:3000',
 ]
 
 function corsAllowed(origin: string | null): string {
-  const list = (Deno.env.get('ALLOWED_ORIGINS') ?? DEFAULT_ALLOWED.join(','))
+  // Defensief: ALLOWED_ORIGINS secret is ADDITIVE, niet vervangend.
+  // Anders kan een misconfigured secret (missing dehofman.nl) silently de
+  // Portal-CORS breken. DEFAULT_ALLOWED garandeert dat de bekende origins
+  // ALTIJD werken; secret kan extra origins toevoegen (preview, custom).
+  const fromEnv = (Deno.env.get('ALLOWED_ORIGINS') ?? '')
     .split(',').map(s => s.trim()).filter(Boolean)
+  const list = Array.from(new Set([...DEFAULT_ALLOWED, ...fromEnv]))
   if (origin && list.includes(origin)) return origin
   return list[0] ?? '*'
 }
@@ -243,6 +255,17 @@ serve(async (req: Request) => {
   keepAlive(
     upsertBrevoContact({ ...v.data, portal_token: lead.portal_token }).catch((err) => {
       console.error('[brevo] upsertBrevoContact failed', err)
+    }),
+  )
+
+  // Zapier walk-in webhook — alleen voor dehofman_portal_* sources.
+  // CLP-leads gaan via Slack + Brevo, dus niet dubbel via Zapier.
+  keepAlive(
+    notifyZapierWalkin(
+      { ...v.data, portal_token: lead.portal_token },
+      lead.id,
+    ).catch((err) => {
+      console.error('[zapier] notifyZapierWalkin failed', err)
     }),
   )
 

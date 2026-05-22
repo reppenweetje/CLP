@@ -3,8 +3,11 @@
 // kan werken. Best-effort: faalt zonder de Edge Function-response te blokkeren.
 //
 // Configure once in Supabase dashboard → Edge Functions → Secrets:
-//   BREVO_API_KEY    — v3 API key uit Brevo (Settings → SMTP & API → API keys)
-//   BREVO_LIST_ID    — numerieke ID van de lijst, bv. "42"
+//   BREVO_API_KEY        — v3 API key uit Brevo (Settings → SMTP & API → API keys)
+//   BREVO_LIST_ID        — numerieke ID van de CLP-lijst, bv. "286"
+//   BREVO_LIST_ID_PORTAL — (optioneel) lijst-ID voor walk-in leads vanaf
+//                          dehofman.nl (source = "dehofman_portal"). Als
+//                          niet gezet vallen die leads in BREVO_LIST_ID.
 //
 // Brevo dedup't automatisch op `email`. We gebruiken `updateEnabled: true`
 // zodat een tweede lead-upsert op dezelfde email een UPDATE wordt, niet
@@ -27,7 +30,27 @@ interface BrevoLeadInput {
   handoff_outcome?: string | null
   started_at?: string | null
   last_event_at?: string | null
+  portal_token?: string | null
   attributes?: Record<string, unknown>
+}
+
+// Map een source-string naar de bijbehorende project-slug voor Brevo's
+// CLP_PROJECT attribuut. CLP_PROJECT staat in Brevo waarschijnlijk als enum
+// met vaste waarden ('dehofman' en eventueel toekomstige projecten); een
+// onbekende value laat Brevo de attribute stilletjes vallen, wat de
+// segmentatie breekt.
+//
+// Patterns:
+//   clp_dehofman      → 'dehofman'   (CLP)
+//   dehofman_portal   → 'dehofman'   (walk-in op portal)
+//   dehofman_*        → 'dehofman'   (toekomstige sub-bronnen)
+function projectFromSource(source: string | null | undefined): string | undefined {
+  if (!source) return undefined
+  const s = String(source).toLowerCase()
+  if (s.startsWith('clp_')) return s.slice(4) || undefined
+  // Bron-prefix `<project>_<variant>` — eerste segment is de project-slug.
+  const seg = s.split('_')[0]
+  return seg || undefined
 }
 
 // Mappen NL 06 naar internationaal +316 formaat — Brevo verwacht E.164.
@@ -81,12 +104,22 @@ function buildAttributes(lead: BrevoLeadInput): Record<string, unknown> {
   // converteert Brevo 'em naar string, ook OK).
   if (typeof lead.score === 'number') set('SCORE', lead.score)
   set('SOURCE',          lead.source)
-  set('CLP_PROJECT',     (lead.source ?? '').replace(/^clp_/, '') || undefined)
+  // Project-attribute heet PROJECT in Brevo (niet CLP_PROJECT). Brevo dropt
+  // unknown attributes stil. projectFromSource() mapt clp_dehofman /
+  // dehofman_portal beide naar 'dehofman' zodat segmentatie consistent is.
+  // Volgende attributes STAAN NIET in Brevo en worden ook stil gedropt
+  // tenzij user ze toevoegt via dashboard:
+  //   SCORE, FOLLOWUP, AFHAAK_REASON, HANDOFF_OUTCOME, STARTED_AT,
+  //   RENT_RANGE, GATE_CONTEXT
+  // We sturen ze toch (toekomstvast); na aanmaken in Brevo verschijnt
+  // de data automatisch zonder code-wijziging.
+  set('PROJECT',         projectFromSource(lead.source))
   set('FOLLOWUP',        lead.followup)
   set('AFHAAK_REASON',   lead.afhaak_reason)
   set('HANDOFF_OUTCOME', lead.handoff_outcome)
   set('STARTED_AT',      lead.started_at)
   set('LAST_EVENT_AT',   lead.last_event_at)
+  set('PORTAL_TOKEN',    lead.portal_token)
 
   // Project-specifieke extras gaan via flat keys met CLP_-prefix om
   // botsing met andere Brevo-attributen te voorkomen.
@@ -124,7 +157,28 @@ export async function upsertBrevoContact(lead: BrevoLeadInput): Promise<void> {
     return
   }
 
-  const listIdRaw = Deno.env.get('BREVO_LIST_ID')
+  // Drie verschillende Brevo-lijsten op basis van source-prefix:
+  //   BREVO_LIST_ID_RESERVATION — leads die op /reserveren een unit op
+  //                               naam laten zetten (source = dehofman_portal_reservation)
+  //   BREVO_LIST_ID_PORTAL      — overige walk-ins op dehofman.nl
+  //                               (insider/interest/xxl/report/notify)
+  //   BREVO_LIST_ID             — CLP-leads (clp_dehofman) en fallback
+  //
+  // Bestaande Brevo-contacten worden bij upsert ADDED aan deze lijst
+  // (Brevo houdt ze ook in hun originele lijst — geen verlies). Sales
+  // kan zo segmenteren op "wie heeft daadwerkelijk een reservering
+  // ingediend" ipv alleen "wie staat in onze CRM".
+  const reservationListRaw = Deno.env.get('BREVO_LIST_ID_RESERVATION')
+  const portalListRaw = Deno.env.get('BREVO_LIST_ID_PORTAL')
+  const defaultListRaw = Deno.env.get('BREVO_LIST_ID')
+  const src = (lead.source ?? '').toLowerCase()
+  const isReservation = src === 'dehofman_portal_reservation'
+  const isPortalSource = src.startsWith('dehofman_portal')
+  const listIdRaw = isReservation && reservationListRaw
+    ? reservationListRaw
+    : isPortalSource && portalListRaw
+      ? portalListRaw
+      : defaultListRaw
   const listId = listIdRaw ? Number.parseInt(listIdRaw, 10) : NaN
 
   const attrs = buildAttributes(lead)
@@ -140,30 +194,46 @@ export async function upsertBrevoContact(lead: BrevoLeadInput): Promise<void> {
   try {
     let res = await postBrevoContact(body, apiKey)
 
-    // Retry-zonder-SMS bij Brevo's duplicate_parameter conflict. Brevo
-    // enforced uniqueness op het SMS-attribuut: als het 06-nummer al aan
-    // een ander contact gekoppeld is (bv. WhatsApp-bot leads of oude
-    // campagne-data) wordt de hele upsert geweigerd, ook email plus
-    // overige attributes komen dan niet binnen. Wij willen het contact
-    // alsnog landen in de marketing-lijst, dus halen we de SMS eruit
-    // en proberen we opnieuw. Het 06-nummer blijft wel in Supabase
-    // bewaard, daar is geen uniqueness-eis.
-    if (res.status === 400 && typeof attrs.SMS === 'string') {
+    // Retry-strip bij Brevo's duplicate_parameter conflict.
+    //
+    // Brevo enforced uniqueness op DEZE attributes in dit account:
+    //   - SMS      (Brevo standaard, altijd uniek)
+    //   - WHATSAPP (in dit account ook als unique geconfigureerd \u2014 bevestigd
+    //              door 400 response met duplicate_identifiers: [\"WHATSAPP\"])
+    //
+    // Als ons 06 al aan een ander contact gekoppeld is (campagne-data,
+    // WhatsApp-bot leads, eerdere tests) wordt de hele upsert geweigerd.
+    // We willen het contact alsnog landen in de marketing-lijst, dus
+    // strippen we ALLE conflicting attributes en proberen opnieuw.
+    // Het 06-nummer blijft in Supabase bewaard, daar geen uniqueness-eis.
+    //
+    // Tot 2 retry-rounden \u2014 Brevo kan in 1 keer maar \u00e9\u00e9n type duplicate
+    // melden, dus na strip van SMS kan WHATSAPP de volgende fail-reason
+    // worden. Tweede retry stript ook die.
+    let retryRound = 0
+    while (res.status === 400 && retryRound < 2) {
       const detail = await res.clone().json().catch(() => null) as
         | { code?: string; metadata?: { duplicate_identifiers?: string[] } }
         | null
-      const isSmsDuplicate =
-        detail?.code === 'duplicate_parameter' &&
-        Array.isArray(detail?.metadata?.duplicate_identifiers) &&
-        detail.metadata.duplicate_identifiers.includes('SMS')
-      if (isSmsDuplicate) {
-        const attrsRetry = { ...attrs }
-        delete attrsRetry.SMS
-        const bodyRetry = { ...body, attributes: attrsRetry }
-        res = await postBrevoContact(bodyRetry, apiKey)
-        if (res.ok) {
-          console.warn('[brevo] retry zonder SMS geslaagd voor', lead.email, '(SMS al aan ander contact gekoppeld)')
+      if (detail?.code !== 'duplicate_parameter') break
+      const dups = detail.metadata?.duplicate_identifiers
+      if (!Array.isArray(dups) || dups.length === 0) break
+
+      // Strip alle conflicting attrs uit attrs in plaats van met body.
+      let strippedAny = false
+      for (const dup of dups) {
+        if (dup in attrs) {
+          delete (attrs as Record<string, unknown>)[dup]
+          strippedAny = true
         }
+      }
+      if (!strippedAny) break
+
+      const bodyRetry = { ...body, attributes: { ...attrs } }
+      res = await postBrevoContact(bodyRetry, apiKey)
+      retryRound += 1
+      if (res.ok) {
+        console.warn('[brevo] retry-' + retryRound + ' zonder', dups.join(','), 'geslaagd voor', lead.email)
       }
     }
 
