@@ -1,3 +1,5 @@
+import { notifyError } from './slack.ts'
+
 // Zapier walk-in webhooks — routeer per source naar de juiste Zap.
 //
 // We hebben twee verschillende Zaps voor twee soorten walk-in events:
@@ -103,10 +105,25 @@ export async function notifyZapierWalkin(
       body: JSON.stringify(payload),
     })
     if (!res.ok) {
-      const detail = await res.text().catch(() => '')
-      console.error('[zapier] non-2xx', res.status, detail.slice(0, 200))
+      const detail = (await res.text().catch(() => '')).slice(0, 200)
+      console.error('[zapier] non-2xx', res.status, detail)
+      await notifyError('Zapier webhook failed (CRM trigger gemist)', {
+        source: lead.source,
+        email: lead.email,
+        portal_token: lead.portal_token,
+        lead_id: leadId,
+        status: res.status,
+        detail,
+      })
     }
   } catch (err) {
     console.error('[zapier] fetch failed', err)
+    await notifyError('Zapier fetch threw (CRM trigger gemist)', {
+      source: lead.source,
+      email: lead.email,
+      portal_token: lead.portal_token,
+      lead_id: leadId,
+      error: String(err),
+    })
   }
 }

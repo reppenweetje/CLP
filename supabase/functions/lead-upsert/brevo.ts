@@ -1,3 +1,5 @@
+import { notifyError } from './slack.ts'
+
 // Brevo Contact upsert — pusht elke lead met email naar Brevo's Contacts API
 // zodat de marketing-flow (lijsten, segmenten, mailings) op de actuele data
 // kan werken. Best-effort: faalt zonder de Edge Function-response te blokkeren.
@@ -145,7 +147,7 @@ async function postBrevoContact(body: Record<string, unknown>, apiKey: string): 
   })
 }
 
-export async function upsertBrevoContact(lead: BrevoLeadInput): Promise<void> {
+export async function upsertBrevoContact(lead: BrevoLeadInput, leadId?: string | null): Promise<void> {
   const apiKey = Deno.env.get('BREVO_API_KEY')
   if (!apiKey) {
     // Brevo niet geconfigureerd, stille skip. Zelfde patroon als Slack:
@@ -238,10 +240,27 @@ export async function upsertBrevoContact(lead: BrevoLeadInput): Promise<void> {
     }
 
     if (!res.ok) {
-      const detail = await res.text().catch(() => '')
-      console.error('[brevo] non-2xx', res.status, detail.slice(0, 300))
+      const detail = (await res.text().catch(() => '')).slice(0, 300)
+      console.error('[brevo] non-2xx', res.status, detail)
+      await notifyError('Brevo upsert failed (contact niet in lijst)', {
+        source: lead.source,
+        email: lead.email,
+        first_name: lead.first_name,
+        portal_token: lead.portal_token,
+        lead_id: leadId,
+        status: res.status,
+        detail,
+      })
     }
   } catch (err) {
     console.error('[brevo] fetch failed', err)
+    await notifyError('Brevo fetch threw', {
+      source: lead.source,
+      email: lead.email,
+      first_name: lead.first_name,
+      portal_token: lead.portal_token,
+      lead_id: leadId,
+      error: String(err),
+    })
   }
 }

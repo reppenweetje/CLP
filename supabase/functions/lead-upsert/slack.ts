@@ -105,6 +105,82 @@ export async function notifyError(
   }
 }
 
+/**
+ * notifyNewLead — fired ONCE per lead, op het moment dat de bezoeker
+ * zijn e-mailadres invult (= conversie van anoniem bezoek naar lead).
+ *
+ * Caller in index.ts checkt zelf of email net nu voor het eerst gezet
+ * is (via SELECT vóór UPSERT). Wij doen alleen het Slack-posten, niet
+ * de dedupe.
+ *
+ * Configure secret: SLACK_LEADGEN_WEBHOOK_URL (incoming webhook van
+ * het #generation kanaal in de REPP-workspace).
+ */
+export async function notifyNewLead(lead: HotLeadInput, leadId: string | null): Promise<void> {
+  const webhook = Deno.env.get('SLACK_LEADGEN_WEBHOOK_URL')
+  if (!webhook) {
+    // Webhook niet gezet → silent skip (dev/preview heeft dit niet nodig).
+    return
+  }
+
+  const project  = (lead.source ?? '').replace(/^clp_/, '').replace(/^dehofman_/, '') || 'onbekend'
+  const persona  = PERSONA_LABEL[lead.persona ?? ''] ?? lead.persona ?? null
+  const timeline = TIMELINE_LABEL[lead.timeline_id ?? ''] ?? lead.timeline_id ?? null
+
+  const contactLines = [
+    fmt('Naam',     lead.first_name),
+    fmt('E-mail',   lead.email),
+    fmt('Telefoon', lead.phone),
+  ].filter(Boolean).join('\n')
+
+  // Context-info (persona/timeline/score) is vaak nog leeg op het moment
+  // van email-capture — pas later in de flow wordt dat gevuld. Optioneel
+  // tonen indien aanwezig.
+  const qualLines = [
+    fmt('Persona',  persona),
+    fmt('Termijn',  timeline),
+    fmt('Stage',    lead.stage),
+    fmt('Score',    lead.score != null ? String(lead.score) : null),
+  ].filter(Boolean).join('\n')
+
+  const payload = {
+    blocks: [
+      {
+        type: 'header',
+        text: { type: 'plain_text', text: `✨ Nieuwe lead — ${project}`, emoji: true },
+      },
+      ...(contactLines ? [{
+        type: 'section',
+        text: { type: 'mrkdwn', text: contactLines },
+      }] : []),
+      ...(qualLines ? [{
+        type: 'section',
+        text: { type: 'mrkdwn', text: qualLines },
+      }] : []),
+      {
+        type: 'context',
+        elements: [
+          { type: 'mrkdwn', text: `via: \`${lead.source ?? '—'}\` · lead_id: \`${leadId ?? '—'}\`` },
+        ],
+      },
+    ],
+    text: `✨ Nieuwe lead — ${project} · ${lead.first_name ?? ''} ${lead.email ?? ''}`.trim(),
+  }
+
+  try {
+    const res = await fetch(webhook, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) {
+      console.error('[slack-newlead] non-2xx', res.status, await res.text())
+    }
+  } catch (err) {
+    console.error('[slack-newlead] webhook fetch failed', err)
+  }
+}
+
 export async function notifyHotLead(lead: HotLeadInput, leadId: string | null): Promise<void> {
   const webhook = Deno.env.get('SLACK_HOTLEADS_WEBHOOK_URL')
   if (!webhook) {

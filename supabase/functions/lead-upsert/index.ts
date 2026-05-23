@@ -28,7 +28,7 @@
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4'
-import { notifyHotLead, notifyError } from './slack.ts'
+import { notifyHotLead, notifyNewLead, notifyError } from './slack.ts'
 import { upsertBrevoContact } from './brevo.ts'
 import { notifyZapierWalkin } from './zapier.ts'
 
@@ -233,6 +233,19 @@ serve(async (req: Request) => {
 
   const ua = req.headers.get('user-agent') ?? ''
 
+  // Snapshot van het bestaande lead-record (indien aanwezig) zodat we
+  // post-upsert kunnen detecteren of dit de eerste keer is dat email
+  // wordt gezet. Zo voorkomen we dat we bij elke state-update een
+  // Slack-bericht spammen naar #generation. SELECT is goedkoop: gedekt
+  // door de unique-index op (source, session_id).
+  const { data: existingRow } = await supa
+    .from('leads')
+    .select('email')
+    .eq('source', v.data.source)
+    .eq('session_id', v.data.session_id)
+    .maybeSingle()
+  const existingEmail = (existingRow as { email: string | null } | null)?.email ?? null
+
   const lead = await upsertLead(supa, v.data)
   if (lead.error) {
     // Kritiek: lead-data is hier nog niet weggeschreven. Sales moet
@@ -255,6 +268,19 @@ serve(async (req: Request) => {
     )
   }
 
+  // Slack-notificatie naar #generation kanaal bij eerste email-capture.
+  // Conditie: bestaande row had geen email + nieuwe payload heeft wel
+  // email. Fired ÉÉN keer per lead, ongeacht source (CLP, portal walk-in,
+  // exit-intent — alles waar email voor het eerst binnen komt).
+  const isFirstEmailCapture = !existingEmail && !!v.data.email
+  if (isFirstEmailCapture) {
+    keepAlive(
+      notifyNewLead(v.data, lead.id).catch((err) => {
+        console.error('[slack] notifyNewLead failed', err)
+      }),
+    )
+  }
+
   if (v.data.temperature === 'hot') {
     keepAlive(
       notifyHotLead(v.data, lead.id).catch((err) => {
@@ -263,20 +289,14 @@ serve(async (req: Request) => {
     )
   }
 
+  // Brevo + Zapier hebben hun eigen notifyError-paden inline (in brevo.ts
+  // en zapier.ts). Hier alleen nog last-resort console.error voor unhandled
+  // throws die buiten hun internal catch ontsnappen.
   keepAlive(
-    upsertBrevoContact({ ...v.data, portal_token: lead.portal_token }).catch((err) => {
-      console.error('[brevo] upsertBrevoContact failed', err)
-      // Brevo fail = automation/nurture-mails komen niet aan. Sales
-      // moet manueel het contact toevoegen.
-      return notifyError('Brevo upsert failed (contact niet in lijst)', {
-        source: v.data.source,
-        email: v.data.email,
-        first_name: v.data.first_name,
-        portal_token: lead.portal_token,
-        lead_id: lead.id,
-        error: String(err),
-      })
-    }),
+    upsertBrevoContact(
+      { ...v.data, portal_token: lead.portal_token },
+      lead.id,
+    ).catch((err) => console.error('[brevo] upsertBrevoContact threw', err)),
   )
 
   // Zapier walk-in webhook — alleen voor dehofman_portal_* sources.
@@ -285,16 +305,7 @@ serve(async (req: Request) => {
     notifyZapierWalkin(
       { ...v.data, portal_token: lead.portal_token },
       lead.id,
-    ).catch((err) => {
-      console.error('[zapier] notifyZapierWalkin failed', err)
-      return notifyError('Zapier webhook failed (CRM trigger gemist)', {
-        source: v.data.source,
-        email: v.data.email,
-        portal_token: lead.portal_token,
-        lead_id: lead.id,
-        error: String(err),
-      })
-    }),
+    ).catch((err) => console.error('[zapier] notifyZapierWalkin threw', err)),
   )
 
   return json(
