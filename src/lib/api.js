@@ -68,6 +68,119 @@ export function isApiConfigured() {
   return isEnabled() && !!endpoint() && !!anonKey()
 }
 
+// ── Dual-write naar clp-analytics (admin-zicht) ─────────────────────────────
+//
+// Naast de reppbot-push hieronder ook een fire-and-forget kopie naar de
+// gedeelde clp-analytics, zodat het admin-dashboard De Hofman-leads ziet
+// in de Registraties-sectie via clp-leads-fetch. Reppbot blijft canoniek
+// voor de bot (gemini-followup, outbound, portal); de analytics-kopie is
+// alleen voor visueel overzicht in /admin. Onafhankelijk gegated van de
+// reppbot-flag zodat je 'm los kunt aan- of uitzetten via een eigen env.
+
+function analyticsEndpoint() {
+  const base = readEnv('VITE_SUPABASE_ANALYTICS_URL', '')
+  if (!base) return null
+  return base.replace(/\/+$/, '') + '/functions/v1/clp-leads-upsert'
+}
+
+function analyticsAnonKey() {
+  return readEnv('VITE_SUPABASE_ANALYTICS_ANON_KEY', '')
+}
+
+function isAnalyticsEnabled() {
+  return readEnv('VITE_SUPABASE_ANALYTICS_ENABLED', 'false') === 'true'
+}
+
+// Spiegelt clp-didamdesk's buildLeadPayload (clp-leads-upsert contract).
+// Reppbot's lead-upsert hieronder heeft een rijker schema met intent_id /
+// size_id / etc top-level; clp-leads-upsert kent slechts een slankere set
+// kolommen en propt de rest in attributes-jsonb.
+function buildAnalyticsPayload(session, extras = {}) {
+  if (!session || !session.sessionId) return null
+  const lead = session.lead ?? {}
+  // Quiz-antwoorden mee in attributes, zonder de lead-PII die er via
+  // answers.lead in zit (e-mail/telefoon staan al in de eigen kolommen).
+  const { lead: _omitLeadPII, ...answersNoPII } = session.answers ?? {}
+
+  const attributes = {
+    ...(extras.attributes ?? {}),
+    project:             session.project ?? null,
+    answers:             answersNoPII,
+    intent_id:           extras.intent_id ?? null,
+    size_id:             extras.size_id ?? null,
+    timeline_id:         extras.timeline_id ?? null,
+    cta_variant:         session.ctaVariant ?? null,
+    handoff_shown:       session.handoffShown ?? null,
+    handoff_temperature: session.handoffTemperature ?? null,
+    handoff_persona:     session.handoffPersona ?? null,
+  }
+
+  return {
+    session_id: session.sessionId,
+    source:     source(),
+
+    email:      lead.email ?? null,
+    first_name: lead.firstName ?? null,
+    phone:      lead.phone ?? null,
+
+    persona:         session.persona ?? null,
+    stage:           session.stage ?? null,
+    temperature:     extras.temperature ?? session.temperature ?? session.handoffTemperature ?? null,
+    score:           extras.score ?? session.score ?? null,
+    status:          extras.status ?? session.status ?? (session.completed ? 'completed' : 'in_progress'),
+    followup:        session.followup ?? null,
+    afhaak_reason:   session.afhaakReason ?? null,
+    handoff_outcome: session.handoffOutcome ?? null,
+
+    started_at:    session.startedAt ? new Date(session.startedAt).toISOString() : null,
+    last_event_at: session.lastEventAt ? new Date(session.lastEventAt).toISOString() : null,
+    completed_at:  session.completed
+      ? new Date(session.lastEventAt ?? Date.now()).toISOString()
+      : null,
+
+    privacy_statement_version: PRIVACY_STATEMENT_VERSION,
+    attributes,
+
+    consents: (extras.consents ?? []).map(c => ({
+      scope:    c.scope,
+      granted:  !!c.granted,
+      privacy_statement_version: c.privacy_statement_version ?? PRIVACY_STATEMENT_VERSION,
+      detail:   c.detail ?? {},
+    })),
+  }
+}
+
+async function pushAnalyticsCopy(payloadOrSession, extras) {
+  if (!isAnalyticsEnabled()) return
+  const url = analyticsEndpoint()
+  const key = analyticsAnonKey()
+  if (!url || !key) return
+
+  // Als de caller al een snake_case payload meegaf (consent.js style),
+  // hergebruik 'm. Anders bouw van de session-shape.
+  const payload = payloadOrSession?.session_id
+    ? payloadOrSession
+    : buildAnalyticsPayload(payloadOrSession, extras)
+  if (!payload) return
+
+  // Best-effort: geen queue, geen retry. Bot heeft de lead canoniek in
+  // reppbot. Een gemiste analytics-kopie betekent alleen dat die ene lead
+  // niet in /admin Registraties verschijnt; niet kritiek.
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${key}`,
+        'apikey':        key,
+      },
+      body: JSON.stringify(payload),
+    })
+  } catch {
+    // swallow
+  }
+}
+
 // ── Payload-builder ─────────────────────────────────────────────────────────
 
 // Neemt een session-object zoals analytics.getSessions() teruggeeft, plus
@@ -164,6 +277,11 @@ async function postRaw(payload, signal) {
 // Probeert direct te pushen. Bij netwerkfout of 5xx → fallback naar queue.
 // Bij 4xx → niet retryen (slechte payload), gooi error door.
 export async function pushLead(payloadOrSession, extras) {
+  // Dual-write naar clp-analytics (admin-zicht). Fire-and-forget, parallel
+  // aan de reppbot-push hieronder. Onafhankelijk gegated via
+  // VITE_SUPABASE_ANALYTICS_ENABLED.
+  pushAnalyticsCopy(payloadOrSession, extras).catch(() => {})
+
   // Feature-flag uit: doe niets, retourneer skipped. Frontend ziet dit als
   // succes (geen error-state) — chat-ervaring blijft identiek aan localStorage-
   // only mode. Wordt geskipped zonder ook maar een fetch te doen.
@@ -253,4 +371,66 @@ export function inspectQueue() {
 
 export function clearQueue() {
   writeQueue([])
+}
+
+// ── Team-mode fetch voor admin Registraties-sectie ──────────────────────────
+//
+// Leest clp_leads-rijen uit clp-analytics via clp-leads-fetch Edge Function,
+// gefilterd op de eigen tenant. clp_leads bevat PII en is RLS-locked —
+// alleen via de service-role Edge Function gepoort achter X-Admin-Token.
+// Toont dus de dual-write kopieën die pushAnalyticsCopy hierboven schrijft.
+
+const SOURCE_TO_TENANT = {
+  clp_dehofman: 'dehofman',
+  clp_uitgifte: 'uitgifte',
+}
+
+function leadsFetchEndpoint() {
+  const base = readEnv('VITE_SUPABASE_ANALYTICS_URL', '')
+  if (!base) return null
+  return base.replace(/\/+$/, '') + '/functions/v1/clp-leads-fetch'
+}
+
+function adminReadToken() {
+  return readEnv('VITE_ADMIN_READ_TOKEN', '')
+}
+
+function leadsFetchTenant() {
+  return SOURCE_TO_TENANT[source()] || null
+}
+
+export function isLeadsFetchConfigured() {
+  return !!leadsFetchEndpoint()
+    && !!analyticsAnonKey()
+    && !!adminReadToken()
+    && !!leadsFetchTenant()
+}
+
+export async function fetchTeamLeads({ tenantOverride = null, limit = 5000 } = {}) {
+  if (!isLeadsFetchConfigured()) {
+    throw new Error('Leads-fetch niet geconfigureerd (VITE_SUPABASE_ANALYTICS_URL + _ANON_KEY + VITE_ADMIN_READ_TOKEN + VITE_CLP_SOURCE)')
+  }
+  const t = tenantOverride || leadsFetchTenant()
+  const url = new URL(leadsFetchEndpoint())
+  url.searchParams.set('tenant', t)
+  url.searchParams.set('limit', String(limit))
+
+  const res = await fetch(url.toString(), {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${analyticsAnonKey()}`,
+      'apikey':        analyticsAnonKey(),
+      'X-Admin-Token': adminReadToken(),
+    },
+  })
+  const text = await res.text()
+  let body = null
+  try { body = text ? JSON.parse(text) : null } catch { body = { raw: text } }
+  if (!res.ok || !body?.ok) {
+    const err = new Error(`clp-leads-fetch ${res.status}: ${body?.error || 'unknown'}`)
+    err.status = res.status
+    err.body = body
+    throw err
+  }
+  return body.leads || []
 }

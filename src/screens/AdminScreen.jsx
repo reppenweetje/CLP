@@ -6,6 +6,7 @@ import {
   buildHandoffByPersona,
   buildHandoffStats,
   buildPersonaBreakdown,
+  buildSessions,
   buildVariantBreakdown,
   clearAllEvents,
   exportSessionsJson,
@@ -13,6 +14,13 @@ import {
   formatDuration,
   getSessions,
 } from '../lib/analytics.js'
+import {
+  fetchTeamEvents,
+  getTenant,
+  isTeamFetchConfigured,
+  supabaseRowToLocalEvent,
+} from '../lib/eventsApi.js'
+import { fetchTeamLeads, isLeadsFetchConfigured } from '../lib/api.js'
 import KpiCard from '../components/admin/KpiCard.jsx'
 import FunnelChart from '../components/admin/FunnelChart.jsx'
 import PersonaBreakdown from '../components/admin/PersonaBreakdown.jsx'
@@ -28,6 +36,7 @@ import TimeToConversion from '../components/admin/TimeToConversion.jsx'
 import DropoffMatrix from '../components/admin/DropoffMatrix.jsx'
 import RealTimeTile from '../components/admin/RealTimeTile.jsx'
 import HotLeads from '../components/admin/HotLeads.jsx'
+import RegistrationsList from '../components/admin/RegistrationsList.jsx'
 import ABSignificance from '../components/admin/ABSignificance.jsx'
 import CohortHeatmap from '../components/admin/CohortHeatmap.jsx'
 import AIWeeklySummary from '../components/admin/AIWeeklySummary.jsx'
@@ -40,6 +49,7 @@ import SupabaseQueueTile from '../components/admin/SupabaseQueueTile.jsx'
 // ze niet truncaten in de 200px brede sidebar.
 const SECTIONS = [
   { id: 'overview', label: 'Overzicht' },
+  { id: 'registraties', label: 'Registraties' },
   { id: 'insights', label: 'Insights' },
   { id: 'route',    label: 'Route' },
   { id: 'bubbles',  label: 'Bubbles + leads' },
@@ -62,29 +72,118 @@ export default function AdminScreen() {
 }
 
 function AdminScreenInner() {
-  const [allSessions, setAllSessions] = useState(() => getSessions())
+  // Data-source: 'team' = aggregaat over alle bezoekers cross-device via
+  // clp-analytics.clp_events, 'local' = alleen events uit deze browser
+  // (debug). Default = team zodra clp-analytics geconfigureerd is; lokaal
+  // alleen bereikbaar via ?source=local URL-param.
+  const teamConfigured = isTeamFetchConfigured()
+  const initialSource = (() => {
+    if (typeof window === 'undefined') return teamConfigured ? 'team' : 'local'
+    try {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('source') === 'local') return 'local'
+    } catch {}
+    return teamConfigured ? 'team' : 'local'
+  })()
+  const [dataSource] = useState(initialSource)
+
+  const [localSessions, setLocalSessions] = useState(() => getSessions())
+  const [teamSessions, setTeamSessions] = useState([])
+  const [teamLoading, setTeamLoading] = useState(false)
+  const [teamError, setTeamError] = useState(null)
+  const [teamFetchedAt, setTeamFetchedAt] = useState(null)
+  const [refreshNonce, setRefreshNonce] = useState(0)
+
+  const [teamLeads, setTeamLeads] = useState([])
+  const [leadsLoading, setLeadsLoading] = useState(false)
+  const [leadsError, setLeadsError] = useState(null)
+
   const [, setTick] = useState(0)
   const [dateRange, setDateRange] = useState('all')
   const [replaySessionId, setReplaySessionId] = useState(null)
 
+  // Local-mode subscribers (storage events, focus, 15s poll)
   useEffect(() => {
+    if (dataSource !== 'local') return
     if (typeof window === 'undefined') return
-    const refresh = () => setAllSessions(getSessions())
+    const refresh = () => setLocalSessions(getSessions())
     const onFocus = () => refresh()
     const onStorage = (e) => { if (e.key === 'clp-events-v1') refresh() }
     window.addEventListener('focus', onFocus)
     window.addEventListener('storage', onStorage)
+    const id = setInterval(refresh, 15000)
     return () => {
       window.removeEventListener('focus', onFocus)
       window.removeEventListener('storage', onStorage)
+      clearInterval(id)
     }
-  }, [])
+  }, [dataSource])
 
+  // Team-mode events fetch via clp-events-fetch. Refetch op dataSource-
+  // switch, window-focus en 60s timer; refreshNonce triggert handmatig.
   useEffect(() => {
-    const id = setInterval(() => setAllSessions(getSessions()), 15000)
-    return () => clearInterval(id)
-  }, [])
+    if (dataSource !== 'team') return
+    if (!teamConfigured) return
+    let cancelled = false
 
+    async function load() {
+      setTeamLoading(true)
+      setTeamError(null)
+      try {
+        const rows = await fetchTeamEvents({ limit: 10000 })
+        if (cancelled) return
+        const local = rows.map(supabaseRowToLocalEvent)
+        const built = buildSessions(local)
+        setTeamSessions(built)
+        setTeamFetchedAt(Date.now())
+      } catch (err) {
+        if (cancelled) return
+        setTeamError(err?.message || String(err))
+      } finally {
+        if (!cancelled) setTeamLoading(false)
+      }
+    }
+
+    load()
+    const onFocus = () => load()
+    window.addEventListener('focus', onFocus)
+    const id = setInterval(load, 60000)
+    return () => {
+      cancelled = true
+      window.removeEventListener('focus', onFocus)
+      clearInterval(id)
+    }
+  }, [dataSource, teamConfigured, refreshNonce])
+
+  // Registraties (clp_leads dual-write kopieën) via clp-leads-fetch.
+  // Alleen in team-modus; refetch bij dataSource-switch, focus en
+  // handmatige refresh (refreshNonce).
+  const leadsConfigured = isLeadsFetchConfigured()
+  useEffect(() => {
+    if (dataSource !== 'team' || !leadsConfigured) return
+    let cancelled = false
+    async function loadLeads() {
+      setLeadsLoading(true)
+      setLeadsError(null)
+      try {
+        const rows = await fetchTeamLeads({ limit: 5000 })
+        if (!cancelled) setTeamLeads(rows)
+      } catch (err) {
+        if (!cancelled) setLeadsError(err?.message || String(err))
+      } finally {
+        if (!cancelled) setLeadsLoading(false)
+      }
+    }
+    loadLeads()
+    const onFocus = () => loadLeads()
+    window.addEventListener('focus', onFocus)
+    return () => {
+      cancelled = true
+      window.removeEventListener('focus', onFocus)
+    }
+  }, [dataSource, leadsConfigured, refreshNonce])
+
+  const allSessions = dataSource === 'team' ? teamSessions : localSessions
   const sessions = useMemo(() => filterByDateRange(allSessions, dateRange), [allSessions, dateRange])
   const sectionIds = useMemo(() => SECTIONS.map((s) => s.id), [])
   const observedSection = useActiveSection(sectionIds)
@@ -131,22 +230,40 @@ function AdminScreenInner() {
   }
 
   const onClear = () => {
-    if (typeof window !== 'undefined' && window.confirm('Alle event-data wordt verwijderd. Doorgaan?')) {
+    if (typeof window === 'undefined') return
+    if (dataSource !== 'local') {
+      window.alert('Wissen werkt alleen in Lokaal-mode. Team-data wordt in Supabase bewaard en kan niet via dit dashboard worden gewist.')
+      return
+    }
+    if (window.confirm('Alle lokale event-data wordt verwijderd. Doorgaan?')) {
       clearAllEvents()
-      setAllSessions([])
+      setLocalSessions([])
       setTick((t) => t + 1)
     }
   }
 
   const onExport = () => {
     if (typeof window === 'undefined') return
-    const blob = new Blob([exportSessionsJson()], { type: 'application/json' })
+    const payload = dataSource === 'team'
+      ? JSON.stringify(allSessions, null, 2)
+      : exportSessionsJson()
+    const blob = new Blob([payload], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `clp-sessions-${new Date().toISOString().slice(0, 10)}.json`
+    a.download = `clp-sessions-${dataSource}-${new Date().toISOString().slice(0, 10)}.json`
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  const onManualRefresh = () => setRefreshNonce((n) => n + 1)
+
+  function formatRelative(ts) {
+    if (!ts) return 'onbekend'
+    const s = Math.floor((Date.now() - ts) / 1000)
+    if (s < 60) return `${s}s geleden`
+    if (s < 3600) return `${Math.floor(s / 60)}m geleden`
+    return `${Math.floor(s / 3600)}u geleden`
   }
 
   return (
@@ -163,6 +280,24 @@ function AdminScreenInner() {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            {dataSource === 'local' && (
+              <span
+                className="text-[10px] tracking-[0.16em] uppercase text-rose-700 border border-rose-300 px-2 py-1 rounded-full whitespace-nowrap"
+                title="?source=local URL-param actief"
+              >
+                Dev · lokale browser-data
+              </span>
+            )}
+            {dataSource === 'team' && (
+              <button
+                onClick={onManualRefresh}
+                disabled={teamLoading}
+                className="text-[12px] text-ink-soft hover:text-ink border border-mist hover:border-midnite px-3 py-1.5 rounded-full transition whitespace-nowrap disabled:opacity-50"
+                title={teamFetchedAt ? `Laatst opgehaald ${formatRelative(teamFetchedAt)}` : 'Vernieuwen'}
+              >
+                {teamLoading ? 'Vernieuwen…' : `↻ ${teamFetchedAt ? formatRelative(teamFetchedAt) : 'Ophalen'}`}
+              </button>
+            )}
             <DateRangePicker value={dateRange} onChange={setDateRange} />
             <a
               href="/"
@@ -177,12 +312,15 @@ function AdminScreenInner() {
             >
               Export
             </button>
-            <button
-              onClick={onClear}
-              className="text-[13px] text-rose-700 hover:text-rose-900 border border-rose-300 hover:bg-rose-50 px-3 py-1.5 rounded-full transition whitespace-nowrap"
-            >
-              Wissen
-            </button>
+            {dataSource === 'local' && (
+              <button
+                onClick={onClear}
+                className="text-[13px] text-rose-700 hover:text-rose-900 border border-rose-300 hover:bg-rose-50 px-3 py-1.5 rounded-full transition whitespace-nowrap"
+                title="Wist localStorage van deze browser"
+              >
+                Wissen
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -191,6 +329,20 @@ function AdminScreenInner() {
         <AdminSidebar sections={SECTIONS} activeId={activeSection} onNavigate={onNavigate} />
 
         <main className="space-y-6 min-w-0">
+          {/* Team-mode status banner: error of empty-state info */}
+          {dataSource === 'team' && teamError && (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-800">
+              <strong className="font-semibold">Kon team-data niet ophalen.</strong>{' '}
+              {teamError}{' '}
+              <button onClick={onManualRefresh} className="underline ml-1">Opnieuw proberen</button>
+            </div>
+          )}
+          {dataSource === 'team' && !teamError && allSessions.length === 0 && !teamLoading && (
+            <div className="rounded-xl border border-mist-light bg-canvas-2 px-4 py-3 text-[13px] text-ink-soft">
+              Nog geen sessies geregistreerd voor tenant <code className="bg-paper px-1.5 py-0.5 rounded">{getTenant() || 'onbekend'}</code>. Open de De Hofman CLP, doorloop de chat-flow, en kom terug.
+            </div>
+          )}
+
           {/* Overview */}
           <section id="overview" className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5 scroll-mt-24">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -205,6 +357,17 @@ function AdminScreenInner() {
               <KpiCard label="Gem. duur" value={formatDuration(avgDuration)} subtext={`${afhakers} afgehaakt`} />
             </div>
             <RealTimeTile onOpenSession={openReplay} />
+          </section>
+
+          {/* Registraties (clp_leads dual-write kopieën) */}
+          <section id="registraties" className="scroll-mt-24">
+            <RegistrationsList
+              leads={teamLeads}
+              loading={leadsLoading}
+              error={leadsError}
+              teamMode={dataSource === 'team'}
+              configured={leadsConfigured}
+            />
           </section>
 
           {/* Insights */}
@@ -266,9 +429,12 @@ function AdminScreenInner() {
           <AdminSettings />
 
           <footer className="pt-4 text-[12px] text-ink-mute leading-relaxed">
-            Events lokaal in localStorage onder <code className="bg-canvas-2 px-1.5 py-0.5 rounded">clp-events-v1</code>.
-            {' '}Plausible Pro forwardt non-PII custom events; de admin hier draait volledig op de localStorage van dit apparaat.
-            {' '}Voor cross-device populatie-cijfers: open Plausible.
+            {dataSource === 'team' ? (
+              <>Bron: Supabase project <code className="bg-canvas-2 px-1.5 py-0.5 rounded">clp-analytics</code>, tabel <code className="bg-canvas-2 px-1.5 py-0.5 rounded">clp_events</code>, tenant <code className="bg-canvas-2 px-1.5 py-0.5 rounded">{getTenant() || 'onbekend'}</code>. Limit 10.000 events/refresh.</>
+            ) : (
+              <>Bron: alleen events uit deze browser via <code className="bg-canvas-2 px-1.5 py-0.5 rounded">clp-events-v1</code>.</>
+            )}
+            {' '}Plausible Pro forwardt non-PII custom events.
           </footer>
         </main>
       </div>

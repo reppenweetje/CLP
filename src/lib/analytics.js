@@ -133,8 +133,10 @@ export function clearAllEvents() {
 }
 
 // Aggregeert events per sessie en haalt metadata eruit voor de admin view.
-export function getSessions() {
-  const events = loadEvents()
+// Geëxporteerd zodat zowel localStorage- als team-mode-fetches dezelfde
+// sessie-shape produceren (clp-events-fetch levert events in identieke
+// shape via supabaseRowToLocalEvent).
+export function buildSessions(events) {
   const bySession = new Map()
   for (const ev of events) {
     if (!bySession.has(ev.sessionId)) bySession.set(ev.sessionId, [])
@@ -167,6 +169,10 @@ export function getSessions() {
     })
   }
   return out.sort((a, b) => b.startedAt - a.startedAt)
+}
+
+export function getSessions() {
+  return buildSessions(loadEvents())
 }
 
 function extractLead(events) {
