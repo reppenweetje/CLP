@@ -37,6 +37,7 @@ import DropoffMatrix from '../components/admin/DropoffMatrix.jsx'
 import RealTimeTile from '../components/admin/RealTimeTile.jsx'
 import HotLeads from '../components/admin/HotLeads.jsx'
 import RegistrationsList from '../components/admin/RegistrationsList.jsx'
+import ErrorBoundary from '../components/admin/ErrorBoundary.jsx'
 import ABSignificance from '../components/admin/ABSignificance.jsx'
 import CohortHeatmap from '../components/admin/CohortHeatmap.jsx'
 import AIWeeklySummary from '../components/admin/AIWeeklySummary.jsx'
@@ -377,7 +378,9 @@ function AdminScreenInner() {
 
           {/* Route */}
           <section id="route" className="scroll-mt-24">
-            <SankeyFlow sessions={sessions} />
+            <ErrorBoundary label="Sankey">
+              <SankeyFlow sessions={sessions} />
+            </ErrorBoundary>
           </section>
 
           {/* Bubbles + Hot leads */}

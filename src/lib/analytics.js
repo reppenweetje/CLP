@@ -483,11 +483,23 @@ const SANKEY_EVENT_TYPES = new Set([
 export function buildSankey(sessions, { branchOnPersona = true } = {}) {
   const links = new Map()  // key = `${from}>${to}` → count
   const nodes = new Set()
+  // Globale stap-volgorde per node-id (eerste-zien) zodat we back-edges
+  // kunnen weren. nivo/d3-sankey gooit "circular link" bij ELKE cyclus
+  // in de DAG; een sessie die teruggaat (naam-edit, ander persona-pad
+  // dat hetzelfde label hergebruikt) maakt zo'n cyclus aan.
+  const nodeStep = new Map()
+  let stepCounter = 0
 
-  function addNode(id) { nodes.add(id) }
+  function addNode(id) {
+    nodes.add(id)
+    if (!nodeStep.has(id)) nodeStep.set(id, stepCounter++)
+  }
   function addLink(from, to) {
     addNode(from); addNode(to)
     if (from === to) return
+    // Drop back-edges om "circular link" crash te voorkomen. Verlies
+    // een paar zeldzame transities, win een werkend diagram.
+    if (nodeStep.get(to) <= nodeStep.get(from)) return
     const key = `${from}>${to}`
     links.set(key, (links.get(key) || 0) + 1)
   }
