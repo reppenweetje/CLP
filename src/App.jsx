@@ -2407,19 +2407,17 @@ function Demo() {
           onDismiss={() => setShowRescue(false)}
           onContact={() => {
             setShowRescue(false)
-            // Hergebruik de bestaande direct-contact-flow (dispatched
-            // 'flow:complete' met stage sales_ready). De bezoeker krijgt
-            // de service-card / handoff zonder extra UI te bouwen.
             trackEvent('direct-contact:requested', { from: 'rescue-nudge' })
             // Rescue-nudge "neem direct contact" = intent, geen Lead.
             fireMetaContact('direct-contact', { from: 'rescue-nudge' })
-            const lead = state.answers.lead || {}
-            if (project.phoneNumber) {
-              window.open(buildPhoneLink(project.phoneNumber), '_self')
-            } else {
-              const summary = buildCustomerWaSummary(state.answers, project)
-              window.open(whatsAppDeeplink(project, lead.firstName || '', summary), '_blank', 'noopener,noreferrer')
-            }
+            // Opent WhatsApp met prebuilt opener naar Reppit. Bewust GEEN
+            // lead-summary erbij want bezoeker heeft mogelijk nog niet
+            // veel ingevuld — eerste-bericht moet kort en uitnodigend
+            // zijn ipv een gigantische context-dump.
+            const num = (project.whatsappNumber || '').replace(/[^0-9]/g, '')
+            const projectName = project.displayName || project.name || 'het project'
+            const msg = encodeURIComponent(`Hi Reppit, ik heb een vraag over ${projectName}:`)
+            window.open(`https://wa.me/${num}?text=${msg}`, '_blank', 'noopener,noreferrer')
           }}
         />
       )}

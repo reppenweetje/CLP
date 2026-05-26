@@ -20,7 +20,7 @@ export default function RescueNudge({ onDismiss, onContact, project }) {
         <div className="min-w-0 flex-1">
           <div className="text-[14px] font-semibold text-ink">Specifieke vragen?</div>
           <div className="text-[12.5px] text-ink-soft mt-1 leading-snug">
-            Geen probleem. {project?.bot?.name || 'Jesse'} helpt je ook direct via WhatsApp of telefoon.
+            Geen probleem. Onze digitale assistent Reppit helpt je ook direct via WhatsApp.
           </div>
           <div className="flex items-center gap-1.5 mt-2.5">
             <button
