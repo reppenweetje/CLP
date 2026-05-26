@@ -35,7 +35,7 @@ export default function IntroScreen({ onStart }) {
 
           <div className="grid grid-cols-3 gap-2 lg:gap-3 pt-1">
             <Stat label="Units" value="14" />
-            <Stat label="Verkocht" value="50%" />
+            <Stat label="Verkocht" value="70%" />
             <Stat label="Vanaf" value="€239k" />
           </div>
         </div>

@@ -46,7 +46,7 @@ export const project = {
     {
       id: 'availability',
       tag: 'Beschikbaarheid',
-      title: '50% verkocht',
+      title: '70% verkocht',
       body: 'XL is uitverkocht. Nog enkele L-units beschikbaar. XXL volgt later.',
       image: '/images/unit-l.jpg',
     },
@@ -133,8 +133,8 @@ export const project = {
   },
 
   status: {
-    soldPercent: 50,
-    headline: 'Circa 50% verkocht. XL uitverkocht. Nog enkele L-units. XXL volgt.',
+    soldPercent: 70,
+    headline: 'Circa 70% verkocht. XL uitverkocht. Nog enkele L-units. XXL volgt.',
     units: {
       L: { label: 'Nog enkele beschikbaar', state: 'available' },
       XL: { label: 'Uitverkocht', state: 'sold_out' },
@@ -151,8 +151,8 @@ export const project = {
         { number: 2, type: 'L', state: 'sold' },
         { number: 3, type: 'L', state: 'sold' },
         { number: 4, type: 'L', state: 'available' },
-        { number: 5, type: 'L', state: 'sold_ov' },
-        { number: 6, type: 'L', state: 'available' },
+        { number: 5, type: 'L', state: 'available' },
+        { number: 6, type: 'L', state: 'sold_ov' },
         { number: 7, type: 'XXL', state: 'coming_soon' },
       ]},
       { units: [
@@ -160,8 +160,8 @@ export const project = {
         { number: 9, type: 'L', state: 'sold' },
         { number: 10, type: 'L', state: 'sold' },
         { number: 11, type: 'L', state: 'sold_ov' },
-        { number: 12, type: 'L', state: 'available' },
-        { number: 13, type: 'L', state: 'available' },
+        { number: 12, type: 'L', state: 'sold_ov' },
+        { number: 13, type: 'L', state: 'sold_ov' },
         { number: 14, type: 'XXL', state: 'coming_soon' },
       ]},
     ],
@@ -354,7 +354,7 @@ export const project = {
     {
       id: 'scarcity',
       title: 'Beschikbaarheid',
-      body: 'Circa 50% verkocht. XL uitverkocht. Nog enkele L-units. XXL volgt later.',
+      body: 'Circa 70% verkocht. XL uitverkocht. Nog enkele L-units. XXL volgt later.',
       tag: 'Schaarste',
     },
     {

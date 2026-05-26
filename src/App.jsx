@@ -1039,12 +1039,13 @@ function Demo() {
         ])
         return
       }
-      dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: answerValue(opt), next: 'lead-email' })
-      // Privacy-claim is bewust verplaatst naar NA de email-input
-      // (zie handleLeadEmailText). Voor de input tonen voelt drempel-
-      // verhogend en is een afhaak-risico.
+      // Lead-form variant (vervangt het oude email → naam → phoneAsk → phone
+      // 4-staps pad). Eén bubble met 3 verplichte velden, daarna direct door
+      // naar de size-vraag via finishLead.
+      dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: answerValue(opt), next: 'lead-form' })
       sendSequence(userTextFromOpt(opt), [
-        { kind: 'bot-text', text: 'Wat is je e-mailadres?' },
+        { kind: 'bot-text', text: 'Zou De Hofman interessant voor je kunnen zijn? Dan kan ik je de brochure toesturen.' },
+        { kind: 'lead-form', payload: {} },
       ])
       return
     }
@@ -1112,11 +1113,11 @@ function Demo() {
       // De rentMatchRequested-flag laat finishLead het rent-match-pad
       // voortzetten in plaats van naar size te gaan (size is niet
       // relevant voor rent-match).
-      dispatch({ type: 'ANSWER', key: 'rentRange', value: answerValue(opt), next: 'lead-email' })
+      dispatch({ type: 'ANSWER', key: 'rentRange', value: answerValue(opt), next: 'lead-form' })
       dispatch({ type: 'BEHAVIOR_RENT_MATCH_REQUESTED' })
       sendSequence(userTextFromOpt(opt), [
         { kind: 'bot-text', text: 'Helder. Om je voorkeur op te kunnen slaan en contact op te kunnen nemen zodra er een match is, heb ik je gegevens nodig.' },
-        { kind: 'bot-text', text: 'Wat is je e-mailadres?' },
+        { kind: 'lead-form', payload: {} },
       ])
       return
     }
@@ -1776,6 +1777,21 @@ function Demo() {
     trackNewLeadFields(state.leadDraft, lead)
     finishLead(lead, [{ kind: 'user-text', text }])
   }
+  // Lead-form submit handler. Vervangt het oude 4-staps text-input pad
+  // (lead-email → lead-name → lead-phoneAsk → lead-phone) door één
+  // gestructureerde form-submit. Bouwt eerst een user-text bubble met
+  // korte samenvatting (naam · email · telefoon), trackt de drie
+  // submitted-events, en delegeert door naar finishLead die de rest
+  // van de flow afhandelt (Supabase push, size-vraag, etc.).
+  function handleLeadFormSubmit({ firstName, email, phone }) {
+    const lead = { firstName, email, phone }
+    // Track-events compatible met oude 4-staps flow zodat analytics
+    // events-tabel consistent blijft.
+    trackNewLeadFields(state.leadDraft || {}, lead)
+    trackEvent('lead-form:submitted', { hasName: !!firstName, hasEmail: !!email, hasPhone: !!phone })
+    const summary = `${firstName} · ${email} · ${phone}`
+    finishLead(lead, [{ kind: 'user-text', text: summary }])
+  }
   function finishLead(lead, prependMessages = []) {
     // Custom event ipv tweede Lead: email-capture heeft al Lead getriggered.
     // FullLeadComplete is sterker signaal (email+naam+phone) maar dat is
@@ -1998,14 +2014,14 @@ function Demo() {
     sendSequence('Vraag financieringsscan via Credion', [
       { kind: 'bot-text', text: 'Mooi. Onze partner Credion belt je zo snel mogelijk om vrijblijvend met je door de financiering te lopen.' },
       { kind: 'bot-text', text: 'We sturen je ook meteen de brochure per mail, zodat je het project alvast rustig kunt doorlezen.' },
-      { kind: 'bot-text', text: 'Wat is je e-mailadres?' },
+      { kind: 'lead-form', payload: {} },
     ])
     // Markeer brochureTrigger impliciet als "ja" (bezoeker heeft via deze
     // route al voor brochure + Credion gekozen) — zodat de flow na lead-
     // capture niet alsnog de brochure-vraag stelt. ANSWER wint van
     // SET_QUESTION wanneer ze in dezelfde dispatch-batch zitten, dus deze
-    // ANSWER dispatch heeft expliciet next: 'lead-email' nodig.
-    dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: { id: 'ja', label: 'Ja, stuur maar', _msgCountBefore: state.messages.length, _viaCredion: true }, next: 'lead-email' })
+    // ANSWER dispatch heeft expliciet next: 'lead-form' nodig.
+    dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: { id: 'ja', label: 'Ja, stuur maar', _msgCountBefore: state.messages.length, _viaCredion: true }, next: 'lead-form' })
   }
   // Wat de bezoeker met de service-card doet. Net als bij de losse
   // warm-handoff muteren we het bestaande bericht met de outcome zodat de
@@ -2326,6 +2342,7 @@ function Demo() {
             onWaRequest={requestWhatsAppOpen}
             onTopicJump={onTopicJump}
             onPortalClick={onPortalClick}
+            onLeadFormSubmit={handleLeadFormSubmit}
             onReset={() => {
               clearPersisted()
               _id = 0
