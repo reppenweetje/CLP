@@ -7,7 +7,11 @@ import { buildSankey } from '../../lib/analytics.js'
 // breder naarmate meer mensen die transitie maakten. Doel: in één blik
 // zien WAAR mensen het pad verlaten en WAAROM hun pad zo afwijkt.
 export default function SankeyFlow({ sessions }) {
-  const [branchOnPersona, setBranchOnPersona] = useState(true)
+  // Default OFF: persona-splits 4-vouden de nodes en maken het diagram
+  // bij <100 sessies onleesbaar. Persona-breakdown staat al apart in de
+  // PersonaBreakdown-sectie; gebruiker kan hier opt-in als 'ie het patroon
+  // wil zien.
+  const [branchOnPersona, setBranchOnPersona] = useState(false)
   const data = useMemo(
     () => buildSankey(sessions, { branchOnPersona }),
     [sessions, branchOnPersona],
@@ -45,7 +49,7 @@ export default function SankeyFlow({ sessions }) {
             nodeOpacity={0.95}
             nodeHoverOpacity={1}
             nodeThickness={14}
-            nodeSpacing={18}
+            nodeSpacing={32}
             nodeBorderWidth={0}
             nodeInnerPadding={2}
             linkOpacity={0.45}

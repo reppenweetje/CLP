@@ -480,7 +480,39 @@ const SANKEY_EVENT_TYPES = new Set([
 // Bouwt een Sankey-graaf {nodes, links}. Branched op persona+keuze waar
 // dat zinvol is, zodat je niet alleen "stap A → stap B" ziet maar ook
 // "belegger → ja → mail" tegenover "eigen → nee → afhaak".
-export function buildSankey(sessions, { branchOnPersona = true } = {}) {
+// Korte stap-namen specifiek voor de Sankey; de uitgebreide
+// humanizeEventType wordt elders gebruikt (tooltips, sessions-list) maar
+// maakt de Sankey-banden onleesbaar. Stappen die hier niet staan vallen
+// terug op humanizeEventType.
+const SANKEY_STEP_LABELS = {
+  'intro:cta-clicked':            'CTA-klik',
+  'lead-email:submitted':         'E-mail',
+  'lead-name:submitted':          'Naam',
+  'lead-phone:submitted':         '06',
+  'size:answered':                'Grootte',
+  'timeline:answered':            'Termijn',
+  'more-info:viewed':             'Extra info',
+  'more-info:continue':           'Geen info',
+  'followup:answered':            'Vervolg',
+  'unit:detail-opened':           'Unit-detail',
+  'calc:rentability-interaction': 'Rendement-calc',
+  'calc:mortgage-interaction':    'Maandlast-calc',
+  'warm-handoff:shown':           'Handoff',
+  'warm-handoff:callback':        'Callback',
+  'warm-handoff:dismissed':       'Handoff dicht',
+}
+
+// Korte persona-prefix wanneer split aanstaat — anders worden node-labels
+// als "[Voor eigen bedrijf] WhatsApp-keuze gemaakt" zo breed dat ze elkaar
+// overlappen.
+const SANKEY_PERSONA_SHORT = {
+  eigen_gebruiker: 'EG',
+  belegger:        'Bel',
+  beide:           'Mix',
+  huurder:         'Hur',
+}
+
+export function buildSankey(sessions, { branchOnPersona = false } = {}) {
   const links = new Map()  // key = `${from}>${to}` → count
   const nodes = new Set()
   // Globale stap-volgorde per node-id (eerste-zien) zodat we back-edges
@@ -506,15 +538,16 @@ export function buildSankey(sessions, { branchOnPersona = true } = {}) {
 
   for (const s of sessions) {
     const personaTag = branchOnPersona && s.persona && s.persona !== 'onbekend'
-      ? `[${humanizePersona(s.persona)}] `
+      ? `[${SANKEY_PERSONA_SHORT[s.persona] || s.persona.slice(0, 3)}] `
       : ''
-    let prev = `Start${branchOnPersona ? '' : ''}`
+    let prev = 'Start'
     addNode(prev)
     for (const ev of s.events) {
       if (!SANKEY_EVENT_TYPES.has(ev.type)) continue
       // Label per stap: voor intent → vertakking op persona;
-      // voor brochure-trigger → vertakking ja/nee; default = stap-naam.
-      let label = humanizeEventType(ev.type)
+      // voor brochure-trigger → vertakking ja/nee; default = sankey-
+      // specifieke korte stap-naam (humanizeEventType is voor andere views).
+      let label = SANKEY_STEP_LABELS[ev.type] || humanizeEventType(ev.type)
       if (ev.type === 'intent:answered') {
         label = `Persona: ${humanizePersona(ev.payload?.persona ?? s.persona ?? 'onbekend')}`
       } else if (ev.type === 'brochure-trigger:answered') {
