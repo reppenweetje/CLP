@@ -85,7 +85,8 @@ async function sendCallbackEmail(payload: CallbackPayload): Promise<void> {
     return
   }
   const to = Deno.env.get('CALLBACK_MAIL_TO') ?? 'info@repp.nl'
-  const fromEmail = Deno.env.get('CALLBACK_MAIL_FROM') ?? 'noreply@repp.nl'
+  // jann@repp.nl is verified sender in Brevo. noreply@ bouncet anders.
+  const fromEmail = Deno.env.get('CALLBACK_MAIL_FROM') ?? 'jann@repp.nl'
   const fromName = Deno.env.get('CALLBACK_MAIL_FROM_NAME') ?? 'Reppit'
 
   const lead = payload.lead ?? {}
