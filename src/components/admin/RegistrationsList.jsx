@@ -15,6 +15,7 @@ export default function RegistrationsList({
   error = null,
   teamMode = false,
   configured = false,
+  onOpenLead,
 }) {
   const sorted = useMemo(() => {
     return [...(leads || [])].sort(
@@ -49,12 +50,13 @@ export default function RegistrationsList({
         error={error}
         teamMode={teamMode}
         configured={configured}
+        onOpenLead={onOpenLead}
       />
     </section>
   )
 }
 
-function Body({ sorted, loading, error, teamMode, configured }) {
+function Body({ sorted, loading, error, teamMode, configured, onOpenLead }) {
   if (!teamMode) {
     return (
       <Empty>
@@ -92,20 +94,46 @@ function Body({ sorted, loading, error, teamMode, configured }) {
   return (
     <ul className="divide-y divide-mist-light">
       {sorted.map((lead) => (
-        <LeadRow key={lead.id ?? lead.session_id} lead={lead} />
+        <LeadRow
+          key={lead.id ?? lead.session_id}
+          lead={lead}
+          onOpen={onOpenLead}
+        />
       ))}
     </ul>
   )
 }
 
-function LeadRow({ lead }) {
+function LeadRow({ lead, onOpen }) {
   const name = lead.first_name || 'Onbekend'
   const consents = Array.isArray(lead.consent_log) ? lead.consent_log.length : 0
+  const handle = () => onOpen?.(lead)
+  const clickable = typeof onOpen === 'function'
   return (
-    <li className="grid grid-cols-[1fr_auto] items-start gap-3 px-1 py-2.5">
+    <li
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onClick={clickable ? handle : undefined}
+      onKeyDown={
+        clickable
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                handle()
+              }
+            }
+          : undefined
+      }
+      className={
+        'grid grid-cols-[1fr_auto] items-start gap-3 px-2 -mx-1 py-2.5 rounded-lg transition ' +
+        (clickable
+          ? 'cursor-pointer hover:bg-canvas-2 focus:outline-none focus:ring-2 focus:ring-midnite/30'
+          : '')
+      }
+    >
       <div className="min-w-0">
         <div className="text-[14px] font-medium text-ink truncate flex items-center gap-2">
-          {name}
+          <span className={clickable ? 'text-midnite' : ''}>{name}</span>
           {lead.email && (
             <span className="text-[11.5px] font-normal text-ink-mute truncate">
               {lead.email}

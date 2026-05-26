@@ -37,6 +37,7 @@ import DropoffMatrix from '../components/admin/DropoffMatrix.jsx'
 import RealTimeTile from '../components/admin/RealTimeTile.jsx'
 import HotLeads from '../components/admin/HotLeads.jsx'
 import RegistrationsList from '../components/admin/RegistrationsList.jsx'
+import LeadDetail from '../components/admin/LeadDetail.jsx'
 import ErrorBoundary from '../components/admin/ErrorBoundary.jsx'
 import ABSignificance from '../components/admin/ABSignificance.jsx'
 import CohortHeatmap from '../components/admin/CohortHeatmap.jsx'
@@ -98,6 +99,7 @@ function AdminScreenInner() {
   const [teamLeads, setTeamLeads] = useState([])
   const [leadsLoading, setLeadsLoading] = useState(false)
   const [leadsError, setLeadsError] = useState(null)
+  const [selectedLead, setSelectedLead] = useState(null)
 
   const [, setTick] = useState(0)
   const [dateRange, setDateRange] = useState('all')
@@ -368,6 +370,7 @@ function AdminScreenInner() {
               error={leadsError}
               teamMode={dataSource === 'team'}
               configured={leadsConfigured}
+              onOpenLead={setSelectedLead}
             />
           </section>
 
@@ -441,6 +444,16 @@ function AdminScreenInner() {
           </footer>
         </main>
       </div>
+
+      <LeadDetail
+        lead={selectedLead}
+        session={
+          selectedLead?.session_id
+            ? allSessions.find((s) => s.sessionId === selectedLead.session_id) || null
+            : null
+        }
+        onClose={() => setSelectedLead(null)}
+      />
 
       <SessionReplay
         session={replaySession}
