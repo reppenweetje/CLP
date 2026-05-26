@@ -70,7 +70,7 @@ export default function LeadFormBubble({ onSubmit }) {
             error={errors.name}
             disabled={submitted}
             ns={ns + '-n'}
-            placeholder="Je voornaam"
+            placeholder="Naam"
           />
           <Field
             label="E-mail"
@@ -80,7 +80,7 @@ export default function LeadFormBubble({ onSubmit }) {
             disabled={submitted}
             ns={ns + '-e'}
             inputMode="email"
-            placeholder="jij@bedrijf.nl"
+            placeholder="jouw@bedrijf.nl"
           />
           <Field
             label="Telefoon"
@@ -106,14 +106,16 @@ export default function LeadFormBubble({ onSubmit }) {
             </div>
           )}
           <p className="text-[11px] text-ink-mute leading-snug pt-1">
-            We bewaren je antwoorden om je goed te helpen.{' '}
+            We mailen je de brochure en bewaren je voorkeur zodat onze
+            makelaar je gericht kan opvolgen. Hoe we met je gegevens
+            omgaan staat in onze{' '}
             <a
-              href="/privacystatement.pdf"
+              href="/privacy.html"
               target="_blank"
               rel="noopener noreferrer"
               className="underline hover:text-ink-soft"
             >
-              Privacystatement
+              privacystatement
             </a>
             .
           </p>

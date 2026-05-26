@@ -21,6 +21,7 @@ import { parseLeadInput, mergeLead } from './lib/parseLead.js'
 import { startNewSession, trackEvent, getSessionId } from './lib/analytics.js'
 import { notifyHotLead } from './lib/slack.js'
 import { pushLead, flushPending, isApiConfigured } from './lib/api.js'
+import { notifyCallbackRequest } from './lib/callbackNotify.js'
 import { attachEventsAutoFlush } from './lib/eventsApi.js'
 import {
   logSessionStartConsent,
@@ -1044,7 +1045,7 @@ function Demo() {
       // naar de size-vraag via finishLead.
       dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: answerValue(opt), next: 'lead-form' })
       sendSequence(userTextFromOpt(opt), [
-        { kind: 'bot-text', text: 'Zou De Hofman interessant voor je kunnen zijn? Dan kan ik je de brochure toesturen.' },
+        { kind: 'bot-text', text: 'Gaan we doen. Waar kan ik de brochure naartoe sturen?' },
         { kind: 'lead-form', payload: {} },
       ])
       return
@@ -1148,8 +1149,6 @@ function Demo() {
     if (q === 'timeline') {
       const merged = { ...state.answers, timeline: opt }
       const unit = recommendUnit(merged, project)
-      const personaNext = derivePersona(merged)
-      const copy = recommendCopy(personaNext, project)
       const confidence = leadConfidence(merged)
       trackEvent('timeline:answered', { id: opt.id, label: opt.label, recommendedUnit: unit.primary?.type })
       // Eén consistente flow voor alle temperaturen. Voorheen kreeg een hot-
@@ -1170,11 +1169,10 @@ function Demo() {
         )
       }
       botMessages.push(
-        { kind: 'bot-text', text: copy },
-        // Macro-keuze: bezoeker krijgt eerst een rustige "contact of rondkijken"
-        // vraag in plaats van direct alle 11 info-chips. Zonder deze
-        // tussenstap voelt de overgang van aanbeveling naar opties als een
-        // afgevuurd keuzemenu i.p.v. een gesprek.
+        // Persona-specifieke recommendCopy-bubble (die hier eerst stond)
+        // is bewust verwijderd: te uitleggend en herhaalde info die uit
+        // de unit-card al bleek. Direct door naar de macro-keuze houdt
+        // het tempo strak.
         { kind: 'bot-text', text: 'Wil je dit even kort overleggen met de makelaar, of liever eerst zelf rondkijken?' },
       )
       dispatch({ type: 'ANSWER', key: 'timeline', value: answerValue(opt), next: 'postRecommendation' })
@@ -1281,6 +1279,19 @@ function Demo() {
         // Warm-handoff = hoog intent, maar geen nieuwe Lead (email is al
         // gecaptured eerder). Meta-standaard 'Contact' event is hier correct.
         fireMetaContact('callback-chip', { persona: personaForCard, temperature: buying.temperature })
+        // Slack-notificatie naar #callbacks: sales weet direct dat deze
+        // lead gebeld wil worden. Fire-and-forget, faalt nooit UX.
+        notifyCallbackRequest({
+          lead,
+          project: project.id || 'clp_dehofman',
+          source: 'warm-handoff-chip',
+          context: {
+            persona: personaForCard,
+            temperature: buying.temperature,
+            score: buying.score,
+            signals: buying.signals.map((s) => s.id).join(', '),
+          },
+        }).catch(() => {})
         const bridge = buildHandoffBridge(personaForCard, project, {
           signals: buying.signals,
           name: lead.firstName || '',
@@ -2099,6 +2110,23 @@ function Demo() {
     })
     // We bouwen om dit te dispatchen via een SET_MESSAGES action.
     dispatch({ type: 'SET_MESSAGES', messages: newMessages })
+    // Slack-notificatie naar #callbacks zodra de bezoeker in de
+    // warm-handoff bubble daadwerkelijk op "Bel mij terug" klikt.
+    // Phone is normaal al via het lead-form binnen; alleen fallback-pad
+    // (oude edge case) heeft 'm nog niet.
+    if (outcome === 'callback') {
+      const callbackLead = state.answers.lead || {}
+      notifyCallbackRequest({
+        lead: callbackLead,
+        project: project.id || 'clp_dehofman',
+        source: 'warm-handoff-button',
+        context: {
+          persona: buying.inferredPersona,
+          temperature: buying.temperature,
+          score: buying.score,
+        },
+      }).catch(() => {})
+    }
     // Bij callback en geen telefoon-nummer in lead: ask phone.
     if (outcome === 'callback' && !state.answers.lead?.phone) {
       dispatch({
