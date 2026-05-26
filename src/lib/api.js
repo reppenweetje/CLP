@@ -503,20 +503,28 @@ export function restoreLead(leadId, opts) {
 
 // CRM-status constanten — hou in sync met de constraint in clp_leads en
 // met ALLOWED_STATUSES in clp-leads-update edge function.
-export const CRM_STATUS_LIST = ['new', 'called', 'qualified', 'proposal', 'won', 'lost']
+//
+// REPP sales-flow: nieuw → terugbellen → gesproken → lead / long_term / afgewezen
+// Bij status 'rejected' wordt de lead automatisch gearchiveerd (afgewezen
+// ≡ gearchiveerd in REPP-flow), afgehandeld in de edge function.
+export const CRM_STATUS_LIST = ['new', 'callback', 'spoken', 'lead', 'long_term', 'rejected']
 export const CRM_STATUS_LABEL = {
-  new:        'Nieuw',
-  called:     'Gebeld',
-  qualified:  'Gekwalificeerd',
-  proposal:   'Voorstel',
-  won:        'Gewonnen',
-  lost:       'Verloren',
+  new:       'Nieuw',
+  callback:  'Terugbellen',
+  spoken:    'Gesproken',
+  lead:      'Lead',
+  long_term: 'Long term lead',
+  rejected:  'Afgewezen',
 }
 export const CRM_STATUS_TONE = {
-  new:        'bg-canvas-2 text-ink-soft border-mist',
-  called:     'bg-blue-50 text-blue-800 border-blue-200',
-  qualified:  'bg-amber-50 text-amber-800 border-amber-200',
-  proposal:   'bg-violet-50 text-violet-800 border-violet-200',
-  won:        'bg-emerald-50 text-emerald-800 border-emerald-200',
-  lost:       'bg-rose-50 text-rose-800 border-rose-200',
+  new:       'bg-canvas-2 text-ink-soft border-mist',
+  callback:  'bg-amber-50 text-amber-800 border-amber-200',
+  spoken:    'bg-blue-50 text-blue-800 border-blue-200',
+  lead:      'bg-emerald-50 text-emerald-800 border-emerald-200',
+  long_term: 'bg-violet-50 text-violet-800 border-violet-200',
+  rejected:  'bg-rose-50 text-rose-800 border-rose-200',
 }
+// Welke statussen archiveren auto (zelfde set als in edge function).
+// Frontend gebruikt dit voor de "verdwijnt uit deze view" hint in de
+// dropdown zodat de gebruiker niet verrast wordt.
+export const CRM_STATUS_AUTO_ARCHIVE = new Set(['rejected'])

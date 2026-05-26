@@ -3,6 +3,7 @@ import { formatDuration, humanizeEventType, humanizePersona } from '../../lib/an
 import {
   addLeadNote,
   archiveLead,
+  CRM_STATUS_AUTO_ARCHIVE,
   CRM_STATUS_LABEL,
   CRM_STATUS_LIST,
   CRM_STATUS_TONE,
@@ -298,12 +299,14 @@ function CrmStrip({ lead, onUpdate }) {
         <div className="flex flex-wrap gap-1.5">
           {CRM_STATUS_LIST.map((s) => {
             const active = s === status
+            const autoArchive = CRM_STATUS_AUTO_ARCHIVE.has(s)
             return (
               <button
                 key={s}
                 type="button"
                 disabled={busy}
                 onClick={() => handleStatus(s)}
+                title={autoArchive ? 'Lead verdwijnt naar archief' : undefined}
                 className={
                   'rounded-full border px-2.5 py-1 text-[11.5px] font-medium transition disabled:opacity-50 ' +
                   (active
@@ -312,6 +315,9 @@ function CrmStrip({ lead, onUpdate }) {
                 }
               >
                 {CRM_STATUS_LABEL[s]}
+                {autoArchive && (
+                  <span className="ml-1 text-[9px] text-ink-mute" aria-hidden>→ archief</span>
+                )}
               </button>
             )
           })}

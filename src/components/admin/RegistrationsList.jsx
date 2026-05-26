@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   archiveLead,
+  CRM_STATUS_AUTO_ARCHIVE,
   CRM_STATUS_LABEL,
   CRM_STATUS_LIST,
   CRM_STATUS_TONE,
@@ -499,12 +500,14 @@ function RowStatusDropdown({ status, onChange }) {
         >
           {CRM_STATUS_LIST.map((s) => {
             const active = s === key
+            const autoArchive = CRM_STATUS_AUTO_ARCHIVE.has(s)
             return (
               <button
                 key={s}
                 role="menuitem"
                 type="button"
                 onClick={(e) => pick(e, s)}
+                title={autoArchive ? 'Lead verdwijnt uit hoofdoverzicht (auto-archief)' : undefined}
                 className={
                   'flex w-full items-center gap-2 px-3 py-1.5 text-[12.5px] text-left hover:bg-canvas-2 ' +
                   (active ? 'font-semibold text-midnite' : 'text-ink')
@@ -515,7 +518,12 @@ function RowStatusDropdown({ status, onChange }) {
                   aria-hidden
                 />
                 {CRM_STATUS_LABEL[s]}
-                {active && <span className="ml-auto text-[11px] text-midnite">huidig</span>}
+                {autoArchive && (
+                  <span className="ml-auto text-[10px] text-ink-mute" aria-hidden>→ archief</span>
+                )}
+                {active && !autoArchive && (
+                  <span className="ml-auto text-[11px] text-midnite">huidig</span>
+                )}
               </button>
             )
           })}
