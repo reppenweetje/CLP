@@ -100,6 +100,9 @@ function AdminScreenInner() {
   const [leadsLoading, setLeadsLoading] = useState(false)
   const [leadsError, setLeadsError] = useState(null)
   const [selectedLead, setSelectedLead] = useState(null)
+  // Mini-CRM: standaard tonen we niet-gearchiveerde rijen. Toggle wisselt
+  // de view en triggert via include_archived param een re-fetch.
+  const [leadsShowArchived, setLeadsShowArchived] = useState(false)
 
   const [, setTick] = useState(0)
   const [dateRange, setDateRange] = useState('all')
@@ -169,7 +172,10 @@ function AdminScreenInner() {
       setLeadsLoading(true)
       setLeadsError(null)
       try {
-        const rows = await fetchTeamLeads({ limit: 5000 })
+        const rows = await fetchTeamLeads({
+          limit: 5000,
+          includeArchived: leadsShowArchived,
+        })
         if (!cancelled) setTeamLeads(rows)
       } catch (err) {
         if (!cancelled) setLeadsError(err?.message || String(err))
@@ -184,7 +190,27 @@ function AdminScreenInner() {
       cancelled = true
       window.removeEventListener('focus', onFocus)
     }
-  }, [dataSource, leadsConfigured, refreshNonce])
+  }, [dataSource, leadsConfigured, refreshNonce, leadsShowArchived])
+
+  // CRM-mutaties via LeadDetail. Patch zowel selectedLead als de lijst zodat
+  // de UI direct meedoet. Bij archiveer/restore wordt de rij uit de huidige
+  // view gehaald (of toegevoegd) zonder volledige re-fetch.
+  function handleLeadUpdate(updated) {
+    if (!updated) return
+    setSelectedLead((cur) => (cur && cur.id === updated.id ? { ...cur, ...updated } : cur))
+    setTeamLeads((rows) => {
+      const archivedNow = !!updated.archived_at
+      // Als de archived-state niet past bij de huidige view, dan moet de rij
+      // uit deze lijst verdwijnen. Anders gewoon patchen op id.
+      const visibleInThisView = leadsShowArchived ? archivedNow : !archivedNow
+      const exists = rows.some((r) => r.id === updated.id)
+      if (!visibleInThisView) {
+        return rows.filter((r) => r.id !== updated.id)
+      }
+      if (!exists) return [updated, ...rows]
+      return rows.map((r) => (r.id === updated.id ? { ...r, ...updated } : r))
+    })
+  }
 
   const allSessions = dataSource === 'team' ? teamSessions : localSessions
   const sessions = useMemo(() => filterByDateRange(allSessions, dateRange), [allSessions, dateRange])
@@ -371,6 +397,8 @@ function AdminScreenInner() {
               teamMode={dataSource === 'team'}
               configured={leadsConfigured}
               onOpenLead={setSelectedLead}
+              showArchived={leadsShowArchived}
+              onToggleArchived={() => setLeadsShowArchived((v) => !v)}
             />
           </section>
 
@@ -453,6 +481,7 @@ function AdminScreenInner() {
             : null
         }
         onClose={() => setSelectedLead(null)}
+        onLeadUpdate={handleLeadUpdate}
       />
 
       <SessionReplay

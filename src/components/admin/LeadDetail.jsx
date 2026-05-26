@@ -1,17 +1,37 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { formatDuration, humanizeEventType, humanizePersona } from '../../lib/analytics.js'
+import {
+  addLeadNote,
+  archiveLead,
+  CRM_STATUS_LABEL,
+  CRM_STATUS_LIST,
+  CRM_STATUS_TONE,
+  deleteLeadNote,
+  restoreLead,
+  setLeadStatus,
+} from '../../lib/api.js'
 
-// Modal-overlay met curated overzicht per lead — bedoeld om sales in 30s
-// te briefen voor 'n outbound bel. Opent vanuit Registraties zodra je op
-// een naam klikt. Combineert clp_leads (contact + persona) + clp_events
-// (gedragsignalen + chat-trace) voor de volledige context.
+// Modal-overlay met curated overzicht per lead. Eén plek voor:
+//   - sales-briefing (header, quick actions, hoogtepunten, gedrag)
+//   - mini-CRM (status, notities, archief)
+//   - call-sheet (gemaakte keuzes in tijdvolgorde, geen ruis-events)
 //
-// Sluiten: Esc, kruis-knop, of klik buiten het panel.
-export default function LeadDetail({ lead, session, onClose }) {
+// Combineert clp_leads (contact + persona + crm-velden) + clp_events
+// (gedragsignalen + chat-trace). Sluiten: Esc, kruis-knop, klik buiten.
+//
+// CRM-mutaties gaan via clp-leads-update edge function en updaten optimistisch
+// de lokale state — onLeadUpdate propagates de patch naar de parent zodat
+// RegistrationsList ook bijwerkt.
+export default function LeadDetail({ lead, session, onClose, onLeadUpdate }) {
   // Hooks ALTIJD eerst (geen conditionals) — React eis.
   const events = session?.events || []
-  const signals = useMemo(() => computeSignals(events, lead), [events, lead])
-  const answersData = lead?.attributes?.answers ?? null
+  const [optimistic, setOptimistic] = useState(lead)
+  // Synchroniseer optimistic met externe lead-changes (bv. nieuwe lead geopend).
+  useEffect(() => { setOptimistic(lead) }, [lead])
+
+  const signals = useMemo(() => computeSignals(events, optimistic), [events, optimistic])
+  const callSheet = useMemo(() => buildCallSheet(events, optimistic), [events, optimistic])
+  const answersData = optimistic?.attributes?.answers ?? null
 
   useEffect(() => {
     if (!lead) return
@@ -20,12 +40,19 @@ export default function LeadDetail({ lead, session, onClose }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [lead, onClose])
 
-  if (!lead) return null
+  function applyUpdate(updated) {
+    if (!updated) return
+    setOptimistic(updated)
+    onLeadUpdate?.(updated)
+  }
 
-  const name = lead.first_name || 'Onbekend'
+  if (!lead || !optimistic) return null
+
+  const name = optimistic.first_name || 'Onbekend'
   const highlights = signals.filter((s) => s.tone === 'hot').slice(0, 4)
-  const phoneE164 = toE164(lead.phone)
-  const phoneDisplay = formatPhone(lead.phone)
+  const phoneE164 = toE164(optimistic.phone)
+  const phoneDisplay = formatPhone(optimistic.phone)
+  const archived = !!optimistic.archived_at
 
   return (
     <div
@@ -42,19 +69,26 @@ export default function LeadDetail({ lead, session, onClose }) {
         {/* Header */}
         <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3">
           <div className="min-w-0 flex-1">
-            <h2 className="text-[22px] font-semibold text-ink truncate">{name}</h2>
-            {lead.email && (
+            <div className="flex items-center gap-2">
+              <h2 className="text-[22px] font-semibold text-ink truncate">{name}</h2>
+              {archived && (
+                <span className="text-[10px] uppercase tracking-wider rounded-full border border-mist bg-canvas-2 text-ink-mute px-2 py-0.5">
+                  Gearchiveerd
+                </span>
+              )}
+            </div>
+            {optimistic.email && (
               <a
-                href={`mailto:${lead.email}`}
+                href={`mailto:${optimistic.email}`}
                 className="text-[13px] text-midnite hover:underline truncate block"
               >
-                {lead.email}
+                {optimistic.email}
               </a>
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <StatusBadge status={lead.status} />
-            {lead.temperature && <TempBadge value={lead.temperature} />}
+            <SessionStatusBadge status={optimistic.status} />
+            {optimistic.temperature && <TempBadge value={optimistic.temperature} />}
             <button
               type="button"
               onClick={onClose}
@@ -90,15 +124,21 @@ export default function LeadDetail({ lead, session, onClose }) {
               <span aria-hidden>💬</span> WhatsApp
             </a>
           )}
-          {lead.email && (
+          {optimistic.email && (
             <a
-              href={`mailto:${lead.email}`}
+              href={`mailto:${optimistic.email}`}
               className="inline-flex items-center gap-2 px-4 py-2 border border-mist hover:border-midnite rounded-full text-[13px] text-ink-soft hover:text-ink transition"
             >
               <span aria-hidden>✉️</span> Mail
             </a>
           )}
         </div>
+
+        {/* Mini-CRM strip: status + archive */}
+        <CrmStrip
+          lead={optimistic}
+          onUpdate={applyUpdate}
+        />
 
         {/* Hoogtepunten (alleen als er hot-signalen zijn) */}
         {highlights.length > 0 && (
@@ -118,18 +158,24 @@ export default function LeadDetail({ lead, session, onClose }) {
 
         {/* Profiel */}
         <section className="px-5 py-4 grid grid-cols-2 sm:grid-cols-4 gap-3 border-b border-mist-light mt-2">
-          <Field label="Persona" value={lead.persona ? humanizePersona(lead.persona) : 'onbekend'} />
+          <Field label="Persona" value={optimistic.persona ? humanizePersona(optimistic.persona) : 'onbekend'} />
           <Field
             label="Stage"
-            value={lead.stage ? String(lead.stage).replace(/_/g, ' ') : 'onbekend'}
+            value={optimistic.stage ? String(optimistic.stage).replace(/_/g, ' ') : 'onbekend'}
           />
           <Field
             label="Score"
-            value={typeof lead.score === 'number' ? `${lead.score}/100` : 'onbekend'}
-            accent={typeof lead.score === 'number' && lead.score >= 60}
+            value={typeof optimistic.score === 'number' ? `${optimistic.score}` : 'onbekend'}
+            sub={typeof optimistic.score === 'number' ? scoreHint(optimistic.score) : null}
+            accent={typeof optimistic.score === 'number' && optimistic.score >= 60}
           />
-          <Field label="Geregistreerd" value={formatWhen(lead.created_at)} />
+          <Field label="Geregistreerd" value={formatWhen(optimistic.created_at)} />
         </section>
+
+        {/* Call-sheet: gemaakte keuzes in chrono-volgorde */}
+        {callSheet.length > 0 && (
+          <CallSheet entries={callSheet} />
+        )}
 
         {/* Gedragsignalen */}
         {signals.length > 0 && (
@@ -153,17 +199,23 @@ export default function LeadDetail({ lead, session, onClose }) {
           </section>
         )}
 
-        {/* Antwoorden */}
+        {/* Antwoorden (form-velden uit lead.attributes.answers) */}
         {answersData && Object.keys(answersData).length > 0 && (
           <Answers answers={answersData} />
         )}
 
-        {/* Tijdlijn */}
+        {/* Notities — mini CRM */}
+        <NotesSection
+          lead={optimistic}
+          onUpdate={applyUpdate}
+        />
+
+        {/* Volledige event-log — verborgen achter <details> voor power-users */}
         {events.length > 0 && (
           <section className="px-5 py-4 border-b border-mist-light">
             <details>
-              <summary className="cursor-pointer text-[11px] tracking-[0.18em] text-midnite uppercase font-medium select-none hover:text-midnite-soft">
-                Volledige tijdlijn ({events.length} events)
+              <summary className="cursor-pointer text-[11px] tracking-[0.18em] text-ink-mute uppercase font-medium select-none hover:text-ink-soft">
+                Volledige event-log ({events.length})
               </summary>
               <ol className="mt-3 space-y-1.5">
                 {events.map((e, i) => (
@@ -179,21 +231,21 @@ export default function LeadDetail({ lead, session, onClose }) {
           </section>
         )}
 
-        {/* Meta */}
-        <section className="px-5 py-4 text-[11.5px] text-ink-mute leading-relaxed space-y-1">
+        {/* Meta + archive-knop */}
+        <section className="px-5 py-4 text-[11.5px] text-ink-mute leading-relaxed space-y-2">
           <div>
-            <strong className="text-ink-soft">Aangemaakt:</strong> {formatFull(lead.created_at)}
+            <strong className="text-ink-soft">Aangemaakt:</strong> {formatFull(optimistic.created_at)}
           </div>
           <div>
             <strong className="text-ink-soft">Session-id:</strong>{' '}
             <code className="bg-canvas-2 px-1.5 py-0.5 rounded text-[11px]">
-              {lead.session_id?.slice(0, 16) || 'onbekend'}
+              {optimistic.session_id?.slice(0, 16) || 'onbekend'}
             </code>
           </div>
           <div>
             <strong className="text-ink-soft">Lead-id (clp_leads):</strong>{' '}
             <code className="bg-canvas-2 px-1.5 py-0.5 rounded text-[11px]">
-              {lead.id ?? 'onbekend'}
+              {optimistic.id ?? 'onbekend'}
             </code>
           </div>
           {!session && (
@@ -202,15 +254,430 @@ export default function LeadDetail({ lead, session, onClose }) {
               de events-koppeling live ging (backfill).
             </div>
           )}
+
+          <ArchiveControl lead={optimistic} onUpdate={applyUpdate} />
         </section>
       </div>
     </div>
   )
 }
 
-// ── Sub-componenten ─────────────────────────────────────────────────────────
+// ── Mini-CRM controls ─────────────────────────────────────────────────────────
 
-function Field({ label, value, accent }) {
+function CrmStrip({ lead, onUpdate }) {
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState(null)
+  const status = lead.crm_status || 'new'
+
+  async function handleStatus(newStatus) {
+    if (newStatus === status || busy) return
+    setBusy(true); setErr(null)
+    // Optimistisch eerst, dan netwerk. Bij fout terugdraaien.
+    const previous = lead
+    onUpdate({ ...lead, crm_status: newStatus })
+    try {
+      const updated = await setLeadStatus(lead.id, newStatus)
+      onUpdate(updated)
+    } catch (e) {
+      onUpdate(previous)
+      setErr(e?.message || 'Status-update mislukt')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="px-5 py-3 border-b border-mist-light bg-canvas-2/40">
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="text-[10px] tracking-[0.18em] text-ink-mute uppercase font-medium">
+          Status
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {CRM_STATUS_LIST.map((s) => {
+            const active = s === status
+            return (
+              <button
+                key={s}
+                type="button"
+                disabled={busy}
+                onClick={() => handleStatus(s)}
+                className={
+                  'rounded-full border px-2.5 py-1 text-[11.5px] font-medium transition disabled:opacity-50 ' +
+                  (active
+                    ? CRM_STATUS_TONE[s] + ' shadow-sm'
+                    : 'border-mist bg-paper text-ink-soft hover:border-midnite/40 hover:text-ink')
+                }
+              >
+                {CRM_STATUS_LABEL[s]}
+              </button>
+            )
+          })}
+        </div>
+        {err && (
+          <span className="text-[11px] text-rose-700">{err}</span>
+        )}
+      </div>
+    </section>
+  )
+}
+
+function NotesSection({ lead, onUpdate }) {
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState(null)
+  const taRef = useRef(null)
+  const notes = Array.isArray(lead.crm_notes) ? lead.crm_notes : []
+  const sorted = [...notes].sort((a, b) => {
+    const ta = new Date(a?.created_at || 0).getTime()
+    const tb = new Date(b?.created_at || 0).getTime()
+    return tb - ta
+  })
+
+  async function handleAdd(e) {
+    e?.preventDefault?.()
+    const t = text.trim()
+    if (!t || busy) return
+    setBusy(true); setErr(null)
+    try {
+      const updated = await addLeadNote(lead.id, t)
+      onUpdate(updated)
+      setText('')
+      taRef.current?.focus()
+    } catch (e) {
+      setErr(e?.message || 'Notitie opslaan mislukt')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleDelete(noteId) {
+    if (busy) return
+    if (!window.confirm('Notitie verwijderen?')) return
+    setBusy(true); setErr(null)
+    const previous = lead
+    onUpdate({ ...lead, crm_notes: notes.filter((n) => n?.id !== noteId) })
+    try {
+      const updated = await deleteLeadNote(lead.id, noteId)
+      onUpdate(updated)
+    } catch (e) {
+      onUpdate(previous)
+      setErr(e?.message || 'Notitie verwijderen mislukt')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="px-5 py-4 border-b border-mist-light">
+      <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium mb-3">
+        Notities ({notes.length})
+      </div>
+
+      <form onSubmit={handleAdd} className="mb-3">
+        <textarea
+          ref={taRef}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Wat heb je net besproken? Korte aantekening voor jezelf of het team."
+          rows={2}
+          className="w-full rounded-lg border border-mist bg-paper px-3 py-2 text-[13.5px] text-ink resize-y focus:outline-none focus:border-midnite/60 focus:ring-2 focus:ring-midnite/10"
+        />
+        <div className="mt-2 flex items-center gap-2">
+          <button
+            type="submit"
+            disabled={busy || !text.trim()}
+            className="rounded-full bg-midnite text-paper px-4 py-1.5 text-[12.5px] font-medium hover:bg-midnite-soft disabled:opacity-50 transition"
+          >
+            {busy ? 'Opslaan…' : 'Notitie toevoegen'}
+          </button>
+          {err && <span className="text-[11px] text-rose-700">{err}</span>}
+        </div>
+      </form>
+
+      {sorted.length === 0 ? (
+        <div className="text-[12.5px] text-ink-mute italic">Nog geen notities.</div>
+      ) : (
+        <ul className="space-y-2">
+          {sorted.map((n) => (
+            <li
+              key={n.id}
+              className="group rounded-lg border border-mist-light bg-canvas px-3 py-2"
+            >
+              <div className="flex items-baseline justify-between gap-2 mb-1">
+                <span className="text-[11px] text-ink-mute tabular-nums">
+                  {formatFull(n.created_at)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(n.id)}
+                  className="opacity-0 group-hover:opacity-100 text-[11px] text-rose-700 hover:text-rose-900 transition"
+                  aria-label="Notitie verwijderen"
+                >
+                  Verwijder
+                </button>
+              </div>
+              <div className="text-[13.5px] text-ink whitespace-pre-wrap leading-snug">
+                {n.text}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+function ArchiveControl({ lead, onUpdate }) {
+  const [busy, setBusy] = useState(false)
+  const archived = !!lead.archived_at
+
+  async function handle() {
+    if (busy) return
+    if (!archived) {
+      if (!window.confirm('Deze registratie naar archief verplaatsen? Hij verdwijnt uit het hoofdoverzicht maar blijft in de database staan.')) return
+    }
+    setBusy(true)
+    try {
+      const updated = archived ? await restoreLead(lead.id) : await archiveLead(lead.id)
+      onUpdate(updated)
+    } catch (e) {
+      window.alert((archived ? 'Herstellen' : 'Archiveren') + ' mislukt: ' + (e?.message || 'onbekend'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="mt-3 pt-3 border-t border-mist-light/60">
+      <button
+        type="button"
+        onClick={handle}
+        disabled={busy}
+        className={
+          'text-[12px] font-medium rounded-full border px-3 py-1.5 transition disabled:opacity-50 ' +
+          (archived
+            ? 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+            : 'border-rose-200 bg-rose-50 text-rose-800 hover:bg-rose-100')
+        }
+      >
+        {busy
+          ? 'Bezig…'
+          : archived
+            ? 'Terughalen uit archief'
+            : 'Naar archief'}
+      </button>
+    </div>
+  )
+}
+
+// ── Call sheet — alleen door bezoeker gemaakte keuzes ────────────────────────
+
+function CallSheet({ entries }) {
+  return (
+    <section className="px-5 py-4 border-b border-mist-light">
+      <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium mb-3">
+        Call sheet — gemaakte keuzes
+      </div>
+      <ol className="space-y-1.5">
+        {entries.map((e, i) => (
+          <li
+            key={i}
+            className="flex items-baseline gap-3 text-[13px] leading-snug"
+          >
+            <span className="text-ink-mute tabular-nums shrink-0 w-14">
+              {formatHHMM(e.timestamp)}
+            </span>
+            <span className={'shrink-0 w-5 text-center ' + (e.tone === 'hot' ? 'text-emerald-700' : e.tone === 'cold' ? 'text-rose-700' : e.tone === 'done' ? 'text-emerald-700' : 'text-ink-mute')}>
+              {e.icon}
+            </span>
+            <span className={'flex-1 ' + (e.tone === 'hot' ? 'text-ink font-medium' : e.tone === 'cold' ? 'text-rose-800' : e.tone === 'done' ? 'text-emerald-800 font-medium' : 'text-ink')}>
+              {e.text}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
+// Welke event-types verschijnen op het call sheet, en hoe ze worden
+// gepresenteerd. Bewust beperkt tot daadwerkelijk door de gebruiker gemaakte
+// keuzes en aankoop-signalen — geen UI-renders of timer-events.
+function buildCallSheet(events, lead) {
+  if (!Array.isArray(events) || events.length === 0) return []
+  const out = []
+  // Voor unit:detail-opened verzamelen we per-unit aantal en tonen we
+  // dat als één gecondenseerde entry.
+  let unitDetailCount = 0
+  let firstUnitDetailTs = null
+  let rentCalcCount = 0
+  let firstRentCalcTs = null
+  let mortgageCalcCount = 0
+  let firstMortgageCalcTs = null
+
+  for (const ev of events) {
+    const entry = callSheetEntry(ev, lead)
+    if (entry === 'unit') {
+      unitDetailCount += 1
+      if (!firstUnitDetailTs) firstUnitDetailTs = ev.timestamp
+      continue
+    }
+    if (entry === 'rent') {
+      rentCalcCount += 1
+      if (!firstRentCalcTs) firstRentCalcTs = ev.timestamp
+      continue
+    }
+    if (entry === 'mortgage') {
+      mortgageCalcCount += 1
+      if (!firstMortgageCalcTs) firstMortgageCalcTs = ev.timestamp
+      continue
+    }
+    if (entry) out.push({ ...entry, timestamp: ev.timestamp })
+  }
+
+  // Voeg gecondenseerde entries toe op de chronologisch juiste plek.
+  if (unitDetailCount > 0) {
+    insertChrono(out, {
+      icon: '🏠',
+      text: `Bekeek unit-details (${unitDetailCount}×)`,
+      tone: 'hot',
+      timestamp: firstUnitDetailTs,
+    })
+  }
+  if (rentCalcCount > 0) {
+    insertChrono(out, {
+      icon: '🧮',
+      text: `Speelde met rendement-calc (${rentCalcCount}×)`,
+      tone: 'hot',
+      timestamp: firstRentCalcTs,
+    })
+  }
+  if (mortgageCalcCount > 0) {
+    insertChrono(out, {
+      icon: '🧮',
+      text: `Speelde met maandlast-calc (${mortgageCalcCount}×)`,
+      tone: 'hot',
+      timestamp: firstMortgageCalcTs,
+    })
+  }
+
+  return out
+}
+
+function insertChrono(list, item) {
+  const idx = list.findIndex((x) => x.timestamp > item.timestamp)
+  if (idx === -1) list.push(item)
+  else list.splice(idx, 0, item)
+}
+
+// Return 'unit' / 'rent' / 'mortgage' voor te condenseren typen,
+// een entry-object voor één-malige items, of null om de event te skippen.
+function callSheetEntry(ev, lead) {
+  const t = ev.type
+  const p = ev.payload || {}
+  switch (t) {
+    case 'session:start':
+      return { icon: '◉', text: 'Sessie gestart' }
+    case 'intro:cta-clicked':
+      return { icon: '↗', text: 'Klikte op CTA' + (p.variant ? ` (variant ${p.variant})` : '') }
+    case 'intent:answered':
+      return {
+        icon: '🎯',
+        text: 'Persona: ' + humanizePersona(p.persona || lead?.persona || 'onbekend'),
+      }
+    case 'focus:answered':
+      return { icon: '🔍', text: 'Focus: ' + (p.label || p.id || 'onbekend') }
+    case 'brochure-trigger:answered': {
+      const ja = p.id === 'ja'
+      return {
+        icon: '📄',
+        text: ja ? 'Wilde de brochure ontvangen' : 'Wilde GEEN brochure',
+        tone: ja ? 'hot' : 'cold',
+      }
+    }
+    case 'lead-name:submitted':
+      return {
+        icon: '✍',
+        text: 'Vulde naam in' + (lead?.first_name ? `: ${lead.first_name}` : ''),
+      }
+    case 'lead-email:submitted':
+      return {
+        icon: '✉',
+        text: 'Vulde e-mail in' + (lead?.email ? `: ${lead.email}` : ''),
+        tone: 'hot',
+      }
+    case 'lead-phone-ask:answered': {
+      const yes = p.id === 'yes' || p.id === 'ja'
+      return {
+        icon: '💬',
+        text: yes ? 'Stemde in met WhatsApp-contact' : 'Wees WhatsApp af',
+        tone: yes ? 'hot' : null,
+      }
+    }
+    case 'lead-phone:submitted':
+      return {
+        icon: '📞',
+        text: 'Vulde telefoonnummer in' + (lead?.phone ? `: ${formatPhone(lead.phone)}` : ''),
+        tone: 'hot',
+      }
+    case 'size:answered':
+      return { icon: '📏', text: 'Grootte: ' + (p.label || p.id || 'onbekend') }
+    case 'timeline:answered':
+      return { icon: '⏱', text: 'Termijn: ' + (p.label || p.id || 'onbekend') }
+    case 'more-info:viewed':
+      return { icon: 'ℹ', text: 'Vroeg extra info' }
+    case 'more-info:continue':
+      return { icon: '↪', text: 'Sloeg extra info over' }
+    case 'followup:answered':
+      return {
+        icon: '➜',
+        text: 'Vervolg: ' + (p.label || p.id || 'onbekend'),
+        tone: ['wa_nu', 'bel', 'plan'].includes(p.id) ? 'hot' : null,
+      }
+    case 'direct-contact:requested':
+      return { icon: '☎', text: 'Vroeg om direct contact', tone: 'hot' }
+    case 'warm-handoff:shown':
+      return null  // skip — alleen uitkomst is interessant
+    case 'warm-handoff:callback':
+      return { icon: '↩', text: 'Vroeg om terugbel', tone: 'hot' }
+    case 'warm-handoff:whatsapp':
+      return { icon: '💬', text: 'Koos WhatsApp via handoff', tone: 'hot' }
+    case 'warm-handoff:phone':
+      return { icon: '📞', text: 'Koos bellen via handoff', tone: 'hot' }
+    case 'warm-handoff:dismissed':
+      return { icon: '⊘', text: 'Sloeg handoff af', tone: 'cold' }
+    case 'cta:brochure-clicked':
+      return { icon: '📥', text: 'Opende brochure-PDF' }
+    case 'cta:whatsapp-clicked':
+      return { icon: '💬', text: 'Klikte WhatsApp-knop', tone: 'hot' }
+    case 'cta:phone-clicked':
+      return { icon: '📞', text: 'Klikte tel-link', tone: 'hot' }
+    case 'unit:detail-opened':
+      return 'unit'
+    case 'calc:rentability-interaction':
+      return 'rent'
+    case 'calc:mortgage-interaction':
+      return 'mortgage'
+    case 'afhaak-reason:answered':
+      return {
+        icon: '⊥',
+        text: 'Afhaakreden: ' + (p.label || p.id || 'onbekend'),
+        tone: 'cold',
+      }
+    case 'flow:complete':
+      return {
+        icon: '✓',
+        text: 'Voltooid' + (p.stage ? ` (${String(p.stage).replace(/_/g, ' ')})` : ''),
+        tone: 'done',
+      }
+    default:
+      return null
+  }
+}
+
+// ── Sub-componenten (header/profile/answers) ──────────────────────────────────
+
+function Field({ label, value, accent, sub }) {
   return (
     <div className="min-w-0">
       <div className="text-[10px] tracking-[0.16em] text-ink-mute uppercase">{label}</div>
@@ -222,11 +689,14 @@ function Field({ label, value, accent }) {
       >
         {value}
       </div>
+      {sub && (
+        <div className="text-[10.5px] text-ink-mute mt-0.5 truncate">{sub}</div>
+      )}
     </div>
   )
 }
 
-function StatusBadge({ status }) {
+function SessionStatusBadge({ status }) {
   const done = status === 'completed'
   const cls = done
     ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
@@ -264,8 +734,6 @@ function TempBadge({ value }) {
 }
 
 function Answers({ answers }) {
-  // Filter PII-keys + lege values. answers.lead bevat een dubbele kopie van
-  // contact-velden (firstName/email/phone) die al in de header staan.
   const SKIP_KEYS = new Set(['lead'])
   const entries = Object.entries(answers).filter(
     ([k, v]) => v != null && !SKIP_KEYS.has(k),
@@ -274,7 +742,7 @@ function Answers({ answers }) {
   return (
     <section className="px-5 py-4 border-b border-mist-light">
       <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium mb-3">
-        Antwoorden
+        Antwoorden (samengevat)
       </div>
       <dl className="space-y-1.5">
         {entries.map(([key, val]) => (
@@ -300,7 +768,6 @@ function computeSignals(events, lead) {
   if (!Array.isArray(events) || events.length === 0) return out
   const types = new Set(events.map((e) => e.type))
 
-  // High-value engagement
   const unitDetailCount = events.filter((e) => e.type === 'unit:detail-opened').length
   if (unitDetailCount > 0) {
     out.push({
@@ -315,8 +782,6 @@ function computeSignals(events, lead) {
   if (types.has('calc:mortgage-interaction')) {
     out.push({ label: 'Maandlast-calculator gebruikt', value: 'ja', tone: 'hot' })
   }
-
-  // Conversion intent
   if (types.has('cta:brochure-clicked')) {
     out.push({ label: 'Brochure geopend', value: 'ja', tone: 'warm' })
   }
@@ -329,8 +794,6 @@ function computeSignals(events, lead) {
   if (types.has('direct-contact:requested')) {
     out.push({ label: 'Direct contact gevraagd', value: 'ja', tone: 'hot' })
   }
-
-  // Warm handoff
   if (types.has('warm-handoff:shown')) {
     const acceptedTypes = [
       'warm-handoff:callback',
@@ -344,13 +807,9 @@ function computeSignals(events, lead) {
       tone: accepted ? 'hot' : 'cold',
     })
   }
-
-  // Contact-volledigheid
   if (lead?.phone) {
     out.push({ label: 'Telefoonnummer gedeeld', value: 'ja', tone: 'hot' })
   }
-
-  // Voltooiing + duur
   const completed = types.has('flow:complete')
   out.push({
     label: 'Flow afgerond',
@@ -361,15 +820,23 @@ function computeSignals(events, lead) {
     const duration = events[events.length - 1].timestamp - events[0].timestamp
     out.push({ label: 'Sessieduur', value: formatDuration(duration), tone: 'neutral' })
   }
-
-  // Afhaak-reden
   const afhaak = events.find((e) => e.type === 'afhaak-reason:answered')
   if (afhaak) {
     const reason = afhaak.payload?.label || afhaak.payload?.id || 'onbekend'
     out.push({ label: 'Afhaakreden', value: reason, tone: 'cold' })
   }
-
   return out
+}
+
+// Geef een kort hintje terug bij de score: laat de bel-beller in 1 oogopslag
+// zien op welk niveau deze lead zit. Drempels in lijn met deriveStage in
+// src/lib/scoring.js (sales_ready ≥ 60, koopintentie ≥ 45, etc.).
+function scoreHint(score) {
+  if (score >= 80) return 'sales-ready'
+  if (score >= 60) return 'koopintentie'
+  if (score >= 40) return 'warm'
+  if (score >= 20) return 'oriënterend'
+  return 'koud'
 }
 
 function toneClass(tone) {

@@ -406,7 +406,7 @@ export function isLeadsFetchConfigured() {
     && !!leadsFetchTenant()
 }
 
-export async function fetchTeamLeads({ tenantOverride = null, limit = 5000 } = {}) {
+export async function fetchTeamLeads({ tenantOverride = null, limit = 5000, includeArchived = false } = {}) {
   if (!isLeadsFetchConfigured()) {
     throw new Error('Leads-fetch niet geconfigureerd (VITE_SUPABASE_ANALYTICS_URL + _ANON_KEY + VITE_ADMIN_READ_TOKEN + VITE_CLP_SOURCE)')
   }
@@ -414,6 +414,7 @@ export async function fetchTeamLeads({ tenantOverride = null, limit = 5000 } = {
   const url = new URL(leadsFetchEndpoint())
   url.searchParams.set('tenant', t)
   url.searchParams.set('limit', String(limit))
+  if (includeArchived) url.searchParams.set('include_archived', 'true')
 
   const res = await fetch(url.toString(), {
     method: 'GET',
@@ -433,4 +434,89 @@ export async function fetchTeamLeads({ tenantOverride = null, limit = 5000 } = {
     throw err
   }
   return body.leads || []
+}
+
+// =============================================================================
+// Mini-CRM mutaties op clp_leads (status, notities, archief).
+//
+// Spiegelt fetchTeamLeads qua auth (X-Admin-Token + analytics anon-JWT). Edge
+// function clp-leads-update accepteert action + lead_id + payload. Bij elke
+// mutatie krijgen we de hele bijgewerkte rij terug zodat de UI optimistisch
+// kan updaten zonder hertegelijke fetch.
+// =============================================================================
+
+function leadsUpdateEndpoint() {
+  const base = readEnv('VITE_SUPABASE_ANALYTICS_URL', '')
+  if (!base) return null
+  return base.replace(/\/+$/, '') + '/functions/v1/clp-leads-update'
+}
+
+export function isLeadsUpdateConfigured() {
+  return !!leadsUpdateEndpoint()
+    && !!analyticsAnonKey()
+    && !!adminReadToken()
+    && !!leadsFetchTenant()
+}
+
+async function callLeadsUpdate(leadId, action, payload = null, { tenantOverride = null } = {}) {
+  if (!isLeadsUpdateConfigured()) {
+    throw new Error('Leads-update niet geconfigureerd (zelfde env als leads-fetch)')
+  }
+  const tenant = tenantOverride || leadsFetchTenant()
+  const res = await fetch(leadsUpdateEndpoint(), {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${analyticsAnonKey()}`,
+      'apikey':        analyticsAnonKey(),
+      'X-Admin-Token': adminReadToken(),
+      'content-type':  'application/json',
+    },
+    body: JSON.stringify({ tenant, lead_id: leadId, action, payload }),
+  })
+  const text = await res.text()
+  let body = null
+  try { body = text ? JSON.parse(text) : null } catch { body = { raw: text } }
+  if (!res.ok || !body?.ok) {
+    const err = new Error(`clp-leads-update ${res.status}: ${body?.error || 'unknown'}`)
+    err.status = res.status
+    err.body = body
+    throw err
+  }
+  return body.lead
+}
+
+export function setLeadStatus(leadId, status, opts) {
+  return callLeadsUpdate(leadId, 'set_status', { status }, opts)
+}
+export function addLeadNote(leadId, text, opts) {
+  return callLeadsUpdate(leadId, 'add_note', { text }, opts)
+}
+export function deleteLeadNote(leadId, noteId, opts) {
+  return callLeadsUpdate(leadId, 'delete_note', { note_id: noteId }, opts)
+}
+export function archiveLead(leadId, opts) {
+  return callLeadsUpdate(leadId, 'archive', null, opts)
+}
+export function restoreLead(leadId, opts) {
+  return callLeadsUpdate(leadId, 'restore', null, opts)
+}
+
+// CRM-status constanten — hou in sync met de constraint in clp_leads en
+// met ALLOWED_STATUSES in clp-leads-update edge function.
+export const CRM_STATUS_LIST = ['new', 'called', 'qualified', 'proposal', 'won', 'lost']
+export const CRM_STATUS_LABEL = {
+  new:        'Nieuw',
+  called:     'Gebeld',
+  qualified:  'Gekwalificeerd',
+  proposal:   'Voorstel',
+  won:        'Gewonnen',
+  lost:       'Verloren',
+}
+export const CRM_STATUS_TONE = {
+  new:        'bg-canvas-2 text-ink-soft border-mist',
+  called:     'bg-blue-50 text-blue-800 border-blue-200',
+  qualified:  'bg-amber-50 text-amber-800 border-amber-200',
+  proposal:   'bg-violet-50 text-violet-800 border-violet-200',
+  won:        'bg-emerald-50 text-emerald-800 border-emerald-200',
+  lost:       'bg-rose-50 text-rose-800 border-rose-200',
 }

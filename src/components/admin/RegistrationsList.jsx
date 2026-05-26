@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { CRM_STATUS_LABEL, CRM_STATUS_TONE } from '../../lib/api.js'
 
 // Toont de daadwerkelijk gecapteerde registraties uit de clp_leads-tabel:
 // bezoekers die hun contactgegevens hebben achtergelaten. Los van "Hete
@@ -9,6 +10,10 @@ import { useMemo } from 'react'
 // clp_leads is RLS-locked want het bevat PII; alleen team-modus toont dit.
 // Voor De Hofman zijn dit de dual-write kopieën van leads die canoniek in
 // reppbot.leads staan (pushAnalyticsCopy in api.js).
+//
+// Mini-CRM: elke registratie heeft een crm_status (Nieuw → Verloren), kan
+// gearchiveerd worden, en heeft notities. Beheerd via LeadDetail-modal.
+// De archief-toggle wisselt of we de niet-archive of het archief tonen.
 export default function RegistrationsList({
   leads = [],
   loading = false,
@@ -16,6 +21,8 @@ export default function RegistrationsList({
   teamMode = false,
   configured = false,
   onOpenLead,
+  showArchived = false,
+  onToggleArchived,
 }) {
   const sorted = useMemo(() => {
     return [...(leads || [])].sort(
@@ -27,22 +34,38 @@ export default function RegistrationsList({
 
   return (
     <section className="rounded-2xl border border-mist-light bg-paper p-5">
-      <header className="flex items-baseline justify-between gap-3 mb-4">
+      <header className="flex items-baseline justify-between gap-3 mb-4 flex-wrap">
         <div>
           <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium mb-1">
-            Inschrijvingen
+            {showArchived ? 'Archief' : 'Inschrijvingen'}
           </div>
-          <h2 className="text-[15px] font-semibold text-ink">Registraties</h2>
+          <h2 className="text-[15px] font-semibold text-ink">
+            {showArchived ? 'Gearchiveerde registraties' : 'Registraties'}
+          </h2>
           <p className="text-[13px] text-ink-soft leading-relaxed mt-1">
-            Bezoekers die hun contactgegevens achterlieten. Rechtstreeks uit de
-            beveiligde clp_leads-tabel.
+            {showArchived
+              ? 'Eerder gearchiveerde leads. Klik om te bekijken of terug te halen.'
+              : 'Bezoekers die hun contactgegevens achterlieten. Klik op een naam voor de call-briefing.'}
           </p>
         </div>
-        {sorted.length > 0 && (
-          <div className="text-[12px] text-ink-mute whitespace-nowrap">
-            {sorted.length} totaal, {withPhone} met 06
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {sorted.length > 0 && (
+            <div className="text-[12px] text-ink-mute whitespace-nowrap">
+              {sorted.length} {showArchived ? 'gearchiveerd' : 'actief'}
+              {!showArchived && `, ${withPhone} met 06`}
+            </div>
+          )}
+          {typeof onToggleArchived === 'function' && (
+            <button
+              type="button"
+              onClick={onToggleArchived}
+              className="text-[11.5px] font-medium rounded-full border border-mist bg-paper px-3 py-1 text-ink-soft hover:border-midnite/40 hover:text-ink transition"
+              aria-pressed={showArchived}
+            >
+              {showArchived ? '← Terug naar actief' : 'Toon archief'}
+            </button>
+          )}
+        </div>
       </header>
       <Body
         sorted={sorted}
@@ -51,12 +74,13 @@ export default function RegistrationsList({
         teamMode={teamMode}
         configured={configured}
         onOpenLead={onOpenLead}
+        showArchived={showArchived}
       />
     </section>
   )
 }
 
-function Body({ sorted, loading, error, teamMode, configured, onOpenLead }) {
+function Body({ sorted, loading, error, teamMode, configured, onOpenLead, showArchived }) {
   if (!teamMode) {
     return (
       <Empty>
@@ -86,8 +110,9 @@ function Body({ sorted, loading, error, teamMode, configured, onOpenLead }) {
   if (sorted.length === 0) {
     return (
       <Empty>
-        Nog geen registraties. Zodra een bezoeker de chat afrondt met een
-        e-mailadres verschijnt die hier.
+        {showArchived
+          ? 'Archief is leeg.'
+          : 'Nog geen registraties. Zodra een bezoeker de chat afrondt met een e-mailadres verschijnt die hier.'}
       </Empty>
     )
   }
@@ -107,6 +132,7 @@ function Body({ sorted, loading, error, teamMode, configured, onOpenLead }) {
 function LeadRow({ lead, onOpen }) {
   const name = lead.first_name || 'Onbekend'
   const consents = Array.isArray(lead.consent_log) ? lead.consent_log.length : 0
+  const noteCount = Array.isArray(lead.crm_notes) ? lead.crm_notes.length : 0
   const handle = () => onOpen?.(lead)
   const clickable = typeof onOpen === 'function'
   return (
@@ -147,6 +173,11 @@ function LeadRow({ lead, onOpen }) {
           {lead.persona && <span className="capitalize">{lead.persona}</span>}
           {lead.stage && <span>{String(lead.stage).replace(/_/g, ' ')}</span>}
           <span>{formatWhen(lead.created_at)}</span>
+          {noteCount > 0 && (
+            <span className="text-midnite font-medium">
+              {noteCount} notitie{noteCount === 1 ? '' : 's'}
+            </span>
+          )}
           {consents > 0 && (
             <span>
               {consents} consent{consents === 1 ? '' : 's'}
@@ -155,18 +186,16 @@ function LeadRow({ lead, onOpen }) {
         </div>
       </div>
       <div className="flex items-center gap-1.5 shrink-0">
-        <StatusBadge status={lead.status} />
+        <CrmStatusBadge status={lead.crm_status} />
         {typeof lead.score === 'number' && <ScoreChip value={lead.score} />}
       </div>
     </li>
   )
 }
 
-function StatusBadge({ status }) {
-  const done = status === 'completed'
-  const cls = done
-    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-    : 'bg-canvas-2 text-ink-soft border-mist'
+function CrmStatusBadge({ status }) {
+  const key = status && CRM_STATUS_LABEL[status] ? status : 'new'
+  const cls = CRM_STATUS_TONE[key] || 'bg-canvas-2 text-ink-soft border-mist'
   return (
     <span
       className={
@@ -174,7 +203,7 @@ function StatusBadge({ status }) {
         cls
       }
     >
-      {done ? 'Voltooid' : 'Bezig'}
+      {CRM_STATUS_LABEL[key]}
     </span>
   )
 }
