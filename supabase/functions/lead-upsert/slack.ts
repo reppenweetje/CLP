@@ -116,6 +116,20 @@ export async function notifyError(
  * Configure secret: SLACK_LEADGEN_WEBHOOK_URL (incoming webhook van
  * het #generation kanaal in de REPP-workspace).
  */
+// Mapt source-string naar lees-baar project + lead-type label.
+// CLP en portal-bronnen krijgen verschillende labels zodat sales meteen
+// ziet waar de lead vandaan komt (CLP = vol scripted flow, Portal =
+// walk-in op dehofman.nl).
+function leadHeader(source: string | null | undefined): string {
+  const s = (source ?? '').toLowerCase()
+  // Project-label, capitalized voor leesbaarheid in Slack
+  const projectLabel = s.includes('dehofman') ? 'De Hofman' : (s.split('_').slice(-1)[0] || 'project')
+  if (s.startsWith('clp_')) return `✨ CLP lead — ${projectLabel}`
+  if (s === 'dehofman_portal_reservation') return `🔑 Reservering — ${projectLabel}`
+  if (s.startsWith('dehofman_portal')) return `✨ Portal lead — ${projectLabel}`
+  return `✨ Nieuwe lead — ${projectLabel}`
+}
+
 export async function notifyNewLead(lead: HotLeadInput, leadId: string | null): Promise<void> {
   const webhook = Deno.env.get('SLACK_LEADGEN_WEBHOOK_URL')
   if (!webhook) {
@@ -123,7 +137,7 @@ export async function notifyNewLead(lead: HotLeadInput, leadId: string | null): 
     return
   }
 
-  const project  = (lead.source ?? '').replace(/^clp_/, '').replace(/^dehofman_/, '') || 'onbekend'
+  const headerText = leadHeader(lead.source)
   const persona  = PERSONA_LABEL[lead.persona ?? ''] ?? lead.persona ?? null
   const timeline = TIMELINE_LABEL[lead.timeline_id ?? ''] ?? lead.timeline_id ?? null
 
@@ -147,7 +161,7 @@ export async function notifyNewLead(lead: HotLeadInput, leadId: string | null): 
     blocks: [
       {
         type: 'header',
-        text: { type: 'plain_text', text: `✨ Nieuwe lead — ${project}`, emoji: true },
+        text: { type: 'plain_text', text: headerText, emoji: true },
       },
       ...(contactLines ? [{
         type: 'section',
@@ -164,7 +178,7 @@ export async function notifyNewLead(lead: HotLeadInput, leadId: string | null): 
         ],
       },
     ],
-    text: `✨ Nieuwe lead — ${project} · ${lead.first_name ?? ''} ${lead.email ?? ''}`.trim(),
+    text: `${headerText} · ${lead.first_name ?? ''} ${lead.email ?? ''}`.trim(),
   }
 
   try {

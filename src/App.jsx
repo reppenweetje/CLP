@@ -494,6 +494,9 @@ function isValidPhoneText(text) {
 function trackNewLeadFields(prevDraft, newDraft) {
   if (newDraft.email && newDraft.email !== prevDraft.email) {
     trackEvent('lead-email:submitted', { email: newDraft.email })
+    // Meta Pixel Lead-event ALLEEN bij eerste email-capture. Phone/name
+    // worden wel intern getrackt voor onze analytics maar niet als
+    // extra Lead naar Meta — voorkomt 2-3x tellen per lead.
     fireMetaLead('email', { hasName: !!newDraft.firstName })
   }
   if (newDraft.firstName && newDraft.firstName !== prevDraft.firstName) {
@@ -501,33 +504,54 @@ function trackNewLeadFields(prevDraft, newDraft) {
   }
   if (newDraft.phone && newDraft.phone !== prevDraft.phone) {
     trackEvent('lead-phone:submitted', { phone: newDraft.phone })
-    fireMetaLead('phone', { hasEmail: !!newDraft.email })
   }
 }
 function capitalize(s) {
   if (!s) return s
   return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
 }
-// Vuurt Meta Pixel "Lead" event af met een unieke event-ID zodat de
-// browser-Pixel niet dubbel met server-side CAPI telt. Faalt stil als de
-// Pixel niet geladen is (consent geweigerd, script geblokkeerd, etc.).
-function fireMetaLead(reason, extra = {}) {
+// Vuurt een Meta Pixel-event af met een unieke event-ID zodat de browser-
+// Pixel niet dubbel telt met server-side CAPI. Faalt stil als de Pixel
+// niet geladen is (consent geweigerd, script geblokkeerd, etc.).
+//
+// Conversie-discipline (2026-05-26):
+//   - "Lead"    = ALLEEN bij eerste email-capture. Echte conversie.
+//   - "Contact" = warm-handoff intent (callback-chip). Hoog intent, geen
+//                 nieuwe lead — bezoeker had email al gegeven.
+//   - Custom    = portal-tap en andere micro-conversies. Trackbaar voor
+//                 ons in Ads Manager, maar geen "Lead" optimalisatie-
+//                 signaal richting Meta.
+//
+// Door Lead-events te beperken tot daadwerkelijke email-conversies
+// optimaliseert Meta's algoritme op het juiste doelpubliek. Voorheen
+// telden phone, callback-clicks en portal-clicks ook als Lead, wat
+// zorgde voor 1-4 Lead-events per echte lead en vervuilde signalen.
+function fireMetaPixelEvent(eventName, reason, extra = {}, isCustom = false) {
   if (typeof window === 'undefined') return
   if (typeof window.fbq !== 'function') return
   try {
-    const eventId = `lead-${reason}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+    const eventId = `${eventName.toLowerCase()}-${reason}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
     window.fbq(
-      'track',
-      'Lead',
-      {
-        content_name: reason,
-        ...extra,
-      },
+      isCustom ? 'trackCustom' : 'track',
+      eventName,
+      { content_name: reason, ...extra },
       { eventID: eventId },
     )
   } catch {
     // Pixel-fouten mogen de UX nooit blokkeren.
   }
+}
+
+function fireMetaLead(reason, extra = {}) {
+  fireMetaPixelEvent('Lead', reason, extra)
+}
+
+function fireMetaContact(reason, extra = {}) {
+  fireMetaPixelEvent('Contact', reason, extra)
+}
+
+function fireMetaCustom(eventName, reason, extra = {}) {
+  fireMetaPixelEvent(eventName, reason, extra, true)
 }
 // Lichtgewicht string-hash (DJB2 variant). Gebruikt om copy-variaties
 // deterministisch te kiezen op basis van session-id, zodat zelfde bezoeker
@@ -1253,7 +1277,9 @@ function Demo() {
           signalCount: buying.signals.length,
           signalIds: buying.signals.map((s) => s.id),
         })
-        fireMetaLead('callback-chip', { persona: personaForCard, temperature: buying.temperature })
+        // Warm-handoff = hoog intent, maar geen nieuwe Lead (email is al
+        // gecaptured eerder). Meta-standaard 'Contact' event is hier correct.
+        fireMetaContact('callback-chip', { persona: personaForCard, temperature: buying.temperature })
         const bridge = buildHandoffBridge(personaForCard, project, {
           signals: buying.signals,
           name: lead.firstName || '',
@@ -1288,7 +1314,11 @@ function Demo() {
         // terugkeren). Géén flow:complete dispatchen — bezoeker is nog niet
         // klaar met de CLP, hij neemt alleen een zijstap.
         trackEvent('cta:portal-clicked', { from: 'moreInfo-chip' })
-        fireMetaLead('portal-tap', { location: 'moreInfo-chip' })
+        // Portal-link click = micro-conversie, geen Lead. Custom event
+        // zodat we 'm wel kunnen tracken in Ads Manager (eigen kolom of
+        // Custom Conversion) zonder Meta's Lead-optimalisatie te
+        // vervuilen met link-clicks.
+        fireMetaCustom('PortalClick', 'moreInfo-chip', { location: 'moreInfo-chip' })
         if (typeof window !== 'undefined') {
           window.open(portalUrlForCta, '_blank', 'noopener,noreferrer')
         }
@@ -1747,7 +1777,11 @@ function Demo() {
     finishLead(lead, [{ kind: 'user-text', text }])
   }
   function finishLead(lead, prependMessages = []) {
-    fireMetaLead('lead-complete', { hasPhone: !!lead?.phone })
+    // Custom event ipv tweede Lead: email-capture heeft al Lead getriggered.
+    // FullLeadComplete is sterker signaal (email+naam+phone) maar dat is
+    // optimalisatie-info voor ons in Ads Manager, niet een dubbele Lead-
+    // conversie richting Meta.
+    fireMetaCustom('FullLeadComplete', 'lead-complete', { hasPhone: !!lead?.phone })
     dispatch({ type: 'LEAD_DRAFT', draft: lead })
     // Volgende stap hangt af van waar de bezoeker in de flow zit. Wanneer
     // size en timeline al beantwoord zijn (bijv. via warm-handoff callback
@@ -1862,7 +1896,9 @@ function Demo() {
   // beschrijving van de situatie op het moment dat de bubble werd getoond.
   const requestWhatsAppOpen = (e, summary, source) => {
     trackEvent('cta:whatsapp-clicked', { location: source })
-    fireMetaLead('whatsapp', { location: source })
+    // WhatsApp-click = intent om contact op te nemen, geen Lead-conversie.
+    // Meta-standaard 'Contact' is hier de juiste mapping.
+    fireMetaContact('whatsapp', { location: source })
     if (e && e.preventDefault) e.preventDefault()
     const lead = state.answers.lead || {}
     if (lead.firstName) {
@@ -1889,7 +1925,7 @@ function Demo() {
     // bezoeker nog geen naam heeft achtergelaten ("Hoi REPP, ik heb interesse
     // in De Hofman."). Bij wel-bekende naam komt die er natuurlijk in.
     trackEvent('cta:whatsapp-clicked', { location: 'header' })
-    fireMetaLead('whatsapp', { location: 'header' })
+    fireMetaContact('whatsapp', { location: 'header' })
     if (e && e.preventDefault) e.preventDefault()
     const lead = state.answers.lead || {}
     const wa = whatsAppDeeplink(project, lead.firstName || '', '')
@@ -2060,7 +2096,8 @@ function Demo() {
   }
   const onPhoneClick = () => {
     trackEvent('cta:phone-clicked', { location: 'header' })
-    fireMetaLead('phone-tap', { location: 'header' })
+    // tel: link-click = intent om te bellen, geen Lead-conversie.
+    fireMetaContact('phone-tap', { location: 'header' })
   }
   const onPortalClick = () => {
     trackEvent('cta:portal-clicked', { location: 'cta-card' })
@@ -2374,7 +2411,8 @@ function Demo() {
             // 'flow:complete' met stage sales_ready). De bezoeker krijgt
             // de service-card / handoff zonder extra UI te bouwen.
             trackEvent('direct-contact:requested', { from: 'rescue-nudge' })
-            fireMetaLead('direct-contact', { from: 'rescue-nudge' })
+            // Rescue-nudge "neem direct contact" = intent, geen Lead.
+            fireMetaContact('direct-contact', { from: 'rescue-nudge' })
             const lead = state.answers.lead || {}
             if (project.phoneNumber) {
               window.open(buildPhoneLink(project.phoneNumber), '_self')
