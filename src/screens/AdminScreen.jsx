@@ -397,6 +397,7 @@ function AdminScreenInner() {
               teamMode={dataSource === 'team'}
               configured={leadsConfigured}
               onOpenLead={setSelectedLead}
+              onLeadUpdate={handleLeadUpdate}
               showArchived={leadsShowArchived}
               onToggleArchived={() => setLeadsShowArchived((v) => !v)}
             />

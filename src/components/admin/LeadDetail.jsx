@@ -60,14 +60,14 @@ export default function LeadDetail({ lead, session, onClose, onLeadUpdate }) {
       role="dialog"
       aria-modal="true"
       aria-label={`Lead-detail van ${name}`}
-      className="fixed inset-0 z-50 bg-ink/50 backdrop-blur-sm flex items-start sm:items-center justify-center p-3 sm:p-6 overflow-y-auto"
+      className="fixed inset-0 z-50 bg-ink/50 backdrop-blur-sm flex items-start sm:items-center justify-center p-3 sm:p-6"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-paper rounded-2xl max-w-2xl w-full my-4 sm:my-8 shadow-2xl overflow-hidden"
+        className="bg-paper rounded-2xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden"
       >
-        {/* Header */}
-        <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3">
+        {/* Header — sticky binnen de modal-flex zodat naam + status altijd zichtbaar blijven */}
+        <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3 shrink-0 border-b border-mist-light">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <h2 className="text-[22px] font-semibold text-ink truncate">{name}</h2>
@@ -100,8 +100,10 @@ export default function LeadDetail({ lead, session, onClose, onLeadUpdate }) {
           </div>
         </div>
 
+        {/* Scrollable body — alles tot en met meta scrollt binnen de modal */}
+        <div className="flex-1 overflow-y-auto">
         {/* Quick actions */}
-        <div className="px-5 pb-4 flex flex-wrap gap-2 border-b border-mist-light">
+        <div className="px-5 py-4 flex flex-wrap gap-2 border-b border-mist-light">
           {phoneE164 ? (
             <a
               href={`tel:${phoneE164}`}
@@ -257,6 +259,7 @@ export default function LeadDetail({ lead, session, onClose, onLeadUpdate }) {
 
           <ArchiveControl lead={optimistic} onUpdate={applyUpdate} />
         </section>
+        </div>{/* end scrollable body */}
       </div>
     </div>
   )
