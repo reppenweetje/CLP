@@ -480,31 +480,32 @@ const SANKEY_EVENT_TYPES = new Set([
 // Bouwt een Sankey-graaf {nodes, links}. Branched op persona+keuze waar
 // dat zinvol is, zodat je niet alleen "stap A → stap B" ziet maar ook
 // "belegger → ja → mail" tegenover "eigen → nee → afhaak".
-// Korte stap-namen specifiek voor de Sankey; de uitgebreide
-// humanizeEventType wordt elders gebruikt (tooltips, sessions-list) maar
-// maakt de Sankey-banden onleesbaar. Stappen die hier niet staan vallen
-// terug op humanizeEventType.
+// Korte display-labels per event-type. Houden we strikt kort (≤14 tekens
+// waar mogelijk) zodat de Sankey-labels niet overlappen. humanizeEventType
+// is voor tooltips/sessies-overzicht, niet voor het diagram.
 const SANKEY_STEP_LABELS = {
+  'session:start':                'Sessie',
   'intro:cta-clicked':            'CTA-klik',
   'lead-email:submitted':         'E-mail',
   'lead-name:submitted':          'Naam',
-  'lead-phone:submitted':         '06',
+  'lead-phone:submitted':         'Telefoon',
   'size:answered':                'Grootte',
   'timeline:answered':            'Termijn',
   'more-info:viewed':             'Extra info',
-  'more-info:continue':           'Geen info',
+  'more-info:continue':           'Verder',
   'followup:answered':            'Vervolg',
   'unit:detail-opened':           'Unit-detail',
-  'calc:rentability-interaction': 'Rendement-calc',
-  'calc:mortgage-interaction':    'Maandlast-calc',
+  'calc:rentability-interaction': 'Rendement',
+  'calc:mortgage-interaction':    'Maandlast',
   'warm-handoff:shown':           'Handoff',
   'warm-handoff:callback':        'Callback',
+  'warm-handoff:whatsapp':        'WA-handoff',
+  'warm-handoff:phone':           'Bel-handoff',
   'warm-handoff:dismissed':       'Handoff dicht',
+  'direct-contact:requested':     'Direct contact',
 }
 
-// Korte persona-prefix wanneer split aanstaat — anders worden node-labels
-// als "[Voor eigen bedrijf] WhatsApp-keuze gemaakt" zo breed dat ze elkaar
-// overlappen.
+// Korte persona-prefix wanneer split aanstaat.
 const SANKEY_PERSONA_SHORT = {
   eigen_gebruiker: 'EG',
   belegger:        'Bel',
@@ -512,67 +513,101 @@ const SANKEY_PERSONA_SHORT = {
   huurder:         'Hur',
 }
 
+// Korte persona-namen voor in node-labels (zonder "Persona: " prefix; die
+// kleur en kolom-positie spreken al voor zich). De volle versies uit
+// humanizePersona zijn vier woorden lang en breken het Sankey-diagram.
+function sankeyPersonaLabel(key) {
+  switch (key) {
+    case 'eigen_gebruiker': return 'Eigen bedrijf'
+    case 'belegger':        return 'Belegger'
+    case 'beide':           return 'Beide'
+    case 'huurder':         return 'Huurder'
+    case 'onbekend':        return 'Onbekend'
+    default:                return key
+  }
+}
+
+// Bouwt een DAG voor de Sankey. Elk knooppunt krijgt:
+//  - id     stable identifier (uniek; bevat eventueel persona-prefix)
+//  - label  korte display-tekst (zonder prefix)
+//  - kind   categorie voor kleur/styling (start | step | persona | choice | exit | done)
+//  - persona  korte tag (EG/Bel/...) als branchOnPersona aan staat, anders null
+// Returneert { nodes, links } in d3-sankey-format (source/target = id).
+//
+// Back-edges worden geweigerd: nivo/d3-sankey crasht op cycles, en een
+// gebruiker die "terug" gaat naar dezelfde stap maakt een cycle. We
+// gebruiken een globale eerste-zien-volgorde per node-id.
 export function buildSankey(sessions, { branchOnPersona = false } = {}) {
   const links = new Map()  // key = `${from}>${to}` → count
-  const nodes = new Set()
-  // Globale stap-volgorde per node-id (eerste-zien) zodat we back-edges
-  // kunnen weren. nivo/d3-sankey gooit "circular link" bij ELKE cyclus
-  // in de DAG; een sessie die teruggaat (naam-edit, ander persona-pad
-  // dat hetzelfde label hergebruikt) maakt zo'n cyclus aan.
+  const nodeMeta = new Map()  // id → meta
   const nodeStep = new Map()
   let stepCounter = 0
 
-  function addNode(id) {
-    nodes.add(id)
-    if (!nodeStep.has(id)) nodeStep.set(id, stepCounter++)
+  function addNode(id, meta) {
+    if (!nodeMeta.has(id)) {
+      nodeMeta.set(id, meta)
+      nodeStep.set(id, stepCounter++)
+    }
   }
   function addLink(from, to) {
-    addNode(from); addNode(to)
     if (from === to) return
-    // Drop back-edges om "circular link" crash te voorkomen. Verlies
-    // een paar zeldzame transities, win een werkend diagram.
+    if (!nodeMeta.has(from) || !nodeMeta.has(to)) return
     if (nodeStep.get(to) <= nodeStep.get(from)) return
     const key = `${from}>${to}`
     links.set(key, (links.get(key) || 0) + 1)
   }
 
   for (const s of sessions) {
-    const personaTag = branchOnPersona && s.persona && s.persona !== 'onbekend'
-      ? `[${SANKEY_PERSONA_SHORT[s.persona] || s.persona.slice(0, 3)}] `
-      : ''
-    let prev = 'Start'
-    addNode(prev)
+    const personaShort = branchOnPersona && s.persona && s.persona !== 'onbekend'
+      ? (SANKEY_PERSONA_SHORT[s.persona] || s.persona.slice(0, 3))
+      : null
+    const personaTag = personaShort ? `[${personaShort}] ` : ''
+    let prev = null
     for (const ev of s.events) {
       if (!SANKEY_EVENT_TYPES.has(ev.type)) continue
-      // Label per stap: voor intent → vertakking op persona;
-      // voor brochure-trigger → vertakking ja/nee; default = sankey-
-      // specifieke korte stap-naam (humanizeEventType is voor andere views).
       let label = SANKEY_STEP_LABELS[ev.type] || humanizeEventType(ev.type)
-      if (ev.type === 'intent:answered') {
-        label = `Persona: ${humanizePersona(ev.payload?.persona ?? s.persona ?? 'onbekend')}`
+      let kind = 'step'
+      if (ev.type === 'session:start') {
+        kind = 'start'
+      } else if (ev.type === 'intent:answered') {
+        label = sankeyPersonaLabel(ev.payload?.persona ?? s.persona ?? 'onbekend')
+        kind = 'persona'
       } else if (ev.type === 'brochure-trigger:answered') {
-        label = `Brochure: ${ev.payload?.id === 'ja' ? 'ja' : 'nee'}`
+        const ja = ev.payload?.id === 'ja'
+        label = ja ? 'Brochure ja' : 'Brochure nee'
+        kind = ja ? 'choice' : 'exit'
       } else if (ev.type === 'lead-phone-ask:answered') {
-        label = `WhatsApp: ${ev.payload?.id ?? 'onbekend'}`
+        const id = ev.payload?.id
+        label = id === 'yes' ? 'WhatsApp ja' : id === 'no' ? 'WhatsApp nee' : 'WhatsApp ?'
+        kind = 'choice'
       } else if (ev.type === 'flow:complete') {
         const stage = ev.payload?.stage ?? 'voltooid'
-        label = `Voltooid (${stage})`
+        label = `✓ ${stage}`
+        kind = 'done'
       } else if (ev.type === 'afhaak-reason:answered') {
         label = `Afhaak: ${ev.payload?.label ?? ev.payload?.id ?? 'reden'}`
+        kind = 'exit'
       }
-      const to = personaTag + label
-      addLink(prev, to)
-      prev = to
+      const id = personaTag + label
+      addNode(id, { label, kind, persona: personaShort })
+      if (prev !== null) addLink(prev, id)
+      prev = id
     }
-    if (!s.completed) {
-      addLink(prev, '⚠ Verlaten')
+    if (prev && !s.completed) {
+      const exitId = '⚠ Verlaten'
+      addNode(exitId, { label: 'Verlaten', kind: 'exit', persona: null })
+      addLink(prev, exitId)
     }
   }
 
-  // Filter trivially small links (1 of minder) zodat de Sankey leesbaar blijft
-  // bij weinig data. Gebruiker kan dit later evt. aanpassen via prop.
   return {
-    nodes: [...nodes].map((id) => ({ id, nodeColor: nodeColorFor(id) })),
+    nodes: [...nodeMeta.entries()].map(([id, meta]) => ({
+      id,
+      label: meta.label,
+      kind: meta.kind,
+      persona: meta.persona,
+      nodeColor: nodeColorFor(meta.kind),
+    })),
     links: [...links.entries()].map(([key, value]) => {
       const [source, target] = key.split('>')
       return { source, target, value }
@@ -580,12 +615,15 @@ export function buildSankey(sessions, { branchOnPersona = false } = {}) {
   }
 }
 
-function nodeColorFor(id) {
-  if (id.includes('Voltooid')) return '#1a8c4a'
-  if (id.includes('Verlaten') || id.includes('Afhaak')) return '#b91c1c'
-  if (id.includes('Brochure: nee')) return '#b91c1c'
-  if (id.includes('Persona:')) return '#0f0f70'
-  return '#1b1b8a'
+function nodeColorFor(kind) {
+  switch (kind) {
+    case 'done':    return '#1a8c4a'
+    case 'exit':    return '#b91c1c'
+    case 'persona': return '#0f0f70'
+    case 'choice':  return '#3a3aa8'
+    case 'start':   return '#1b1b8a'
+    default:        return '#1b1b8a'
+  }
 }
 
 // ============================================================================

@@ -1,29 +1,64 @@
-import { useMemo, useState } from 'react'
-import { ResponsiveSankey } from '@nivo/sankey'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { sankey, sankeyJustify, sankeyLinkHorizontal } from 'd3-sankey'
 import { buildSankey } from '../../lib/analytics.js'
 
-// Sankey flow diagram — toont de werkelijke gebruikersroute door de chat,
-// inclusief vertakkingen op persona-keuze en brochure-ja/nee. Banden zijn
-// breder naarmate meer mensen die transitie maakten. Doel: in één blik
-// zien WAAR mensen het pad verlaten en WAAROM hun pad zo afwijkt.
+// Sankey flow diagram — toont de werkelijke gebruikersroute door de chat.
+// Bredere banden = meer mensen die die overgang maakten. We renderen het
+// diagram zelf (SVG + d3-sankey) ipv via nivo zodat we volledige controle
+// hebben over label-plaatsing: in elke kolom doen we collision-avoidance
+// zodat labels nooit over elkaar vallen, met dunne leiders als een label
+// is verplaatst tov het knooppunt.
+
+const NODE_WIDTH = 12
+const NODE_PADDING = 22
+const LABEL_FONT_SIZE = 11
+const LABEL_LINE_HEIGHT = 14
+const MIN_LABEL_GAP = 16
+const HEIGHT_MIN = 360
+const HEIGHT_MAX = 760
+const CHAR_PX = 5.6                // gemeten gem. voor 11px Montserrat 500
+const CHAR_PX_COUNT = 5.4          // count-tspan is iets smaller (lighter)
+const SIDE_MARGIN = 14
+const TOP_MARGIN = 14
+const BOTTOM_MARGIN = 14
+
 export default function SankeyFlow({ sessions }) {
-  // Default OFF: persona-splits 4-vouden de nodes en maken het diagram
-  // bij <100 sessies onleesbaar. Persona-breakdown staat al apart in de
-  // PersonaBreakdown-sectie; gebruiker kan hier opt-in als 'ie het patroon
-  // wil zien.
+  // Persona-split staat default UIT — bij <100 sessies vermenigvuldigt
+  // het de nodes onnodig en blijft het diagram onleesbaar.
   const [branchOnPersona, setBranchOnPersona] = useState(false)
+  const containerRef = useRef(null)
+  const [width, setWidth] = useState(960)
+
+  useEffect(() => {
+    if (!containerRef.current) return
+    const el = containerRef.current
+    const ro = new ResizeObserver(([entry]) => {
+      const w = Math.floor(entry.contentRect.width)
+      if (w >= 320) setWidth(w)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   const data = useMemo(
     () => buildSankey(sessions, { branchOnPersona }),
     [sessions, branchOnPersona],
   )
-
   const hasData = data.links.length > 0
+  // In persona-split-mode hebben we 4x zoveel nodes per kolom; middel-
+  // kolommen worden visueel onleesbaar als elke step-node ook label krijgt.
+  // We labelen dan alleen de eerste/laatste kolom én sleutel-momenten
+  // (persona-keuze, ja/nee, voltooid, afhaak). De rest blijft zichtbaar
+  // via tooltip op hover.
+  const labelStrategy = branchOnPersona ? 'key-nodes-only' : 'all'
 
   return (
     <section className="rounded-2xl border border-mist-light bg-paper p-5 col-span-full">
       <header className="flex items-baseline justify-between gap-3 mb-4">
         <div>
-          <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium mb-1">Gebruikersroute</div>
+          <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium mb-1">
+            Gebruikersroute
+          </div>
           <h2 className="text-[15px] font-semibold text-ink">Sankey-stroom door de chat</h2>
           <p className="text-[13px] text-ink-soft leading-relaxed mt-1">
             Bredere banden = meer mensen die dit pad volgden. Hover voor exacte aantallen.
@@ -39,48 +74,421 @@ export default function SankeyFlow({ sessions }) {
           Splits op persona
         </label>
       </header>
-      {hasData ? (
-        <div style={{ height: 460 }}>
-          <ResponsiveSankey
-            data={data}
-            margin={{ top: 12, right: 240, bottom: 12, left: 12 }}
-            align="justify"
-            colors={(node) => node.nodeColor || '#1b1b8a'}
-            nodeOpacity={0.95}
-            nodeHoverOpacity={1}
-            nodeThickness={14}
-            nodeSpacing={32}
-            nodeBorderWidth={0}
-            nodeInnerPadding={2}
-            linkOpacity={0.45}
-            linkHoverOpacity={0.75}
-            linkContract={2}
-            enableLinkGradient
-            labelPosition="outside"
-            labelOrientation="horizontal"
-            labelPadding={10}
-            labelTextColor={{ from: 'color', modifiers: [['darker', 1.5]] }}
-            theme={{
-              fontFamily: 'Montserrat, system-ui, -apple-system, sans-serif',
-              fontSize: 11,
-              text: { fontSize: 11, fill: '#1d1d1f' },
-              tooltip: {
-                container: {
-                  background: '#ffffff',
-                  color: '#1d1d1f',
-                  fontSize: 12,
-                  borderRadius: 8,
-                  boxShadow: '0 8px 24px rgba(15,15,112,0.12)',
-                  padding: '8px 12px',
-                },
-              },
-            }}
-          />
-        </div>
-      ) : (
-        <EmptyState />
-      )}
+      <div ref={containerRef} className="w-full">
+        {hasData ? (
+          <Chart data={data} width={width} labelStrategy={labelStrategy} />
+        ) : (
+          <EmptyState />
+        )}
+      </div>
+      {hasData && <Legend />}
     </section>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Chart — pure render gegeven een breedte en {nodes, links}
+// ---------------------------------------------------------------------------
+
+function Chart({ data, width, labelStrategy = 'all' }) {
+  const layout = useMemo(
+    () => computeLayout(data, width, { labelStrategy }),
+    [data, width, labelStrategy],
+  )
+  if (!layout) return <EmptyState />
+  const { nodes, links, labels, height } = layout
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      role="img"
+      aria-label="Sankey-diagram van gebruikersroute door de chat"
+      className="block"
+    >
+      <g aria-hidden="true">
+        {links.map((link, i) => (
+          <path
+            key={i}
+            d={sankeyLinkHorizontal()(link)}
+            fill="none"
+            stroke={linkStrokeFor(link)}
+            strokeOpacity={0.32}
+            strokeWidth={Math.max(1, link.width)}
+            className="transition-[stroke-opacity] duration-150 hover:stroke-opacity-60"
+          >
+            <title>{`${link.source.label} → ${link.target.label}: ${link.value}`}</title>
+          </path>
+        ))}
+      </g>
+      <g aria-hidden="true">
+        {nodes.map((n, i) => (
+          <rect
+            key={i}
+            x={n.x0}
+            y={n.y0}
+            width={n.x1 - n.x0}
+            height={Math.max(1, n.y1 - n.y0)}
+            fill={n.nodeColor}
+            opacity={0.95}
+            rx={2}
+          >
+            <title>
+              {n.persona
+                ? `[${n.persona}] ${n.label} — ${n.value}`
+                : `${n.label} — ${n.value}`}
+            </title>
+          </rect>
+        ))}
+      </g>
+      <g>
+        {labels.map((l, i) => (
+          <g key={i}>
+            {l.shifted && (
+              <line
+                x1={l.connectorX1}
+                y1={l.connectorY1}
+                x2={l.connectorX2}
+                y2={l.connectorY2}
+                stroke="#a8a8c8"
+                strokeWidth={0.75}
+              />
+            )}
+            <text
+              x={l.x}
+              y={l.y}
+              fontSize={LABEL_FONT_SIZE}
+              fontFamily="Montserrat, system-ui, -apple-system, sans-serif"
+              fontWeight={500}
+              textAnchor={l.anchor}
+              dominantBaseline="middle"
+              fill="#1d1d1f"
+            >
+              {l.persona && (
+                <tspan
+                  fill="#5a5a8a"
+                  fontWeight={600}
+                  fontSize={LABEL_FONT_SIZE - 1}
+                >
+                  {`[${l.persona}] `}
+                </tspan>
+              )}
+              <tspan>{l.text}</tspan>
+              <tspan fill="#7a7a8a" fontWeight={400}>{`  ${l.count}`}</tspan>
+            </text>
+          </g>
+        ))}
+      </g>
+    </svg>
+  )
+}
+
+function linkStrokeFor(link) {
+  if (link.target?.kind === 'exit') return '#b91c1c'
+  if (link.target?.kind === 'done') return '#1a8c4a'
+  return '#7a7ace'
+}
+
+// ---------------------------------------------------------------------------
+// Layout — d3-sankey + per-kolom label-plaatsing met collision avoidance
+// ---------------------------------------------------------------------------
+
+function computeLayout(data, width, { labelStrategy = 'all' } = {}) {
+  if (!data.nodes.length || !data.links.length) return null
+
+  // Hoogte schaalt met aantal links, zodat we genoeg verticale ruimte
+  // hebben om nodes uit elkaar te zetten zonder de labels te laten clashen.
+  const height = clamp(
+    HEIGHT_MIN,
+    HEIGHT_MAX,
+    Math.round(140 + data.links.length * 18 + data.nodes.length * 4),
+  )
+
+  // Reserveer ruimte voor labels aan beide zijden. We meten labels op basis
+  // van de geschatte tekst-breedte zodat smalle viewports niet alles
+  // wegtrekken; eerst rough estimate, daarna kun je iteren.
+  const labelTexts = data.nodes.map((n) => labelTextFor(n))
+  const longestLeft = maxStringWidth(labelTexts.slice(0, Math.ceil(labelTexts.length / 4)))
+  const longestRight = maxStringWidth(labelTexts.slice(-Math.ceil(labelTexts.length / 4)))
+  const padLeft = clamp(80, 220, longestLeft + 24)
+  const padRight = clamp(120, 280, longestRight + 28)
+  if (width <= padLeft + padRight + 60) {
+    // viewport te smal — terugvallen op kleinere padding
+    return computeLayoutCompact(data, width, height)
+  }
+
+  const gen = sankey()
+    .nodeId((d) => d.id)
+    .nodeWidth(NODE_WIDTH)
+    .nodePadding(NODE_PADDING)
+    .nodeAlign(sankeyJustify)
+    .extent([
+      [padLeft, TOP_MARGIN],
+      [width - padRight, height - BOTTOM_MARGIN],
+    ])
+
+  const graph = gen({
+    nodes: data.nodes.map((n) => ({ ...n })),
+    links: data.links.map((l) => ({ ...l })),
+  })
+
+  const labels = placeLabels(graph.nodes, width, height, { labelStrategy })
+  return { nodes: graph.nodes, links: graph.links, labels, height }
+}
+
+function computeLayoutCompact(data, width, height, { labelStrategy = 'all' } = {}) {
+  // Mobiele / smalle viewport: korter padding, labels rechts inkortbaar.
+  const padLeft = 60
+  const padRight = 80
+  const gen = sankey()
+    .nodeId((d) => d.id)
+    .nodeWidth(NODE_WIDTH)
+    .nodePadding(NODE_PADDING)
+    .nodeAlign(sankeyJustify)
+    .extent([
+      [padLeft, TOP_MARGIN],
+      [Math.max(padLeft + 80, width - padRight), height - BOTTOM_MARGIN],
+    ])
+  const graph = gen({
+    nodes: data.nodes.map((n) => ({ ...n })),
+    links: data.links.map((l) => ({ ...l })),
+  })
+  const labels = placeLabels(graph.nodes, width, height, { compact: true, labelStrategy })
+  return { nodes: graph.nodes, links: graph.links, labels, height }
+}
+
+// Plaats labels per kolom met collision-avoidance. Ideaal: y = midden van
+// node. Bij overlap schuiven we de label omlaag, met een dunne lijntje
+// terug naar de node-rand zodat duidelijk blijft welke node bij welk
+// label hoort.
+function placeLabels(nodes, width, height, { compact = false, labelStrategy = 'all' } = {}) {
+  if (!nodes.length) return []
+  // Groepeer op kolom (afgerond op x0).
+  const colsMap = new Map()
+  for (const n of nodes) {
+    const k = Math.round(n.x0)
+    if (!colsMap.has(k)) colsMap.set(k, [])
+    colsMap.get(k).push(n)
+  }
+  const cols = [...colsMap.entries()].sort((a, b) => a[0] - b[0])
+  const minX = cols[0][0]
+  const maxX = cols[cols.length - 1][0]
+  // KEY_KINDS: in persona-split-mode tonen we alleen labels op deze
+  // node-types in middelste kolommen. Voor de eerste/laatste kolom altijd.
+  const KEY_KINDS = new Set(['persona', 'choice', 'exit', 'done'])
+  const isKey = (n, isEdge) =>
+    labelStrategy === 'all' || isEdge || KEY_KINDS.has(n.kind)
+  // Hoeveel ruimte per kolom-gap is er voor labels? We trekken 6px lucht
+  // af zodat label van kolom N niet tegen label van kolom N+1 aanloopt.
+  const colGap = cols.length > 1
+    ? (cols[1][0] - cols[0][0]) - NODE_WIDTH - 6
+    : 120
+  // Count-tspan eet ~4 chars extra; reserveer die ruimte zodat de label
+  // zelf niet eindigt in een ellipsis terwijl er nog plek is voor "  30".
+  const countBudget = 4
+  // 14 als bodem werkt voor "Eigen bedrijf" (13) + "Brochure nee" (12)
+  // zonder ellipsis op standaard col-gaps (74-85px). Klein risico op
+  // doortrekken in extreem smal viewport, maar dan slaat compact-layout in.
+  const middleMaxChars = Math.max(14, Math.floor(colGap / CHAR_PX) - countBudget)
+  const sideMaxChars = compact ? 20 : 32
+
+  const placed = []
+  for (const [col, list] of cols) {
+    const isFirst = col === minX
+    const isLast = col === maxX
+    // Eerste kolom: labels naar LINKS van node. Andere: naar RECHTS.
+    const side = isFirst ? 'left' : 'right'
+    const maxChars = (isFirst || isLast) ? sideMaxChars : middleMaxChars
+
+    // Filter eerst op label-strategie zodat we niet voor genegeerde nodes
+    // ruimte reserveren in de collision-avoidance.
+    const visible = list.filter((n) => isKey(n, isFirst || isLast))
+    if (visible.length === 0) continue
+    const sorted = [...visible].sort((a, b) => (a.y0 + a.y1) - (b.y0 + b.y1))
+    const slots = []
+    // Pass 1: top-down met min-gap. Eerste y = midden eerste node, daarna
+    // max(midden, vorige + gap).
+    let lastY = -Infinity
+    for (const n of sorted) {
+      const mid = (n.y0 + n.y1) / 2
+      const y = Math.max(mid, lastY + MIN_LABEL_GAP)
+      slots.push(y)
+      lastY = y
+    }
+    // Als de stack onderaan over de chart-hoogte gaat, schuif alles up.
+    const overflow = lastY - (height - BOTTOM_MARGIN)
+    if (overflow > 0) {
+      for (let i = slots.length - 1; i >= 0; i--) {
+        const ceiling = i > 0 ? slots[i - 1] + MIN_LABEL_GAP : TOP_MARGIN
+        slots[i] = Math.max(ceiling, slots[i] - overflow)
+      }
+    }
+    // Als top boven de chart uitkomt, schuif alles down.
+    const underflow = TOP_MARGIN - slots[0]
+    if (underflow > 0) {
+      for (let i = 0; i < slots.length; i++) {
+        slots[i] = slots[i] + underflow
+      }
+    }
+
+    sorted.forEach((n, i) => {
+      const y = slots[i]
+      const idealY = (n.y0 + n.y1) / 2
+      const shifted = Math.abs(y - idealY) > 2
+      const x = side === 'left' ? n.x0 - 8 : n.x1 + 8
+      const anchor = side === 'left' ? 'end' : 'start'
+      // Persona-prefix tonen we alleen daar waar 'ie écht uniek bijdraagt:
+      // op de allereerste kolom (laat zien dat elke persona z'n eigen start
+      // heeft). Op persona-knooppunten zelf is de prefix redundant met de
+      // label ("Belegger" zegt al genoeg). Op alle andere knooppunten zou
+      // de prefix ~25px per label kosten en kolom-buurmannen laten botsen
+      // — de tooltip geeft persona-info bij hover.
+      const showPersona = !!n.persona && isFirst && n.kind !== 'persona'
+      const text = truncate(labelTextFor(n), maxChars)
+      placed.push({
+        text,
+        x,
+        y,
+        anchor,
+        side,
+        persona: showPersona ? n.persona : null,
+        count: n.value || 0,
+        shifted,
+        // Bewaar node-rand-coordinates voor connector-redraw na
+        // cross-column collision resolution.
+        nodeLeft: n.x0,
+        nodeRight: n.x1,
+        idealY,
+        priority: nodePriority(n, isFirst, isLast),
+      })
+    })
+  }
+  // Cross-column post-pass: schuif overlappende labels uit elkaar.
+  return resolveCrossColumnCollisions(placed, height)
+}
+
+// Hogere prioriteit = belangrijker label dat in conflict liever
+// op z'n ideale plek mag blijven. De andere wordt verschoven.
+function nodePriority(n, isFirst, isLast) {
+  if (isFirst || isLast) return 100
+  if (n.kind === 'persona') return 90
+  if (n.kind === 'done') return 80
+  if (n.kind === 'exit') return 75
+  if (n.kind === 'choice') return 60
+  return 40
+}
+
+// Bekijkt labels paarsgewijs; bij overlap wordt de lage-prio label
+// verticaal opgeschoven (min 1 line-height) en de connector-lijn
+// hertekend zodat duidelijk blijft welke node de label hoort.
+function resolveCrossColumnCollisions(placed, height) {
+  const labels = placed.map((l) => ({ ...l }))
+  function rect(l) {
+    const labelWidth =
+      (l.text.length + (l.persona ? l.persona.length + 3 : 0) + (l.count > 0 ? String(l.count).length + 2 : 0)) * CHAR_PX
+    const x0 = l.anchor === 'end' ? l.x - labelWidth : l.x
+    const x1 = l.anchor === 'end' ? l.x : l.x + labelWidth
+    return { x0, x1, y0: l.y - LABEL_LINE_HEIGHT / 2, y1: l.y + LABEL_LINE_HEIGHT / 2 }
+  }
+  function overlap(a, b) {
+    const A = rect(a), B = rect(b)
+    const ox = Math.max(0, Math.min(A.x1, B.x1) - Math.max(A.x0, B.x0))
+    const oy = Math.max(0, Math.min(A.y1, B.y1) - Math.max(A.y0, B.y0))
+    return ox > 2 && oy > 2
+  }
+  // Meerdere passes: bij elk overlap-paar verschuiven we de lagere prio.
+  // Limiet zodat we niet eindeloos itereren.
+  for (let pass = 0; pass < 4; pass++) {
+    let changed = false
+    for (let i = 0; i < labels.length; i++) {
+      for (let j = i + 1; j < labels.length; j++) {
+        if (!overlap(labels[i], labels[j])) continue
+        // Selecteer de movable: lagere priority. Bij gelijk: degene met
+        // hoogste y (verschuiven naar onder is veiliger want we hebben
+        // chart-hoogte als margin).
+        const a = labels[i], b = labels[j]
+        const movable = a.priority < b.priority ? a : b.priority < a.priority ? b : (a.y >= b.y ? a : b)
+        const other = movable === a ? b : a
+        // Bepaal richting: naar buiten van other's y.
+        const direction = movable.y >= other.y ? 1 : -1
+        const newY = clamp(
+          TOP_MARGIN,
+          height - BOTTOM_MARGIN,
+          other.y + direction * (LABEL_LINE_HEIGHT + 4),
+        )
+        if (Math.abs(newY - movable.y) > 0.5) {
+          movable.y = newY
+          movable.shifted = true
+          changed = true
+        }
+      }
+    }
+    if (!changed) break
+  }
+  // Hercompute connector-coords zodat de lijn van node-rand naar de
+  // (mogelijk verschoven) label loopt.
+  for (const l of labels) {
+    l.connectorX1 = l.side === 'left' ? l.nodeLeft : l.nodeRight
+    l.connectorY1 = l.idealY
+    l.connectorX2 = l.side === 'left' ? l.nodeLeft - 4 : l.nodeRight + 4
+    l.connectorY2 = l.y
+  }
+  return labels
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function labelTextFor(n) {
+  return n.label || n.id
+}
+
+function truncate(s, max) {
+  if (!s) return ''
+  if (s.length <= max) return s
+  return s.slice(0, Math.max(1, max - 1)) + '…'
+}
+
+function clamp(min, max, v) {
+  return Math.max(min, Math.min(max, v))
+}
+
+function maxStringWidth(arr) {
+  let m = 0
+  for (const s of arr || []) {
+    if (!s) continue
+    const w = s.length * CHAR_PX
+    if (w > m) m = w
+  }
+  return m
+}
+
+// ---------------------------------------------------------------------------
+// Legend + empty state
+// ---------------------------------------------------------------------------
+
+function Legend() {
+  return (
+    <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11.5px] text-ink-mute">
+      <LegendDot color="#1b1b8a" label="Stap" />
+      <LegendDot color="#0f0f70" label="Persona-keuze" />
+      <LegendDot color="#3a3aa8" label="Vertakking (ja/nee)" />
+      <LegendDot color="#1a8c4a" label="Voltooid" />
+      <LegendDot color="#b91c1c" label="Verlaten / afhaak" />
+    </div>
+  )
+}
+
+function LegendDot({ color, label }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span
+        className="inline-block w-2.5 h-2.5 rounded-sm"
+        style={{ backgroundColor: color }}
+      />
+      {label}
+    </span>
   )
 }
 
