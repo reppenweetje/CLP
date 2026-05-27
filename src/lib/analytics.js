@@ -306,6 +306,8 @@ export function humanizePersona(key) {
 
 export function humanizeEventType(type) {
   switch (type) {
+    case 'intro:viewed': return 'Landing geopend'
+    case 'intro:bounced': return 'Verlaten zonder klik'
     case 'session:start': return 'Sessie gestart'
     case 'intent:answered': return 'Persona-keuze gemaakt'
     case 'brochure-trigger:answered': return 'Brochure-trigger beantwoord'
@@ -474,6 +476,8 @@ export function buildBubbleExposure(sessions) {
 
 // Welke event-types meedoen in de Sankey (rest is ruis voor pad-analyse).
 const SANKEY_EVENT_TYPES = new Set([
+  'intro:viewed',           // landing-page geopend (nieuwe top-of-funnel)
+  'intro:bounced',          // tab gesloten zonder CTA-klik
   'session:start',
   'intro:cta-clicked',
   'intent:answered',
@@ -502,6 +506,8 @@ const SANKEY_EVENT_TYPES = new Set([
 // waar mogelijk) zodat de Sankey-labels niet overlappen. humanizeEventType
 // is voor tooltips/sessies-overzicht, niet voor het diagram.
 const SANKEY_STEP_LABELS = {
+  'intro:viewed':                 'Bezoek',
+  'intro:bounced':                '⊥ Bounce',
   'session:start':                'Sessie',
   'intro:cta-clicked':            'CTA-klik',
   'lead-email:submitted':         'E-mail',
@@ -588,7 +594,11 @@ export function buildSankey(sessions, { branchOnPersona = false } = {}) {
       if (!SANKEY_EVENT_TYPES.has(ev.type)) continue
       let label = SANKEY_STEP_LABELS[ev.type] || humanizeEventType(ev.type)
       let kind = 'step'
-      if (ev.type === 'session:start') {
+      if (ev.type === 'intro:viewed') {
+        kind = 'start'
+      } else if (ev.type === 'intro:bounced') {
+        kind = 'exit'
+      } else if (ev.type === 'session:start') {
         kind = 'start'
       } else if (ev.type === 'intent:answered') {
         label = sankeyPersonaLabel(ev.payload?.persona ?? s.persona ?? 'onbekend')

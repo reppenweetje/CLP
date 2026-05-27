@@ -868,6 +868,60 @@ function Demo() {
     return detach
   }, [])
 
+  // Top-of-funnel tracking: leg ook bezoeken vast die nooit op de CTA
+  // klikken. intro:viewed fired eenmalig per browser-sessie (alleen als de
+  // chat nog niet eerder begonnen is); intro:bounced fired bij pagehide
+  // wanneer de chat nog steeds niet gestart is. Beide via sendBeacon-vriendelijke
+  // pushEvent zodat het ook aankomt als de tab al weg klikt.
+  //
+  // Skipt voor de hervat-flow (state.messages.length > 0) want dan zit de
+  // bezoeker al midden in een chat en is bouncen geen "cold drop-off".
+  useEffect(() => {
+    if (state.view !== 'intro' || state.messages.length > 0) return
+    if (typeof window === 'undefined') return
+    const introStartedAt = Date.now()
+    let bounced = false
+    let started = false
+
+    trackEvent('intro:viewed', {
+      copyVariant,
+      referrer: document.referrer || null,
+    })
+
+    function maybeBounce() {
+      if (bounced || started) return
+      bounced = true
+      const dwellMs = Date.now() - introStartedAt
+      // Skip ultra-korte bounces (<300ms) — meestal pre-render / bot.
+      if (dwellMs < 300) return
+      try {
+        trackEvent('intro:bounced', { copyVariant, dwellMs })
+      } catch {}
+    }
+
+    // 'started' marker zodra de CTA-klik leidt tot view !== 'intro'.
+    // We detecteren de overgang via een MutationObserver-vrije check
+    // door simpelweg de globale state-handler. Maar makkelijker: bij
+    // unmount weten we dat 't ofwel een nav-away is ofwel een view-switch.
+    // Pagehide is reliable cross-browser voor unload-events.
+    function onPageHide() { maybeBounce() }
+    function onVisibilityChange() {
+      if (document.visibilityState === 'hidden') maybeBounce()
+    }
+    window.addEventListener('pagehide', onPageHide)
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => {
+      // Cleanup loopt wanneer view wisselt of component unmount.
+      // Als view !== 'intro' = chat is gestart, dan was 't géén bounce.
+      started = true
+      window.removeEventListener('pagehide', onPageHide)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+    }
+  // Bewust alleen op view + messages.length — copyVariant verandert na mount
+  // niet, dus geen re-fire-risico bij toggles.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.view, state.messages.length])
+
   const start = (variant) => {
     // Hervat-pad: bezoeker kwam via het header-logo terug naar intro met
     // chat-historie nog intact. We schakelen alleen view om en bewaren de
