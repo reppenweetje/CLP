@@ -415,7 +415,7 @@ function AdminScreenInner() {
               <TopPaths sessions={sessions} />
             </ErrorBoundary>
             <ErrorBoundary label="Sankey">
-              <SankeyFlow sessions={sessions} />
+              <SankeyFlow sessions={sessions} onOpenSession={openReplay} />
             </ErrorBoundary>
           </section>
 

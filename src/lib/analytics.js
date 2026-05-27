@@ -541,6 +541,8 @@ export function buildSankey(sessions, { branchOnPersona = false } = {}) {
   const links = new Map()  // key = `${from}>${to}` → count
   const nodeMeta = new Map()  // id → meta
   const nodeStep = new Map()
+  const nodeSessions = new Map()  // nodeId → Set<sessionId>  voor click-drill-down
+  const linkSessions = new Map()  // linkKey → Set<sessionId>
   let stepCounter = 0
 
   function addNode(id, meta) {
@@ -552,9 +554,10 @@ export function buildSankey(sessions, { branchOnPersona = false } = {}) {
   function addLink(from, to) {
     if (from === to) return
     if (!nodeMeta.has(from) || !nodeMeta.has(to)) return
-    if (nodeStep.get(to) <= nodeStep.get(from)) return
+    if (nodeStep.get(to) <= nodeStep.get(from)) return false
     const key = `${from}>${to}`
     links.set(key, (links.get(key) || 0) + 1)
+    return key
   }
 
   for (const s of sessions) {
@@ -590,13 +593,27 @@ export function buildSankey(sessions, { branchOnPersona = false } = {}) {
       }
       const id = personaTag + label
       addNode(id, { label, kind, persona: personaShort })
-      if (prev !== null) addLink(prev, id)
+      if (!nodeSessions.has(id)) nodeSessions.set(id, new Set())
+      nodeSessions.get(id).add(s.sessionId)
+      if (prev !== null) {
+        const linkKey = addLink(prev, id)
+        if (linkKey) {
+          if (!linkSessions.has(linkKey)) linkSessions.set(linkKey, new Set())
+          linkSessions.get(linkKey).add(s.sessionId)
+        }
+      }
       prev = id
     }
     if (prev && !s.completed) {
       const exitId = '⚠ Verlaten'
       addNode(exitId, { label: 'Verlaten', kind: 'exit', persona: null })
-      addLink(prev, exitId)
+      if (!nodeSessions.has(exitId)) nodeSessions.set(exitId, new Set())
+      nodeSessions.get(exitId).add(s.sessionId)
+      const linkKey = addLink(prev, exitId)
+      if (linkKey) {
+        if (!linkSessions.has(linkKey)) linkSessions.set(linkKey, new Set())
+        linkSessions.get(linkKey).add(s.sessionId)
+      }
     }
   }
 
@@ -612,6 +629,8 @@ export function buildSankey(sessions, { branchOnPersona = false } = {}) {
       const [source, target] = key.split('>')
       return { source, target, value }
     }),
+    nodeSessions,
+    linkSessions,
   }
 }
 
