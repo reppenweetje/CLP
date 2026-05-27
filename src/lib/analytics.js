@@ -15,6 +15,24 @@ import { pushEvent as pushSupabaseEvent, isAnalyticsConfigured } from './eventsA
 const EVENTS_KEY = 'clp-events-v1'
 const SESSION_KEY = 'clp-session-id'
 
+// Interne REPP-test-records: leads waarvan de e-mail eindigt op @repp.nl
+// worden in admin-views uitgesloten zodat onze eigen test-flows de
+// echte cijfers niet vervuilen. Match is case-insensitive.
+const INTERNAL_EMAIL_RE = /@repp\.nl$/i
+
+export function isInternalReppEmail(email) {
+  return typeof email === 'string' && INTERNAL_EMAIL_RE.test(email.trim())
+}
+
+// Accepteert een sessie OF lead-object; checkt lead.email of session.lead.email.
+export function isInternalReppRecord(item) {
+  if (!item) return false
+  if (typeof item === 'string') return isInternalReppEmail(item)
+  if (item.email) return isInternalReppEmail(item.email)
+  if (item.lead?.email) return isInternalReppEmail(item.lead.email)
+  return false
+}
+
 function uuid() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
   return 'x' + Math.random().toString(16).slice(2) + Date.now().toString(16)

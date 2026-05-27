@@ -13,6 +13,7 @@ import {
   filterByDateRange,
   formatDuration,
   getSessions,
+  isInternalReppRecord,
 } from '../lib/analytics.js'
 import {
   fetchTeamEvents,
@@ -218,8 +219,27 @@ function AdminScreenInner() {
     })
   }
 
-  const allSessions = dataSource === 'team' ? teamSessions : localSessions
+  // Raw bron-data zoals binnen kwam (gebruikt voor het tellen van verborgen
+  // interne records; voor alle downstream-analyses werken we met de
+  // gefilterde set).
+  const rawAllSessions = dataSource === 'team' ? teamSessions : localSessions
+
+  // Filter interne REPP-test-records (@repp.nl-mailadressen) uit voordat
+  // analyses worden gedraaid. Sessies zonder e-mail blijven gewoon staan.
+  const allSessions = useMemo(
+    () => rawAllSessions.filter((s) => !isInternalReppRecord(s)),
+    [rawAllSessions],
+  )
+  const internalSessionCount = rawAllSessions.length - allSessions.length
+
   const sessions = useMemo(() => filterByDateRange(allSessions, dateRange), [allSessions, dateRange])
+
+  // Leads: zelfde filtering, plus aparte teller voor de chip-melding.
+  const visibleTeamLeads = useMemo(
+    () => teamLeads.filter((l) => !isInternalReppRecord(l)),
+    [teamLeads],
+  )
+  const internalLeadCount = teamLeads.length - visibleTeamLeads.length
   const sectionIds = useMemo(() => SECTIONS.map((s) => s.id), [])
   const observedSection = useActiveSection(sectionIds)
   // Optimistic override: na een sidebar-click highlighten we direct de
@@ -334,6 +354,10 @@ function AdminScreenInner() {
               </button>
             )}
             <DateRangePicker value={dateRange} onChange={setDateRange} />
+            <InternalExclusionChip
+              sessionCount={internalSessionCount}
+              leadCount={internalLeadCount}
+            />
             <a
               href="/"
               className="text-[13px] text-ink-soft hover:text-ink border border-mist hover:border-midnite px-3 py-1.5 rounded-full transition whitespace-nowrap"
@@ -397,7 +421,7 @@ function AdminScreenInner() {
           {/* Registraties (clp_leads dual-write kopieën) */}
           <section id="registraties" className="scroll-mt-24">
             <RegistrationsList
-              leads={teamLeads}
+              leads={visibleTeamLeads}
               loading={leadsLoading}
               error={leadsError}
               teamMode={dataSource === 'team'}
@@ -571,4 +595,26 @@ function avgPerDayLabel(sessions) {
   const oldest = sessions[sessions.length - 1].startedAt
   const days = Math.max(1, (Date.now() - oldest) / 86400000)
   return `${(sessions.length / days).toFixed(1)} per dag`
+}
+
+// Subtiel chipje in de toolbar dat aangeeft dat @repp.nl-records uit het
+// admin-overzicht zijn gefilterd. Verschijnt alleen wanneer er ook
+// daadwerkelijk iets verborgen is, anders zou 'ie ruis zijn.
+function InternalExclusionChip({ sessionCount = 0, leadCount = 0 }) {
+  const total = sessionCount + leadCount
+  if (total === 0) return null
+  const parts = []
+  if (sessionCount > 0) parts.push(`${sessionCount} ${sessionCount === 1 ? 'sessie' : 'sessies'}`)
+  if (leadCount > 0) parts.push(`${leadCount} ${leadCount === 1 ? 'lead' : 'leads'}`)
+  const detail = parts.join(' + ')
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full border border-mist bg-canvas-2 px-2.5 py-1 text-[11.5px] text-ink-soft whitespace-nowrap cursor-help"
+      title={`${detail} met een @repp.nl-mailadres worden niet meegerekend in de admin-statistieken, zodat onze eigen test-flows de cijfers niet vervuilen. De data blijft wel in de database staan.`}
+    >
+      <span aria-hidden className="text-ink-mute">⊘</span>
+      <span>REPP-intern verborgen</span>
+      <span className="tabular-nums font-semibold text-ink-soft">{detail}</span>
+    </span>
+  )
 }
