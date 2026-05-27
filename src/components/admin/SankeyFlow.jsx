@@ -22,10 +22,14 @@ const SIDE_MARGIN = 14
 const TOP_MARGIN = 14
 const BOTTOM_MARGIN = 14
 
-export default function SankeyFlow({ sessions, onOpenSession }) {
+export default function SankeyFlow({ sessions, onOpenSession, externalHoverSessionIds = null }) {
   // Persona-split staat default UIT — bij <100 sessies vermenigvuldigt
   // het de nodes onnodig en blijft het diagram onleesbaar.
   const [branchOnPersona, setBranchOnPersona] = useState(false)
+  // Persona-filter: leeg = alle sessies. Eén actief = alleen die persona
+  // gaat door de buildSankey-pijp, zodat segment-isolatie 1 klik kost
+  // ipv mentaal de overall Sankey filteren.
+  const [activePersona, setActivePersona] = useState(null)
   const containerRef = useRef(null)
   const [width, setWidth] = useState(960)
 
@@ -35,11 +39,18 @@ export default function SankeyFlow({ sessions, onOpenSession }) {
   const [hoveredNodeId, setHoveredNodeId] = useState(null)
   const [selectedNodeId, setSelectedNodeId] = useState(null)
 
-  // Reset selectie bij data-shift (toggle persona-split, andere sessies).
+  // Sessies die in de Sankey-build gaan: na persona-filter.
+  const filteredSessions = useMemo(() => {
+    if (!activePersona) return sessions
+    return sessions.filter((s) => (s.persona || 'onbekend') === activePersona)
+  }, [sessions, activePersona])
+
+  // Reset selectie bij data-shift (toggle persona-split, andere sessies,
+  // andere persona-filter).
   useEffect(() => {
     setSelectedNodeId(null)
     setHoveredNodeId(null)
-  }, [branchOnPersona, sessions])
+  }, [branchOnPersona, sessions, activePersona])
 
   // Esc om te resetten.
   useEffect(() => {
@@ -65,8 +76,8 @@ export default function SankeyFlow({ sessions, onOpenSession }) {
   }, [])
 
   const data = useMemo(
-    () => buildSankey(sessions, { branchOnPersona }),
-    [sessions, branchOnPersona],
+    () => buildSankey(filteredSessions, { branchOnPersona }),
+    [filteredSessions, branchOnPersona],
   )
   const hasData = data.links.length > 0
   // In persona-split-mode hebben we 4x zoveel nodes per kolom; middel-
@@ -76,12 +87,29 @@ export default function SankeyFlow({ sessions, onOpenSession }) {
   // via tooltip op hover.
   const labelStrategy = branchOnPersona ? 'key-nodes-only' : 'all'
 
-  // Bepaal focus-set: selectie heeft voorrang op hover.
-  const focusNodeId = selectedNodeId || hoveredNodeId
+  // Bepaal focus-set met prioriteit: select > externe hover (TopPaths) > interne hover.
+  // - Single-node hover/select wordt uitgebreid naar buurman-nodes via links.
+  // - Externe session-set (van TopPaths cross-highlight) wordt vertaald naar
+  //   alle nodes die die sessies hebben aangedaan.
+  const focusNodeId = selectedNodeId || (externalHoverSessionIds ? null : hoveredNodeId)
   const selectedNode = useMemo(() => {
     if (!selectedNodeId) return null
     return data.nodes.find((n) => n.id === selectedNodeId) || null
   }, [selectedNodeId, data.nodes])
+
+  // Externe focus-set vertalen naar node-id-set via data.nodeSessions.
+  // Alleen actief wanneer er geen interne selectie is — selectie wint
+  // van TopPaths-hover om verwarring te voorkomen.
+  const externalNodeIds = useMemo(() => {
+    if (selectedNodeId || !externalHoverSessionIds || !data.nodeSessions) return null
+    const ids = new Set()
+    for (const [nodeId, sessionIdSet] of data.nodeSessions) {
+      for (const sid of externalHoverSessionIds) {
+        if (sessionIdSet.has(sid)) { ids.add(nodeId); break }
+      }
+    }
+    return ids.size > 0 ? ids : null
+  }, [externalHoverSessionIds, data.nodeSessions, selectedNodeId])
 
   return (
     <section className="rounded-2xl border border-mist-light bg-paper p-5 col-span-full">
@@ -105,6 +133,11 @@ export default function SankeyFlow({ sessions, onOpenSession }) {
           Splits op persona
         </label>
       </header>
+      <PersonaFilterChips
+        sessions={sessions}
+        active={activePersona}
+        onChange={setActivePersona}
+      />
       <div ref={containerRef} className="w-full">
         {hasData ? (
           <Chart
@@ -112,6 +145,7 @@ export default function SankeyFlow({ sessions, onOpenSession }) {
             width={width}
             labelStrategy={labelStrategy}
             focusNodeId={focusNodeId}
+            externalNodeIds={externalNodeIds}
             selectedNodeId={selectedNodeId}
             onHoverNode={setHoveredNodeId}
             onSelectNode={(id) =>
@@ -134,7 +168,7 @@ export default function SankeyFlow({ sessions, onOpenSession }) {
       )}
       {hasData && <Legend />}
       {hasData && !selectedNodeId && (
-        <p className="mt-3 text-[11px] text-ink-mute italic">
+        <p className="mt-3 text-[12px] text-ink-soft italic">
           Hover om paden te dimmen, klik op een knoop voor details en bijbehorende sessies.
         </p>
       )}
@@ -151,6 +185,7 @@ function Chart({
   width,
   labelStrategy = 'all',
   focusNodeId = null,
+  externalNodeIds = null,
   selectedNodeId = null,
   onHoverNode,
   onSelectNode,
@@ -162,13 +197,13 @@ function Chart({
   if (!layout) return <EmptyState />
   const { nodes, links, labels, height } = layout
 
-  // Pre-bereken welke nodes/links "in focus" zijn op basis van focusNodeId.
-  // Connected = source of target van focus.
-  const isFocused = (id) => focusNodeId == null || id === focusNodeId || connectedNodeIds(focusNodeId, links).has(id)
+  // Focus-set: of een single-node-focus (uitgebreid naar buurman-nodes)
+  // óf een externe id-set (van TopPaths cross-highlight). Geen van beide = niet dimmen.
+  const focusSet = externalNodeIds || (focusNodeId ? connectedNodeIds(focusNodeId, links) : null)
+  const hasFocus = !!focusSet
+  const isFocused = (id) => !hasFocus || focusSet.has(id)
   const isLinkFocused = (link) =>
-    focusNodeId == null ||
-    link.source.id === focusNodeId ||
-    link.target.id === focusNodeId
+    !hasFocus || (focusSet.has(link.source.id) && focusSet.has(link.target.id))
 
   return (
     <svg
@@ -188,7 +223,7 @@ function Chart({
               d={sankeyLinkHorizontal()(link)}
               fill="none"
               stroke={linkStrokeFor(link)}
-              strokeOpacity={focusNodeId == null ? 0.32 : focused ? 0.6 : 0.05}
+              strokeOpacity={!hasFocus ? 0.32 : focused ? 0.62 : 0.05}
               strokeWidth={Math.max(1, link.width)}
               className="transition-[stroke-opacity] duration-150"
               style={{ pointerEvents: 'stroke' }}
@@ -213,7 +248,7 @@ function Chart({
                   fill="none"
                   stroke={n.nodeColor}
                   strokeWidth={2}
-                  strokeOpacity={0.8}
+                  strokeOpacity={0.85}
                   rx={4}
                   className="pointer-events-none"
                 />
@@ -224,7 +259,7 @@ function Chart({
                 width={n.x1 - n.x0}
                 height={Math.max(1, n.y1 - n.y0)}
                 fill={n.nodeColor}
-                opacity={focusNodeId == null ? 0.95 : focused ? 1 : 0.2}
+                opacity={!hasFocus ? 0.95 : focused ? 1 : 0.3}
                 rx={2}
                 className="transition-opacity duration-150 cursor-pointer"
                 onClick={(e) => { e.stopPropagation(); onSelectNode?.(n.id) }}
@@ -244,8 +279,11 @@ function Chart({
       <g aria-hidden="true">
         {labels.map((l, i) => {
           const focused = isFocused(l.nodeId)
+          // Labels nooit ónder de leesbaarheidsdrempel dimmen (0.45 = nog
+          // contrastvol genoeg op de cream-canvas). Sales mag de buur-labels
+          // nog wel lezen tijdens hover-focus.
           return (
-            <g key={i} opacity={focused ? 1 : 0.25} className="transition-opacity duration-150">
+            <g key={i} opacity={focused ? 1 : 0.45} className="transition-opacity duration-150">
               {l.shifted && (
                 <line
                   x1={l.connectorX1}
@@ -651,7 +689,7 @@ function NodeDetailPanel({ node, data, sessions, totalSessions, onClose, onOpenS
             )}
             {node.label}
           </h3>
-          <span className="text-[12px] text-ink-mute tabular-nums">
+          <span className="text-[12px] text-ink-soft tabular-nums">
             {nodeSessionIds.size} sessies · {sharePct.toFixed(0)}% van totaal
           </span>
         </div>
@@ -668,7 +706,7 @@ function NodeDetailPanel({ node, data, sessions, totalSessions, onClose, onOpenS
       <div className="grid sm:grid-cols-3 gap-4">
         {/* Persona-mix */}
         <div>
-          <div className="text-[10px] tracking-[0.18em] text-ink-mute uppercase font-medium mb-2">
+          <div className="text-[10.5px] tracking-[0.18em] text-ink-soft uppercase font-semibold mb-2">
             Persona-mix
           </div>
           {personaMix.length === 0 ? (
@@ -677,8 +715,8 @@ function NodeDetailPanel({ node, data, sessions, totalSessions, onClose, onOpenS
             <ul className="space-y-1.5">
               {personaMix.map((p) => (
                 <li key={p.key} className="flex items-baseline justify-between gap-2 text-[12.5px]">
-                  <span className="text-ink-soft truncate">{p.label}</span>
-                  <span className="font-medium tabular-nums text-ink">{p.count}</span>
+                  <span className="text-ink truncate">{p.label}</span>
+                  <span className="font-semibold tabular-nums text-ink">{p.count}</span>
                 </li>
               ))}
             </ul>
@@ -687,7 +725,7 @@ function NodeDetailPanel({ node, data, sessions, totalSessions, onClose, onOpenS
 
         {/* Kwam van */}
         <div>
-          <div className="text-[10px] tracking-[0.18em] text-ink-mute uppercase font-medium mb-2">
+          <div className="text-[10.5px] tracking-[0.18em] text-ink-soft uppercase font-semibold mb-2">
             Kwam van
           </div>
           {incoming.length === 0 ? (
@@ -698,10 +736,10 @@ function NodeDetailPanel({ node, data, sessions, totalSessions, onClose, onOpenS
                 const pct = incomingTotal > 0 ? (e.count / incomingTotal) * 100 : 0
                 return (
                   <li key={e.id} className="flex items-baseline justify-between gap-2 text-[12.5px]">
-                    <span className="text-ink-soft truncate">{e.label || e.id}</span>
-                    <span className="tabular-nums text-ink-mute">
-                      <span className="font-medium text-ink">{e.count}</span>
-                      <span className="ml-1 text-[10.5px]">({pct.toFixed(0)}%)</span>
+                    <span className="text-ink truncate">{e.label || e.id}</span>
+                    <span className="tabular-nums text-ink-soft">
+                      <span className="font-semibold text-ink">{e.count}</span>
+                      <span className="ml-1 text-[11px]">({pct.toFixed(0)}%)</span>
                     </span>
                   </li>
                 )
@@ -712,7 +750,7 @@ function NodeDetailPanel({ node, data, sessions, totalSessions, onClose, onOpenS
 
         {/* Ging naar */}
         <div>
-          <div className="text-[10px] tracking-[0.18em] text-ink-mute uppercase font-medium mb-2">
+          <div className="text-[10.5px] tracking-[0.18em] text-ink-soft uppercase font-semibold mb-2">
             Ging naar
           </div>
           {outgoing.length === 0 ? (
@@ -723,10 +761,10 @@ function NodeDetailPanel({ node, data, sessions, totalSessions, onClose, onOpenS
                 const pct = outgoingTotal > 0 ? (e.count / outgoingTotal) * 100 : 0
                 return (
                   <li key={e.id} className="flex items-baseline justify-between gap-2 text-[12.5px]">
-                    <span className="text-ink-soft truncate">{e.label || e.id}</span>
-                    <span className="tabular-nums text-ink-mute">
-                      <span className="font-medium text-ink">{e.count}</span>
-                      <span className="ml-1 text-[10.5px]">({pct.toFixed(0)}%)</span>
+                    <span className="text-ink truncate">{e.label || e.id}</span>
+                    <span className="tabular-nums text-ink-soft">
+                      <span className="font-semibold text-ink">{e.count}</span>
+                      <span className="ml-1 text-[11px]">({pct.toFixed(0)}%)</span>
                     </span>
                   </li>
                 )
@@ -739,7 +777,7 @@ function NodeDetailPanel({ node, data, sessions, totalSessions, onClose, onOpenS
       {/* Sessies-lijst — klikbaar om SessionReplay te openen */}
       {matchingSessions.length > 0 && (
         <div className="mt-4 pt-4 border-t border-mist-light/70">
-          <div className="text-[10px] tracking-[0.18em] text-ink-mute uppercase font-medium mb-2">
+          <div className="text-[10.5px] tracking-[0.18em] text-ink-soft uppercase font-semibold mb-2">
             Sessies door deze knoop ({matchingSessions.length})
           </div>
           <ul className="grid sm:grid-cols-2 gap-1">
@@ -760,7 +798,7 @@ function NodeDetailPanel({ node, data, sessions, totalSessions, onClose, onOpenS
                   <span className="font-medium">
                     {s.lead?.firstName || s.lead?.email || s.sessionId.slice(0, 8)}
                   </span>
-                  <span className="text-ink-mute ml-1.5">
+                  <span className="text-ink-soft ml-1.5">
                     {s.persona ? humanizePersona(s.persona) : ''}
                     {s.duration ? ` · ${formatDuration(s.duration)}` : ''}
                     {s.completed ? ' · ✓ voltooid' : ' · afgehaakt'}
@@ -770,13 +808,88 @@ function NodeDetailPanel({ node, data, sessions, totalSessions, onClose, onOpenS
             ))}
           </ul>
           {matchingSessions.length > 12 && (
-            <div className="mt-2 text-[11px] text-ink-mute italic">
+            <div className="mt-2 text-[12px] text-ink-soft italic">
               +{matchingSessions.length - 12} verborgen. Filter via persona-split of date-range om in te zoomen.
             </div>
           )}
         </div>
       )}
     </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Persona filter chips — boven de Sankey
+// ---------------------------------------------------------------------------
+//
+// "Alle" = geen filter (default). Klik op een persona = alleen die sessies
+// gaan door buildSankey. Geeft segment-vergelijking met één klik zonder de
+// persona-split te hoeven aanzetten (die vermenigvuldigt alle nodes).
+// Counts achter elk label zodat lege segmenten herkenbaar zijn (chip wordt
+// dan dimmer).
+
+const PERSONA_ORDER = ['eigen_gebruiker', 'belegger', 'beide', 'huurder']
+
+function PersonaFilterChips({ sessions, active, onChange }) {
+  const counts = useMemo(() => {
+    const m = new Map()
+    for (const s of sessions) {
+      const k = s.persona || 'onbekend'
+      m.set(k, (m.get(k) || 0) + 1)
+    }
+    return m
+  }, [sessions])
+
+  const present = PERSONA_ORDER.filter((p) => (counts.get(p) || 0) > 0)
+  const unknown = counts.get('onbekend') || 0
+
+  return (
+    <div className="mb-4 flex flex-wrap items-center gap-1.5">
+      <span className="text-[10px] tracking-[0.18em] text-ink-mute uppercase font-medium mr-1">
+        Filter:
+      </span>
+      <PersonaChip
+        active={active == null}
+        onClick={() => onChange(null)}
+        label="Alle persona's"
+        count={sessions.length}
+      />
+      {present.map((p) => (
+        <PersonaChip
+          key={p}
+          active={active === p}
+          onClick={() => onChange(active === p ? null : p)}
+          label={humanizePersona(p)}
+          count={counts.get(p)}
+        />
+      ))}
+      {unknown > 0 && (
+        <PersonaChip
+          active={active === 'onbekend'}
+          onClick={() => onChange(active === 'onbekend' ? null : 'onbekend')}
+          label="Onbekend"
+          count={unknown}
+          muted
+        />
+      )}
+    </div>
+  )
+}
+
+function PersonaChip({ active, onClick, label, count, muted = false }) {
+  const base = 'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium transition'
+  const cls = active
+    ? 'bg-midnite text-paper border-midnite shadow-sm'
+    : muted
+      ? 'bg-paper border-mist text-ink-mute hover:text-ink-soft hover:border-ink-mute/60'
+      : 'bg-paper border-mist text-ink-soft hover:text-ink hover:border-midnite/40'
+  return (
+    <button type="button" onClick={onClick} className={base + ' ' + cls}>
+      <span>{label}</span>
+      <span className={'tabular-nums ' + (active ? 'text-paper/80' : 'text-ink-mute')}>
+        {count}
+      </span>
+    </button>
   )
 }
 

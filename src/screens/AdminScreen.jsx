@@ -105,6 +105,11 @@ function AdminScreenInner() {
   // de view en triggert via include_archived param een re-fetch.
   const [leadsShowArchived, setLeadsShowArchived] = useState(false)
 
+  // Cross-highlight TopPaths ↔ Sankey: hover op een TopPaths-kaart zet
+  // hier de sessie-ids van dat pad, die de Sankey gebruikt om alleen die
+  // route uit te lichten. Transient (hover-only, geen lock).
+  const [flowHoverSessionIds, setFlowHoverSessionIds] = useState(null)
+
   const [, setTick] = useState(0)
   const [dateRange, setDateRange] = useState('all')
   const [replaySessionId, setReplaySessionId] = useState(null)
@@ -409,13 +414,17 @@ function AdminScreenInner() {
             <AIWeeklySummary sessions={sessions} />
           </section>
 
-          {/* Route — Top paden (actie) boven Sankey (overview) */}
+          {/* Route — Top paden (actie) boven Sankey (overview), gekoppeld via cross-highlight */}
           <section id="route" className="scroll-mt-24 space-y-5">
             <ErrorBoundary label="TopPaths">
-              <TopPaths sessions={sessions} />
+              <TopPaths sessions={sessions} onPathHover={setFlowHoverSessionIds} />
             </ErrorBoundary>
             <ErrorBoundary label="Sankey">
-              <SankeyFlow sessions={sessions} onOpenSession={openReplay} />
+              <SankeyFlow
+                sessions={sessions}
+                onOpenSession={openReplay}
+                externalHoverSessionIds={flowHoverSessionIds}
+              />
             </ErrorBoundary>
           </section>
 

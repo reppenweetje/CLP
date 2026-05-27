@@ -9,12 +9,21 @@ import { buildTopPaths } from '../../lib/analytics.js'
 // Bij voldoende data (paden ≥2 sessies) tonen we patronen; bij weinig data
 // vallen we automatisch terug op alles inclusief 1-sessie paden zodat
 // er altijd iets te zien is.
-export default function TopPaths({ sessions }) {
+export default function TopPaths({ sessions, onPathHover }) {
   const data = useMemo(
     () => buildTopPaths(sessions, { limit: 5, minVolume: 2 }),
     [sessions],
   )
   const hasData = data.completed.length > 0 || data.abandoned.length > 0
+
+  // Cross-highlight: bij hover op een pad geven we de set sessie-ids door
+  // aan de Sankey via een lifted parent-state. Bij leave: reset.
+  function handleEnter(path) {
+    onPathHover?.(path?.sessionIds && path.sessionIds.size > 0 ? path.sessionIds : null)
+  }
+  function handleLeave() {
+    onPathHover?.(null)
+  }
 
   return (
     <section className="rounded-2xl border border-mist-light bg-paper p-5 col-span-full">
@@ -26,6 +35,9 @@ export default function TopPaths({ sessions }) {
           <h2 className="text-[15px] font-semibold text-ink">Top routes</h2>
           <p className="text-[13px] text-ink-soft leading-relaxed mt-1">
             Welke paden komen het vaakst voor. Links wat werkt, rechts waar leads afhaken.
+            {onPathHover && (
+              <span className="text-ink-mute"> Hover een kaart om in de Sankey te markeren.</span>
+            )}
           </p>
         </div>
         {data.total > 0 && (
@@ -46,6 +58,8 @@ export default function TopPaths({ sessions }) {
             tone="emerald"
             paths={data.completed}
             emptyMessage="Nog geen pad met voltooiing."
+            onCardEnter={handleEnter}
+            onCardLeave={handleLeave}
           />
           <PathColumn
             title="Waar lekt het"
@@ -54,6 +68,8 @@ export default function TopPaths({ sessions }) {
             tone="rose"
             paths={data.abandoned}
             emptyMessage="Nog geen afhaak-patroon."
+            onCardEnter={handleEnter}
+            onCardLeave={handleLeave}
           />
         </div>
       )}
@@ -61,7 +77,7 @@ export default function TopPaths({ sessions }) {
   )
 }
 
-function PathColumn({ title, subtitle, icon, tone, paths, emptyMessage }) {
+function PathColumn({ title, subtitle, icon, tone, paths, emptyMessage, onCardEnter, onCardLeave }) {
   const chipCls =
     tone === 'emerald'
       ? 'text-emerald-800 border-emerald-200 bg-emerald-50'
@@ -87,7 +103,14 @@ function PathColumn({ title, subtitle, icon, tone, paths, emptyMessage }) {
       ) : (
         <ol className="space-y-2">
           {paths.map((p, i) => (
-            <PathCard key={p.signature} path={p} rank={i + 1} tone={tone} />
+            <PathCard
+              key={p.signature}
+              path={p}
+              rank={i + 1}
+              tone={tone}
+              onEnter={onCardEnter}
+              onLeave={onCardLeave}
+            />
           ))}
         </ol>
       )}
@@ -95,36 +118,45 @@ function PathColumn({ title, subtitle, icon, tone, paths, emptyMessage }) {
   )
 }
 
-function PathCard({ path, rank, tone }) {
+function PathCard({ path, rank, tone, onEnter, onLeave }) {
   const accent =
     tone === 'emerald'
       ? 'border-l-emerald-400/70'
       : 'border-l-rose-400/70'
+  const hoverable = typeof onEnter === 'function'
   return (
-    <li className={'rounded-xl border border-mist-light border-l-4 bg-canvas px-3.5 py-3 ' + accent}>
+    <li
+      onMouseEnter={hoverable ? () => onEnter(path) : undefined}
+      onMouseLeave={hoverable ? () => onLeave() : undefined}
+      className={
+        'rounded-xl border border-mist-light border-l-4 bg-canvas px-3.5 py-3 transition-shadow ' +
+        accent +
+        (hoverable ? ' hover:shadow-sm hover:border-midnite/30 cursor-default' : '')
+      }
+    >
       <div className="flex items-baseline justify-between gap-3 mb-2">
         <div className="flex items-baseline gap-2 min-w-0">
-          <span className="text-[10.5px] text-ink-mute font-semibold tabular-nums">#{rank}</span>
+          <span className="text-[11px] text-ink-soft font-semibold tabular-nums">#{rank}</span>
           <span className="text-[18px] font-semibold text-ink tabular-nums leading-none">
             {path.count}
           </span>
-          <span className="text-[11.5px] text-ink-soft">
+          <span className="text-[12px] text-ink-soft">
             sessie{path.count === 1 ? '' : 's'}
           </span>
         </div>
-        <span className="text-[11.5px] text-ink-mute tabular-nums shrink-0">
+        <span className="text-[12px] text-ink-soft tabular-nums shrink-0">
           {path.sharePercent.toFixed(0)}% v/d totaal
         </span>
       </div>
       <PathSteps steps={path.steps} />
       {path.personas.length > 0 && (
-        <div className="mt-2.5 flex flex-wrap gap-x-2.5 gap-y-0.5 text-[11px] text-ink-mute">
-          <span className="font-medium uppercase tracking-wider text-[9.5px] text-ink-mute">
+        <div className="mt-2.5 flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5 text-[11.5px] text-ink-soft">
+          <span className="font-semibold uppercase tracking-wider text-[10px] text-ink-soft">
             Persona:
           </span>
           {path.personas.slice(0, 4).map((p) => (
             <span key={p.key}>
-              {p.label} <span className="font-semibold text-ink-soft">{p.count}</span>
+              {p.label} <span className="font-semibold text-ink">{p.count}</span>
             </span>
           ))}
         </div>

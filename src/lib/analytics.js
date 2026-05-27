@@ -742,12 +742,14 @@ export function buildTopPaths(sessions, { limit = 5, minVolume = 2 } = {}) {
         steps,
         count: 0,
         personas: new Map(),
+        sessionIds: new Set(),  // voor cross-highlight in de Sankey
         completed,
       })
     }
     const g = groups.get(signature)
     g.count += 1
     g.personas.set(persona, (g.personas.get(persona) || 0) + 1)
+    if (s.sessionId) g.sessionIds.add(s.sessionId)
   }
 
   const enrich = (g) => ({
@@ -755,6 +757,7 @@ export function buildTopPaths(sessions, { limit = 5, minVolume = 2 } = {}) {
     steps:         g.steps,
     count:         g.count,
     completed:     g.completed,
+    sessionIds:    g.sessionIds,
     personas:      [...g.personas.entries()]
                      .sort((a, b) => b[1] - a[1])
                      .map(([key, count]) => ({ key, label: pathPersonaLabel(key), count })),
