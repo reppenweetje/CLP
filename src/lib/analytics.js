@@ -627,6 +627,141 @@ function nodeColorFor(kind) {
 }
 
 // ============================================================================
+// Top paths (sales-actionable winners + leaks)
+// ============================================================================
+//
+// Doel: top-N meest voorkomende routes door de chat, gesplitst in voltooid
+// vs afhaak. Beantwoordt "wat werkt" en "waar verliezen we de meeste leads"
+// in tegenstelling tot de Sankey die de volledige routekaart toont.
+//
+// Pad-signatuur = volgorde van labels per stap, joined met " → ". Sessies
+// die exact dezelfde keten doorlopen worden geclusterd; aantal per cluster
+// is de "count". Persona-mix wordt per cluster bijgehouden zodat sales
+// kan zien "Brochure ja → email → ✓" wordt vooral door beleggers gedaan.
+
+// Events die meedoen in de pad-signatuur. NB: session:start en
+// intro:cta-clicked weggelaten omdat die ruis toevoegen aan vrijwel elk
+// pad (iedereen begint immers met sessie + cta-klik).
+function pathStepFor(ev, session) {
+  const t = ev.type
+  const p = ev.payload || {}
+  switch (t) {
+    case 'intent:answered':
+      return { label: pathPersonaLabel(p.persona || session.persona || 'onbekend'), kind: 'persona' }
+    case 'brochure-trigger:answered': {
+      const ja = p.id === 'ja'
+      return { label: ja ? 'Brochure ja' : 'Brochure nee', kind: ja ? 'choice' : 'exit' }
+    }
+    case 'lead-name:submitted':   return { label: 'Naam',     kind: 'step' }
+    case 'lead-email:submitted':  return { label: 'E-mail',   kind: 'step' }
+    case 'size:answered':         return { label: 'Grootte',  kind: 'step' }
+    case 'timeline:answered':     return { label: 'Termijn',  kind: 'step' }
+    case 'lead-phone-ask:answered': {
+      const yes = p.id === 'yes' || p.id === 'ja'
+      return { label: yes ? 'WA ja' : 'WA nee', kind: 'choice' }
+    }
+    case 'lead-phone:submitted':  return { label: 'Telefoon', kind: 'step' }
+    case 'followup:answered':     return { label: p.label || p.id || 'Vervolg', kind: 'choice' }
+    case 'direct-contact:requested': return { label: 'Direct contact', kind: 'step' }
+    case 'warm-handoff:callback': return { label: 'Callback', kind: 'choice' }
+    case 'warm-handoff:whatsapp': return { label: 'WA-handoff', kind: 'choice' }
+    case 'warm-handoff:phone':    return { label: 'Bel-handoff', kind: 'choice' }
+    case 'afhaak-reason:answered':
+      return { label: `Afhaak: ${p.label || p.id || 'reden'}`, kind: 'exit' }
+    case 'flow:complete':
+      return { label: `✓ ${p.stage || 'voltooid'}`, kind: 'done' }
+    default:
+      return null
+  }
+}
+
+function pathPersonaLabel(key) {
+  switch (key) {
+    case 'eigen_gebruiker': return 'Eigen bedrijf'
+    case 'belegger':        return 'Belegger'
+    case 'beide':           return 'Beide'
+    case 'huurder':         return 'Huurder'
+    case 'onbekend':        return 'Onbekend'
+    default:                return key
+  }
+}
+
+// limit = aantal items per groep (voltooid resp. afhaak)
+// minVolume = minimum aantal sessies voor een pad om als "patroon" te
+//             tellen. Bij weinig data tonen we ook 1-sessie paden zodat
+//             er iets te zien is.
+export function buildTopPaths(sessions, { limit = 5, minVolume = 2 } = {}) {
+  const total = Array.isArray(sessions) ? sessions.length : 0
+  if (total === 0) return { completed: [], abandoned: [], total: 0 }
+
+  const groups = new Map()
+
+  for (const s of sessions) {
+    const events = Array.isArray(s.events) ? s.events : []
+    const steps = []
+    for (const ev of events) {
+      const step = pathStepFor(ev, s)
+      if (step) steps.push(step)
+    }
+    if (steps.length === 0) continue
+
+    const completed = !!s.completed
+    // Markeer abandons zonder expliciete afhaak-reden met een generieke exit.
+    if (!completed) {
+      const last = steps[steps.length - 1]
+      if (last.kind !== 'exit' && last.kind !== 'done') {
+        steps.push({ label: 'Verlaten', kind: 'exit' })
+      }
+    }
+
+    const signature = steps.map((st) => st.label).join(' → ')
+    const persona = s.persona || 'onbekend'
+
+    if (!groups.has(signature)) {
+      groups.set(signature, {
+        signature,
+        steps,
+        count: 0,
+        personas: new Map(),
+        completed,
+      })
+    }
+    const g = groups.get(signature)
+    g.count += 1
+    g.personas.set(persona, (g.personas.get(persona) || 0) + 1)
+  }
+
+  const enrich = (g) => ({
+    signature:     g.signature,
+    steps:         g.steps,
+    count:         g.count,
+    completed:     g.completed,
+    personas:      [...g.personas.entries()]
+                     .sort((a, b) => b[1] - a[1])
+                     .map(([key, count]) => ({ key, label: pathPersonaLabel(key), count })),
+    sharePercent:  total > 0 ? (g.count / total) * 100 : 0,
+  })
+
+  // Twee-traps filtering: eerst proberen met minVolume; als de top-lijst
+  // dan leeg is val terug op alles (zodat we bij weinig data toch iets
+  // tonen ipv een lege staat).
+  const all = [...groups.values()].map(enrich)
+  const sortByCount = (a, b) => b.count - a.count
+
+  let completed = all.filter((g) => g.completed && g.count >= minVolume).sort(sortByCount).slice(0, limit)
+  let abandoned = all.filter((g) => !g.completed && g.count >= minVolume).sort(sortByCount).slice(0, Math.max(3, Math.ceil(limit * 0.6)))
+
+  if (completed.length === 0) {
+    completed = all.filter((g) => g.completed).sort(sortByCount).slice(0, limit)
+  }
+  if (abandoned.length === 0) {
+    abandoned = all.filter((g) => !g.completed).sort(sortByCount).slice(0, Math.max(3, Math.ceil(limit * 0.6)))
+  }
+
+  return { completed, abandoned, total }
+}
+
+// ============================================================================
 // Time to conversion histogram
 // ============================================================================
 

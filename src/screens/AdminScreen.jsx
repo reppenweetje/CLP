@@ -38,6 +38,7 @@ import RealTimeTile from '../components/admin/RealTimeTile.jsx'
 import HotLeads from '../components/admin/HotLeads.jsx'
 import RegistrationsList from '../components/admin/RegistrationsList.jsx'
 import LeadDetail from '../components/admin/LeadDetail.jsx'
+import TopPaths from '../components/admin/TopPaths.jsx'
 import ErrorBoundary from '../components/admin/ErrorBoundary.jsx'
 import ABSignificance from '../components/admin/ABSignificance.jsx'
 import CohortHeatmap from '../components/admin/CohortHeatmap.jsx'
@@ -408,8 +409,11 @@ function AdminScreenInner() {
             <AIWeeklySummary sessions={sessions} />
           </section>
 
-          {/* Route */}
-          <section id="route" className="scroll-mt-24">
+          {/* Route — Top paden (actie) boven Sankey (overview) */}
+          <section id="route" className="scroll-mt-24 space-y-5">
+            <ErrorBoundary label="TopPaths">
+              <TopPaths sessions={sessions} />
+            </ErrorBoundary>
             <ErrorBoundary label="Sankey">
               <SankeyFlow sessions={sessions} />
             </ErrorBoundary>
