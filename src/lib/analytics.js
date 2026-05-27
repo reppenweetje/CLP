@@ -633,14 +633,27 @@ export function buildSankey(sessions, { branchOnPersona = false } = {}) {
       prev = id
     }
     if (prev && !s.completed) {
-      const exitId = '⚠ Verlaten'
-      addNode(exitId, { label: 'Verlaten', kind: 'exit', persona: null })
-      if (!nodeSessions.has(exitId)) nodeSessions.set(exitId, new Set())
-      nodeSessions.get(exitId).add(s.sessionId)
-      const linkKey = addLink(prev, exitId)
-      if (linkKey) {
-        if (!linkSessions.has(linkKey)) linkSessions.set(linkKey, new Set())
-        linkSessions.get(linkKey).add(s.sessionId)
+      const prevMeta = nodeMeta.get(prev)
+      // Skip dubbele exit als de laatste stap al een exit/done is
+      // (vb: prev = ⊥ Bounce uit een echt intro:bounced event, of een
+      // Afhaak: reden, of ✓ voltooid pad — geen Verlaten erbij plakken).
+      if (prevMeta?.kind !== 'exit' && prevMeta?.kind !== 'done') {
+        // Silent bouncer: laatste step is 'Bezoek' = alleen intro:viewed
+        // gevuurd en daarna stilte. Convergeer naar dezelfde ⊥ Bounce-node
+        // als waar expliciete intro:bounced-events terechtkomen, zodat
+        // we niet twee parallelle paden hebben voor identiek gedrag.
+        const isSilentBounce = prevMeta?.label === 'Bezoek'
+        const exitId = isSilentBounce ? (personaTag + '⊥ Bounce') : '⚠ Verlaten'
+        const exitLabel = isSilentBounce ? '⊥ Bounce' : 'Verlaten'
+        const exitPersona = isSilentBounce ? personaShort : null
+        addNode(exitId, { label: exitLabel, kind: 'exit', persona: exitPersona })
+        if (!nodeSessions.has(exitId)) nodeSessions.set(exitId, new Set())
+        nodeSessions.get(exitId).add(s.sessionId)
+        const linkKey = addLink(prev, exitId)
+        if (linkKey) {
+          if (!linkSessions.has(linkKey)) linkSessions.set(linkKey, new Set())
+          linkSessions.get(linkKey).add(s.sessionId)
+        }
       }
     }
   }
