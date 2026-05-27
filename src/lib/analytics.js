@@ -674,6 +674,137 @@ function nodeColorFor(kind) {
 }
 
 // ============================================================================
+// Referrer / bron-breakdown — top-of-funnel attributie
+// ============================================================================
+//
+// Classificeert elke sessie naar een leesbare bron (Facebook, Instagram,
+// Google, Direct, ...) op basis van utm_source (prioriteit) of referrer.
+// Aggregeert dan per bron: visits, cta-klik-rate, voltooi-rate, lead-rate,
+// bounce-rate. Geeft sales/marketing direct inzicht in welke kanalen het
+// best converteren.
+//
+// NB: data komt uit intro:viewed event. Sessies van vóór dat event
+// bestond worden als "Geen tracking" gegroepeerd zodat de coverage
+// eerlijk is.
+
+const SOURCE_HOST_PATTERNS = [
+  { match: /facebook\.com|fb\.com|fb\.me|m\.facebook/i,        label: 'Facebook' },
+  { match: /instagram\.com|l\.instagram|ig\.me/i,              label: 'Instagram' },
+  { match: /linkedin\.com|lnkd\.in/i,                          label: 'LinkedIn' },
+  { match: /tiktok\.com/i,                                     label: 'TikTok' },
+  { match: /youtube\.com|youtu\.be/i,                          label: 'YouTube' },
+  { match: /whatsapp\.com|wa\.me/i,                            label: 'WhatsApp' },
+  { match: /google\.[a-z]+/i,                                  label: 'Google' },
+  { match: /bing\.com|duckduckgo\.com/i,                       label: 'Search (overig)' },
+  { match: /funda\.nl/i,                                       label: 'Funda' },
+  { match: /dehofman\.nl/i,                                    label: 'De Hofman.nl' },
+  { match: /uitgifte\.com/i,                                   label: 'Uitgifte.com' },
+  { match: /repp\.(ai|nl)|kopen\.repp/i,                       label: 'REPP-eigen' },
+]
+
+const UTM_LABEL_MAP = {
+  fb:        'Facebook',
+  facebook:  'Facebook',
+  ig:        'Instagram',
+  instagram: 'Instagram',
+  meta:      'Facebook / Instagram',
+  google:    'Google',
+  adwords:   'Google',
+  bing:      'Bing',
+  linkedin:  'LinkedIn',
+  tiktok:    'TikTok',
+  youtube:   'YouTube',
+  whatsapp:  'WhatsApp',
+  email:     'E-mail',
+  newsletter:'Nieuwsbrief',
+  direct:    'Direct',
+}
+
+function classifySource(payload) {
+  if (!payload) return 'Geen tracking'
+  // utm_source heeft voorrang (door advertiser ingesteld, betrouwbaarder)
+  const utm = (payload.utm_source || '').trim().toLowerCase()
+  if (utm) {
+    return UTM_LABEL_MAP[utm] || (utm.charAt(0).toUpperCase() + utm.slice(1))
+  }
+  const ref = (payload.referrer || '').trim()
+  if (!ref) return 'Direct'
+  try {
+    const url = new URL(ref)
+    const host = url.hostname.toLowerCase()
+    for (const p of SOURCE_HOST_PATTERNS) {
+      if (p.match.test(host)) return p.label
+    }
+    return host.replace(/^www\./, '')
+  } catch {
+    return 'Onbekend'
+  }
+}
+
+export function buildReferrerBreakdown(sessions) {
+  const m = new Map()
+  function bucket(source) {
+    if (!m.has(source)) {
+      m.set(source, {
+        source,
+        visits: 0,
+        ctaClicks: 0,
+        bounces: 0,
+        completions: 0,
+        leads: 0,
+        dwellSum: 0,
+        dwellCount: 0,
+        utmSet: new Set(),
+        campaignSet: new Set(),
+      })
+    }
+    return m.get(source)
+  }
+
+  for (const s of sessions) {
+    const viewedEv = s.events?.find?.((e) => e.type === 'intro:viewed')
+    const source = viewedEv ? classifySource(viewedEv.payload) : 'Geen tracking'
+    const stats = bucket(source)
+    stats.visits++
+
+    if (viewedEv?.payload?.utm_medium) stats.utmSet.add(viewedEv.payload.utm_medium)
+    if (viewedEv?.payload?.utm_campaign) stats.campaignSet.add(viewedEv.payload.utm_campaign)
+
+    const hasCta = s.events?.some?.((e) => e.type === 'intro:cta-clicked')
+    const hasBounce = s.events?.some?.((e) => e.type === 'intro:bounced')
+    if (hasCta) stats.ctaClicks++
+    if (hasBounce) {
+      stats.bounces++
+      const dwell = s.events.find((e) => e.type === 'intro:bounced')?.payload?.dwellMs
+      if (typeof dwell === 'number') {
+        stats.dwellSum += dwell
+        stats.dwellCount++
+      }
+    }
+    if (s.completed) stats.completions++
+    if (s.lead?.email || s.lead?.phone) stats.leads++
+  }
+
+  return [...m.values()]
+    .map((s) => ({
+      source: s.source,
+      visits: s.visits,
+      ctaClicks: s.ctaClicks,
+      bounces: s.bounces,
+      completions: s.completions,
+      leads: s.leads,
+      ctaRate:        s.visits > 0 ? (s.ctaClicks / s.visits) * 100 : 0,
+      completionRate: s.visits > 0 ? (s.completions / s.visits) * 100 : 0,
+      leadRate:       s.visits > 0 ? (s.leads / s.visits) * 100 : 0,
+      bounceRate:     s.visits > 0 ? (s.bounces / s.visits) * 100 : 0,
+      avgDwellSec:    s.dwellCount > 0 ? Math.round(s.dwellSum / s.dwellCount / 1000) : null,
+      mediums:        [...s.utmSet],
+      campaigns:      [...s.campaignSet],
+    }))
+    .sort((a, b) => b.visits - a.visits)
+}
+
+// ============================================================================
 // Top paths (sales-actionable winners + leaks)
 // ============================================================================
 //

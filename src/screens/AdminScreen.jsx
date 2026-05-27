@@ -40,6 +40,7 @@ import HotLeads from '../components/admin/HotLeads.jsx'
 import RegistrationsList from '../components/admin/RegistrationsList.jsx'
 import LeadDetail from '../components/admin/LeadDetail.jsx'
 import TopPaths from '../components/admin/TopPaths.jsx'
+import ReferrerBreakdown from '../components/admin/ReferrerBreakdown.jsx'
 import ErrorBoundary from '../components/admin/ErrorBoundary.jsx'
 import ABSignificance from '../components/admin/ABSignificance.jsx'
 import CohortHeatmap from '../components/admin/CohortHeatmap.jsx'
@@ -54,6 +55,7 @@ import SupabaseQueueTile from '../components/admin/SupabaseQueueTile.jsx'
 const SECTIONS = [
   { id: 'overview', label: 'Overzicht' },
   { id: 'registraties', label: 'Registraties' },
+  { id: 'bronnen',  label: 'Bronnen' },
   { id: 'insights', label: 'Insights' },
   { id: 'route',    label: 'Route' },
   { id: 'bubbles',  label: 'Bubbles + leads' },
@@ -431,6 +433,13 @@ function AdminScreenInner() {
               showArchived={leadsShowArchived}
               onToggleArchived={() => setLeadsShowArchived((v) => !v)}
             />
+          </section>
+
+          {/* Bronnen — effectiviteit per kanaal (utm/referrer) */}
+          <section id="bronnen" className="scroll-mt-24">
+            <ErrorBoundary label="Bronnen">
+              <ReferrerBreakdown sessions={sessions} />
+            </ErrorBoundary>
           </section>
 
           {/* Insights */}

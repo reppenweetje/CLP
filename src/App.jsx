@@ -883,9 +883,19 @@ function Demo() {
     let bounced = false
     let started = false
 
+    // Bron-attributie: utm-params hebben voorrang (expliciet door ads-tool
+    // ingesteld), referrer als fallback. Hostname van current url voor
+    // multi-tenant tracking. Alles compact in 1 event zodat de
+    // analytics-pipeline 't met één query kan groeperen.
+    const params = new URLSearchParams(window.location.search)
     trackEvent('intro:viewed', {
       copyVariant,
-      referrer: document.referrer || null,
+      referrer:     document.referrer || null,
+      utm_source:   params.get('utm_source')   || null,
+      utm_medium:   params.get('utm_medium')   || null,
+      utm_campaign: params.get('utm_campaign') || null,
+      utm_content:  params.get('utm_content')  || null,
+      url_host:     window.location.hostname || null,
     })
 
     function maybeBounce() {
