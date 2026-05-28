@@ -159,7 +159,7 @@ export const project = {
         { number: 8, type: 'XL', state: 'sold' },
         { number: 9, type: 'L', state: 'sold' },
         { number: 10, type: 'L', state: 'sold' },
-        { number: 11, type: 'L', state: 'sold_ov' },
+        { number: 11, type: 'L', state: 'sold' },
         { number: 12, type: 'L', state: 'sold_ov' },
         { number: 13, type: 'L', state: 'sold_ov' },
         { number: 14, type: 'XXL', state: 'coming_soon' },
