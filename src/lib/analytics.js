@@ -75,6 +75,11 @@ function autoSessionProps() {
     if (copy === 'a' || copy === 'b') out.copyVariant = copy
     const cta  = window.localStorage.getItem('clp-cta-variant')
     if (cta) out.ctaVariant = cta
+    // Intro-screen A/B (show = klassieke landing, skip = direct chat).
+    // Auto-inject zodat Plausible/Supabase conversie kan vergelijken op
+    // elke downstream stap (lead, reservation, handoff, etc.).
+    const intro = window.localStorage.getItem('clp-intro-variant')
+    if (intro === 'show' || intro === 'skip') out.introVariant = intro
     return out
   } catch { return {} }
 }

@@ -45,12 +45,16 @@ import AdminScreen from './screens/AdminScreen.jsx'
 import SmartResumeBanner from './components/SmartResumeBanner.jsx'
 import RescueNudge from './components/RescueNudge.jsx'
 import ExitIntentPrompt from './components/ExitIntentPrompt.jsx'
-import { useSmartResume, useInactivityRescue, useExitIntent, getOrAssignVariant } from './lib/engagement.js'
+import { useSmartResume, useInactivityRescue, useExitIntent, getOrAssignVariant, getOrAssignIntroVariant } from './lib/engagement.js'
 import { detectCurrentIp } from './lib/ipExclusion.js'
 let _id = 0
 const nextId = () => ++_id
 const STORAGE_KEY = 'clp-state-v5'
 const initial = {
+  // Default = 'intro'. Bij cold-start bepaalt de useReducer-initializer
+  // (zie Demo()) of we deze waarde overschrijven naar 'chat' op basis van
+  // de intro-A/B-variant ('skip' = direct chat, 'show' = klassieke landing).
+  // Persisted state houdt zijn eigen view-waarde (logo-back-pad blijft werken).
   view: 'intro',
   messages: [],
   messageQueue: [],
@@ -111,18 +115,21 @@ function reducer(state, action) {
       // Variant uit action gebruiken; default 'a' als afwezig (server-side
       // render of pre-engagement init).
       const copyVariant = action.copyVariant || 'a'
-      // Eerste bubble direct in beeld (anders blijft het scherm leeg met
-      // typing-indicator), de rest in de release-queue.
+      // typeFirst: zet ook de eerste begroeting in de release-queue zodat de
+      // bezoeker eerst de typing-indicator ziet — voelt meer als een echte
+      // conversatie die opstart. Gebruikt door de 'skip'-arm van het
+      // intro-A/B (zie auto-start useEffect in Demo). De 'show'-arm geeft
+      // typeFirst niet mee zodat de bubble direct verschijnt na de klik op
+      // "Start chat" (anders voelt die klik laggy).
+      const typeFirst = action.typeFirst === true
+      const greeting = { kind: 'bot-text', text: `Hoi, ik ben ${bot.name} van ${bot.org}.` }
+      const followup = { kind: 'bot-text', text: 'Om de juiste brochure en prijzen met je te delen heb ik een korte vraag.' }
+      const question = { kind: 'bot-text', text: getLabel('intent', copyVariant) }
       return {
         ...state,
         view: 'chat',
-        messages: [
-          { id: nextId(), kind: 'bot-text', text: `Hoi, ik ben ${bot.name} van ${bot.org}.` },
-        ],
-        messageQueue: [
-          { kind: 'bot-text', text: 'Om de juiste brochure en prijzen met je te delen heb ik een korte vraag.' },
-          { kind: 'bot-text', text: getLabel('intent', copyVariant) },
-        ],
+        messages: typeFirst ? [] : [{ id: nextId(), ...greeting }],
+        messageQueue: typeFirst ? [greeting, followup, question] : [followup, question],
         currentQuestion: 'intent',
       }
     }
@@ -633,7 +640,12 @@ function Demo() {
         debugOpen: false,
       }
     }
-    return init
+    // Cold start: kies variant en zet de initiële view. Door dit synchroon
+    // in de initializer te doen zien 'skip'-bezoekers geen IntroScreen-flits
+    // voordat React de eerste useEffect heeft uitgevoerd. start() wordt later
+    // door de auto-start-effect aangeroepen om de eerste bot-bubble te queuen.
+    const introVariant = getOrAssignIntroVariant()
+    return { ...init, view: introVariant === 'skip' ? 'chat' : 'intro' }
   })
   const [answersOpen, setAnswersOpen] = useState(false)
   const [optionsSheetOpen, setOptionsSheetOpen] = useState(false)
@@ -932,7 +944,14 @@ function Demo() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.view, state.messages.length])
 
-  const start = (variant) => {
+  const start = (variant, options = {}) => {
+    // typeFirst (default false): laat ook de eerste begroeting via de
+    // typing-queue verschijnen ipv direct in beeld. Gebruikt door de
+    // 'skip'-arm van het intro-A/B (auto-start zonder CTA-klik) — daar
+    // voelt een korte typing-pauze meer als een conversatie die opstart.
+    // De 'show'-arm klikt actief op "Start chat" en krijgt typeFirst=false
+    // zodat de bubble meteen verschijnt en de klik niet laggy aanvoelt.
+    const { typeFirst = false } = options
     // Hervat-pad: bezoeker kwam via het header-logo terug naar intro met
     // chat-historie nog intact. We schakelen alleen view om en bewaren de
     // bestaande sessie + alle antwoorden zodat de chat verder loopt waar
@@ -947,8 +966,21 @@ function Demo() {
     trackEvent('session:start', { variant, copyVariant })
     trackEvent('intro:cta-clicked', { variant, copyVariant })
     logSessionStartConsent()
-    dispatch({ type: 'START_CHAT', bot: project.salesTeam?.bot, copyVariant })
+    dispatch({ type: 'START_CHAT', bot: project.salesTeam?.bot, copyVariant, typeFirst })
   }
+  // Intro-A/B: log de toegewezen variant zodat we 'm naast conversie-events
+  // kunnen analyseren. Wanneer de bezoeker in de 'skip'-arm zit en nog geen
+  // chat-historie heeft, starten we de chat meteen — start() detecteert zelf
+  // cold-start (geen messages → nieuwe sessie + START_CHAT) versus hervat
+  // (al messages aanwezig, bv. logo-back-pad → RESUME_CHAT).
+  useEffect(() => {
+    const introVariant = getOrAssignIntroVariant()
+    try { trackEvent('intro:variant-assigned', { introVariant }) } catch {}
+    if (introVariant === 'skip' && state.messages.length === 0) {
+      start(undefined, { typeFirst: true })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   // Klik op REPP-logo in de header tijdens chat: terugnavigatie naar de
   // IntroScreen zonder progress-verlies. start() detecteert daarna de
   // bestaande messages en hervat de chat ipv 'em opnieuw te beginnen.
