@@ -45,12 +45,16 @@ import AdminScreen from './screens/AdminScreen.jsx'
 import SmartResumeBanner from './components/SmartResumeBanner.jsx'
 import RescueNudge from './components/RescueNudge.jsx'
 import ExitIntentPrompt from './components/ExitIntentPrompt.jsx'
-import { useSmartResume, useInactivityRescue, useExitIntent, getOrAssignVariant } from './lib/engagement.js'
+import { useSmartResume, useInactivityRescue, useExitIntent, getOrAssignVariant, getOrAssignIntroVariant } from './lib/engagement.js'
 import { detectCurrentIp } from './lib/ipExclusion.js'
 let _id = 0
 const nextId = () => ++_id
 const STORAGE_KEY = 'clp-state-v5'
 const initial = {
+  // Default = 'intro'. Bij cold-start bepaalt de useReducer-initializer
+  // (zie Demo()) of we deze waarde overschrijven naar 'chat' op basis van
+  // de intro-A/B-variant ('skip' = direct chat, 'show' = klassieke landing).
+  // Persisted state houdt zijn eigen view-waarde (logo-back-pad blijft werken).
   view: 'intro',
   messages: [],
   messageQueue: [],
@@ -633,7 +637,12 @@ function Demo() {
         debugOpen: false,
       }
     }
-    return init
+    // Cold start: kies variant en zet de initiële view. Door dit synchroon
+    // in de initializer te doen zien 'skip'-bezoekers geen IntroScreen-flits
+    // voordat React de eerste useEffect heeft uitgevoerd. start() wordt later
+    // door de auto-start-effect aangeroepen om de eerste bot-bubble te queuen.
+    const introVariant = getOrAssignIntroVariant()
+    return { ...init, view: introVariant === 'skip' ? 'chat' : 'intro' }
   })
   const [answersOpen, setAnswersOpen] = useState(false)
   const [optionsSheetOpen, setOptionsSheetOpen] = useState(false)
@@ -949,6 +958,19 @@ function Demo() {
     logSessionStartConsent()
     dispatch({ type: 'START_CHAT', bot: project.salesTeam?.bot, copyVariant })
   }
+  // Intro-A/B: log de toegewezen variant zodat we 'm naast conversie-events
+  // kunnen analyseren. Wanneer de bezoeker in de 'skip'-arm zit en nog geen
+  // chat-historie heeft, starten we de chat meteen — start() detecteert zelf
+  // cold-start (geen messages → nieuwe sessie + START_CHAT) versus hervat
+  // (al messages aanwezig, bv. logo-back-pad → RESUME_CHAT).
+  useEffect(() => {
+    const introVariant = getOrAssignIntroVariant()
+    try { trackEvent('intro:variant-assigned', { introVariant }) } catch {}
+    if (introVariant === 'skip' && state.messages.length === 0) {
+      start()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   // Klik op REPP-logo in de header tijdens chat: terugnavigatie naar de
   // IntroScreen zonder progress-verlies. start() detecteert daarna de
   // bestaande messages en hervat de chat ipv 'em opnieuw te beginnen.
