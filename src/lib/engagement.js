@@ -190,3 +190,30 @@ export function getOrAssignVariant() {
 export function pickByVariant(variant, options) {
   return options[variant] ?? options.a ?? Object.values(options)[0]
 }
+
+// ── Intro-screen A/B variant ────────────────────────────────────────────────
+//
+// Bepaalt of een nieuwe bezoeker eerst de IntroScreen ziet ('show') of meteen
+// in de chat landt ('skip'). 50/50 random bij eerste bezoek, sticky in
+// localStorage zodat refreshes en revisits dezelfde ervaring krijgen.
+// Variant wordt door analytics.js autoSessionProps automatisch op elk event
+// gehangen als `introVariant`, dus Plausible/Supabase kunnen vergelijken
+// op conversie-stappen (lead-capture, reservation, etc.) zonder dat elke
+// trackEvent-call de variant expliciet hoeft mee te geven.
+//
+// Aparte key dan 'clp-variant' (copy A/B) en 'clp-cta-variant' (CTA-rotatie)
+// zodat de drie dimensies onafhankelijk meetbaar blijven.
+const INTRO_VARIANT_KEY = 'clp-intro-variant'
+
+export function getOrAssignIntroVariant() {
+  if (typeof window === 'undefined') return 'show'
+  try {
+    const existing = window.localStorage.getItem(INTRO_VARIANT_KEY)
+    if (existing === 'show' || existing === 'skip') return existing
+    const v = Math.random() < 0.5 ? 'show' : 'skip'
+    window.localStorage.setItem(INTRO_VARIANT_KEY, v)
+    return v
+  } catch {
+    return 'show'
+  }
+}
