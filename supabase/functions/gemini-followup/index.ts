@@ -1,13 +1,14 @@
-// Edge Function: gemini-followup (v14)
+// Edge Function: gemini-followup (v15)
 // Runtime:  Supabase Edge (Deno)
 // Purpose:  Genereer één WhatsApp follow-up bericht op basis van een
 //           lead-snapshot. Schrijft optioneel terug naar public.leads.
 //
+// v14 → v15:
+//   - ROUTE 2 spacing: opening + samenvattingszin staan op één blok met
+//     line-break tussen, geen witregel meer. Drie blokken structuur:
+//     begroeting / context / CTA. Visueel rustiger.
 // v13 → v14:
-//   - Afsluiting "Groet, Reppit, de slimme assistent van REPP" volledig
-//     geschrapt uit beide routes. Bericht eindigt nu na de sluitvraag/CTA
-//     zonder ondertekening. Reppit-naam komt niet meer voor in het bericht.
-//   - Karakterlimiet 500 → 400 + hard verbod sectie tegen groet/naam/signature.
+//   - Afsluiting "Groet, Reppit" geschrapt. Bericht eindigt na sluitvraag.
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4'

@@ -1,11 +1,13 @@
-// Prompt builder v14. Wijzigingen t.o.v. v13:
-//  - Afsluiting "Groet,\nReppit, de slimme assistent van REPP" volledig
-//    verwijderd uit BEIDE routes. Bericht eindigt nu na de sluitvraag/CTA
-//    zonder groet of naam. Reppit-naam komt niet meer voor in het bericht.
-//  - Karakterlimiet verlaagd 500 → 400 zodat Gemini geen ruimte heeft om
-//    spontaan toch een groet toe te voegen.
-//  - Nieuwe HARD VERBOD sectie: nooit afsluiten met groet, naam, signature
-//    of vergelijkbare ondertekening. Bericht stopt bij de vraag.
+// Prompt builder v15. Wijzigingen t.o.v. v14:
+//  - ROUTE 2: opening + samenvattingszin staan nu op ÉÉN blok met alleen
+//    een line-break ertussen (GEEN witregel). Voorheen had elke regel een
+//    eigen witregel ervoor — dat voelde gehakt. Witregel blijft wel tussen
+//    [begroeting → blok] en tussen [blok → CTA]. Vergelijkbaar met hoe je
+//    in een echt WhatsApp-bericht je gedachten groepeert per onderwerp.
+//  - ROUTE 1 (afhaak) blijft ongewijzigd — heeft maar één context-alinea
+//    dus daar speelt dit niet.
+//
+// v13 → v14 was: signoff "Groet, Reppit..." weg uit beide routes.
 
 export interface PromptInput {
   first_name?: string | null
@@ -246,16 +248,22 @@ const SYSTEM_PROMPT = [
   'ROUTE 2: NIET-AFHAAKLEAD — VASTE TEMPLATE',
   '==================================================',
   '── REGEL 1 — begroeting: "Hi {first_name}," of "Hi,"',
-  '── WITREGEL',
+  '── WITREGEL (één lege regel)',
   '── REGEL 2 — opening (LETTERLIJK): "Je hebt gisteren info van De Hofman opgevraagd en als het goed is een mail hierover ontvangen."',
-  '── WITREGEL (alleen als regel 3 wordt geschreven)',
+  '── LINE BREAK (alleen newline, GEEN witregel) — regel 3 staat DIRECT onder regel 2 in hetzelfde tekstblok',
   '── REGEL 3 — samenvattingszin (alleen als bruikbare info):',
   '    - persona/intent EN size: "Volgens mij zoek je een ruimte van ongeveer {size} {persona}."',
   '    - alleen size: "Volgens mij zoek je een ruimte van ongeveer {size}."',
   '    - alleen persona/intent: "Volgens mij kijk je naar deze units {persona}."',
-  '    - beide ontbreken: regel 3 EN de witregel ervoor volledig overslaan.',
-  '── WITREGEL',
+  '    - beide ontbreken: regel 3 volledig overslaan EN de line-break ervoor ook (regel 2 wordt dan direct gevolgd door de WITREGEL naar regel 4).',
+  '── WITREGEL (één lege regel)',
   '── REGEL 4 (LETTERLIJK): "Er zijn nog maar twee units beschikbaar. Wil je dat ik even met je meekijk of dit wat voor je kan zijn?"',
+  '',
+  'BELANGRIJK over formattering ROUTE 2:',
+  '- Tussen begroeting en blok-opening: WITREGEL (één lege regel).',
+  '- Tussen opening (regel 2) en samenvatting (regel 3): GEEN witregel, alleen line-break. Beide regels horen visueel bij hetzelfde "context-blok".',
+  '- Tussen blok en CTA-vraag (regel 4): WITREGEL.',
+  '- Resultaat: drie blokken (begroeting / context / CTA) met witregels ertussen. Binnen het context-blok geen extra witregels.',
   '',
   'DIT IS DE LAATSTE REGEL VAN HET BERICHT. GEEN GROET, GEEN NAAM, GEEN AFSLUITING HIERNA.',
   '',
@@ -266,12 +274,21 @@ const SYSTEM_PROMPT = [
   'Hi Peter,',
   '',
   'Je hebt gisteren info van De Hofman opgevraagd en als het goed is een mail hierover ontvangen.',
-  '',
   'Volgens mij zoek je een ruimte van ongeveer 200 m² (100 m² BG) voor je eigen bedrijf.',
   '',
   'Er zijn nog maar twee units beschikbaar. Wil je dat ik even met je meekijk of dit wat voor je kan zijn?',
   '',
-  'Einde voorbeeld. LET OP: het bericht stopt na regel 4. GEEN "Groet," en GEEN "Reppit" erna.',
+  'Einde voorbeeld. LET OP: bericht stopt na regel 4. GEEN "Groet," en GEEN "Reppit" erna. EN: opening + samenvatting staan op opeenvolgende regels ZONDER lege regel ertussen.',
+  '',
+  'EXACT OUTPUT-VOORBEELD met ALLEEN bruikbare info, geen samenvatting (first_name="Joost", persona="onbekend", size_id="weet_niet"):',
+  '',
+  'Hi Joost,',
+  '',
+  'Je hebt gisteren info van De Hofman opgevraagd en als het goed is een mail hierover ontvangen.',
+  '',
+  'Er zijn nog maar twee units beschikbaar. Wil je dat ik even met je meekijk of dit wat voor je kan zijn?',
+  '',
+  'Einde voorbeeld. Hier valt regel 3 weg, dus regel 2 → WITREGEL → regel 4.',
   '',
   '==================================================',
   'VEILIGHEIDSREGELS',
