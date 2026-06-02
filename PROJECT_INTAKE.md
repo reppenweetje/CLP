@@ -20,6 +20,27 @@
 | Korte omschrijving — 1 zin **(verplicht)** | ... | 14 hoogwaardige bedrijfsunits in Haarlem Waarderpolder. |
 | Sales-type **(verplicht)** | koop / huur / mixed | koop |
 | Unit-typologie **(verplicht)** | bv "2-laags bedrijfsunits" | 2-laags nieuwbouw bedrijfsunits |
+| **Portal-strategie** **(verplicht)** | `own-portal` / `kopen-repp-redirect` | own-portal |
+| **Portal-URL** **(verplicht)** | volledige URL waar de lead na lead-capture naartoe gaat | https://dehofman.nl |
+
+### Toelichting Portal-strategie
+
+| Strategie | Wanneer | Wat de lead krijgt |
+|---|---|---|
+| `own-portal` | Project heeft eigen dedicated portal-site (zoals dehofman.nl) | Unieke portal-code via mail + WhatsApp, gated content op eigen domein |
+| `kopen-repp-redirect` | Project gebruikt het algemene REPP-portal `kopen.repp.nl/<slug>` | Directe verwijzing zonder portal-code. Simpelere Brevo-mail (alleen brochure + bedankt) |
+
+Voor nieuwe projecten is `kopen-repp-redirect` de default — minder setup, geen aparte portal-site nodig.
+
+**Impact per strategie:**
+
+| Onderdeel | `own-portal` | `kopen-repp-redirect` |
+|---|---|---|
+| Aparte portal-repo nodig? | Ja (zoals projectportal voor De Hofman) | Nee |
+| Brevo email-template | Met portal-code (magic-link) | Zonder portal-code (alleen brochure-link) |
+| CLP CTA na lead-capture | "Bekijk je portal" → eigen domein | "Bekijk meer" → `kopen.repp.nl/<slug>` |
+| WhatsApp-bericht (Gemini) | Identiek | Identiek (zegt "via mail ontvangen", werkt voor beide) |
+| Externe setup-tijd | +2-4u (portal-site bouwen) | Geen extra |
 
 ---
 

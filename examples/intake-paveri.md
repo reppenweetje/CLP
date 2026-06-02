@@ -17,6 +17,8 @@
 | Korte omschrijving | 18 moderne bedrijfsunits in Almere De Vaart, vlak naast de A6. |
 | Sales-type | koop |
 | Unit-typologie | 2-laags nieuwbouw bedrijfsunits met overheaddeur |
+| Portal-strategie | kopen-repp-redirect |
+| Portal-URL | https://kopen.repp.nl/paveri |
 
 ---
 
@@ -199,7 +201,8 @@ volledig uitgegeven; vergelijkbare projecten zijn er voorlopig niet.
 ## H. Externe accounts
 
 - [x] Domein: paveri.clp.repp.nl (via REPP-DNS bij Cloudflare)
-- [x] Brevo: REPP-account hergebruiken, nieuwe PORTAL_PAVERI lijst aanmaken
+- [x] Geen aparte portal-site nodig (portal-strategie = kopen-repp-redirect) — lead gaat na lead-capture direct naar kopen.repp.nl/paveri
+- [x] Brevo: REPP-account hergebruiken, nieuwe PAVERI_LEADS lijst aanmaken (zonder portal-code, alleen brochure-email)
 - [x] Meta Pixel: bestaande REPP-pixel hergebruiken, events taggen met project=paveri
 - [x] Plausible: bestaande REPP-account, subdomein paveri.clp.repp.nl toevoegen
 - [x] GitHub: REPP-team toegang
