@@ -43,6 +43,46 @@ Voor nu: focus op **archetype "bedrijfsunits-koop"** (Paveri / Animo / Elst BUni
 
 ---
 
+## HARD REQUIREMENT: zero-downtime voor De Hofman
+
+De Hofman's productie-CLP draait nu live en mag op geen enkel moment functioneel breken tijdens deze refactor. Dit is regel #1.
+
+**Wat dit betekent voor elke fase:**
+
+- Geen Big Bang. Elke fase = aparte branch + PR. Geen direct push naar main.
+- Vercel maakt voor elke PR een preview-URL. Test daar voor je merget.
+- Loader heeft altijd `|| dehofman` fallback zodat een hostname-mismatch terugvalt op huidig gedrag.
+- Per fase een expliciete **smoke-test checklist** die Claude moet doorlopen vóór hij om merge vraagt:
+  - [ ] `npm run build` is groen
+  - [ ] `grep -r "De Hofman" src/ --include="*.{js,jsx}"` levert alleen `projects/dehofman.js` of comments op
+  - [ ] Localhost: open `npm run dev`, doorloop chat-flow tot lead-capture, geen visuele regressies
+  - [ ] Localhost: console heeft geen errors of warnings
+  - [ ] Preview-URL: bezoek als anonieme bezoeker (incognito), zelfde test
+  - [ ] Preview-URL: admin opent na inloggen, KPI-tegels tonen data
+  - [ ] Voor Fase 2: cURL-test van gemini-followup met De Hofman snapshot → output identiek aan vóór de wijziging
+  - [ ] Voor Fase 6: cURL-test API-route met `host: dehofman.clp.repp.nl` header → Slack-notif in juist kanaal
+
+- Bij twijfel: niet mergen. Vraag Flip eerst.
+- Rollback-strategie: Vercel deploy-history (één klik), Supabase edge function version-history (één SQL-call), `git revert` voor frontend.
+
+**Fase-volgorde van laag- naar hoog-risico:**
+
+| Fase | Risico voor De Hofman live |
+|---|---|
+| 3 (INTAKE doc) | nul — alleen Markdown |
+| 4 (RUNBOOK doc) | nul — alleen Markdown |
+| 5 (WIZARD update) | nul — alleen Markdown |
+| 7 (handoff doc) | nul — alleen Markdown |
+| 1 (hostname-loader + decoupling) | medium — code-refactor, breed bereik |
+| 2 (Gemini-prompt) | medium — kan WhatsApp-output breken |
+| 6 (API-routes hostname-aware) | medium — kan Slack/Brevo verkeerd routen |
+
+Aanbevolen volgorde: 3, 4, 5, 7 (docs eerst, geen risico). Dan 1 (de grote refactor, met intensieve smoke-test). Dan 2 (Gemini met cURL-validatie). Dan 6 (API-routes met integration-test). 
+
+Andere optie: 1 + 6 samen want ze raken vergelijkbare server-side surface. Beoordelen per geval.
+
+---
+
 ## Pre-flight afstemming (BEANTWOORD)
 
 | Vraag | Antwoord |
