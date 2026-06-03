@@ -51,10 +51,12 @@ function keepAlive(promise: Promise<unknown>): void {
 }
 
 const DEFAULT_ALLOWED = [
-  // CLP (dehofman.clp.repp.nl + Vercel preview)
+  // CLP-hostnames per project + lokale dev + Vercel preview
   'https://dehofman.clp.repp.nl',
+  'https://depaveri.clp.repp.nl',
   'https://clp-xi-tan.vercel.app',
   'http://localhost:5173',
+  'http://localhost:5174',
   'http://localhost:4173',
   // Portal (dehofman.nl + projectportal Vercel preview)
   'https://dehofman.nl',
