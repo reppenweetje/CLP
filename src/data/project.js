@@ -20,6 +20,7 @@
 // Zie TEMPLATE_DUPLICATION_PLAN.md voor de architectuur-toelichting.
 
 import * as dehofman from './projects/dehofman.js'
+import * as paveri   from './projects/paveri.js'
 
 // Map van hostname (zonder protocol of path) → module met { project, uspCardOrder }.
 // Productie-pattern: <slug>.clp.repp.nl.
@@ -27,6 +28,7 @@ import * as dehofman from './projects/dehofman.js'
 // voorkomende dev-flow. Voor andere projecten gebruik je VITE_PROJECT_OVERRIDE.
 const PROJECTS = {
   'dehofman.clp.repp.nl': dehofman,
+  'depaveri.clp.repp.nl': paveri,
   'localhost':            dehofman,
   '127.0.0.1':            dehofman,
 }
