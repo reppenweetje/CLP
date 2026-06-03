@@ -21,6 +21,7 @@
 // Zie ../../supabase/functions/lead-upsert/index.ts voor het server-contract.
 
 import { PRIVACY_STATEMENT_VERSION } from './consent.js'
+import { project } from '../data/project.js'
 
 const QUEUE_KEY = 'clp-lead-queue-v1'
 const MAX_QUEUE = 50          // hard cap zodat localStorage niet vol loopt
@@ -48,8 +49,22 @@ function anonKey() {
   return readEnv('VITE_SUPABASE_ANON_KEY', '')
 }
 
+// Source-key voor lead-tagging in Supabase + n8n routing + CRM project field.
+// Volgorde:
+//   1. VITE_CLP_SOURCE env-var (expliciet — preview-deploys kunnen 'em overriden)
+//   2. Hostname-afgeleid uit project.id (de-paveri → clp_depaveri)
+//   3. Fallback clp_dehofman (legacy default)
+//
+// Cruciaal voor hostname-aware routing: dehofman.clp.repp.nl en
+// depaveri.clp.repp.nl delen één Vercel-project (en dus één env-var),
+// dus de hostname-afleiding is wat ze uit elkaar trekt. Zonder dit
+// zouden Paveri-leads ten onrechte als clp_dehofman binnenkomen in
+// outbound_settings + n8n + Brevo.
 function source() {
-  return readEnv('VITE_CLP_SOURCE', 'clp_dehofman')
+  const envSrc = readEnv('VITE_CLP_SOURCE', '')
+  if (envSrc) return envSrc
+  const id = project?.id || 'de-hofman'
+  return `clp_${id.replace(/-/g, '')}`
 }
 
 // Master-switch om de Supabase-koppeling per Vercel-environment te kunnen
@@ -382,6 +397,7 @@ export function clearQueue() {
 
 const SOURCE_TO_TENANT = {
   clp_dehofman: 'dehofman',
+  clp_depaveri: 'depaveri',
   clp_uitgifte: 'uitgifte',
 }
 

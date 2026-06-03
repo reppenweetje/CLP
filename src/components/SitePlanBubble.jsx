@@ -22,6 +22,8 @@ export default function SitePlanBubble({ sitePlan, units, persona, onUnitView, o
       ...(r.left?.units || []),
       ...(r.right ? [r.right] : []),
     ]) || []),
+    ...(sitePlan.columns?.left?.sections?.flatMap((s) => s.units) || []),
+    ...(sitePlan.columns?.right?.units || []),
   ]
   const selected = allUnits.find((u) => u.number === selectedNumber)
   const selectedTypeData = selected ? units?.find((u) => u.type === selected.type) : null
@@ -70,7 +72,61 @@ export default function SitePlanBubble({ sitePlan, units, persona, onUnitView, o
             <div className="mt-3 relative">
               <div className="rounded-2xl bg-canvas-2 border border-mist-light p-3 flex gap-2 items-stretch">
                 <div className="flex-1 min-w-0">
-                  {sitePlan.layoutRows ? (
+                  {sitePlan.columns ? (
+                    // Columns-schema (Paveri-style L):
+                    //  - Outer grid heeft N rijen (1 per linker-section) en
+                    //    2 kolommen (links + rechts).
+                    //  - Elke linker-section pakt z'n eigen rij in kolom 1.
+                    //    Aspect-ratio cellen bepalen de natural row-heights.
+                    //  - De rechter-kolom STAPT met grid-row: 1 / span N
+                    //    over alle linker-rijen heen, dus de hoogte van
+                    //    rechts = som van alle linker-rij-hoogtes.
+                    //  - Inside rechter-kolom verdeelt repeat(M, 1fr) die
+                    //    hoogte in M gelijke cellen.
+                    // Effect: links is een nette stack (C-rij direct op
+                    // D-rij), rechts staat ernaast en strekt automatisch
+                    // tot diezelfde totaal-hoogte — zonder inflate-bug.
+                    (() => {
+                      const cols = sitePlan.columns
+                      const lFr = cols.leftFr ?? 78
+                      const rFr = cols.rightFr ?? 22
+                      const sections = cols.left?.sections || []
+                      const rightUnits = cols.right?.units || []
+                      return (
+                        <div
+                          className="grid gap-1"
+                          style={{
+                            gridTemplateColumns: `${lFr}fr ${rFr}fr`,
+                            gridTemplateRows: `repeat(${sections.length}, auto)`,
+                          }}
+                        >
+                          {sections.map((section, si) => (
+                            <div
+                              key={`s-${si}`}
+                              className="grid gap-1 min-w-0"
+                              style={{
+                                gridColumn: '1',
+                                gridRow: `${si + 1}`,
+                                gridTemplateColumns: `repeat(${section.cols}, minmax(0, 1fr))`,
+                              }}
+                            >
+                              {section.units.map((u) => renderUnit(u, selectedNumber, setSelectedNumber, onUnitView, section.aspect))}
+                            </div>
+                          ))}
+                          <div
+                            className="grid gap-1 min-w-0"
+                            style={{
+                              gridColumn: '2',
+                              gridRow: `1 / span ${Math.max(sections.length, 1)}`,
+                              gridTemplateRows: `repeat(${rightUnits.length}, minmax(0, 1fr))`,
+                            }}
+                          >
+                            {rightUnits.map((u) => renderUnit(u, selectedNumber, setSelectedNumber, onUnitView, 'fill'))}
+                          </div>
+                        </div>
+                      )
+                    })()
+                  ) : sitePlan.layoutRows ? (
                     // LayoutRows (Paveri-style): rij per rij specificeer je
                     // left-section + right-sidebar-cell. Empty left = lege
                     // ruimte (bv. middelste rij waar alleen sidebar-unit zit).
@@ -189,13 +245,17 @@ export default function SitePlanBubble({ sitePlan, units, persona, onUnitView, o
 function renderUnit(u, selectedNumber, setSelectedNumber, onUnitView, aspect) {
   const isSel = selectedNumber === u.number
   // aspect 'fill' = vul cel volledig (h-full w-full, geen vaste ratio).
-  // Gebruikt voor layoutRows sidebar-cellen die de hoogte van hun rij moeten
-  // matchen ipv hun eigen aspect-ratio te dicteren. Andere waardes
-  // (portrait/landscape/square) dicteren de cell-size via aspect-ratio.
+  // Gebruikt voor columns-schema rechter-cellen die de hoogte van hun rij
+  // moeten matchen ipv hun eigen aspect-ratio te dicteren. Geen min-h hier
+  // want dat zou de rechter-kolom oprekken voorbij de linker-natural-height
+  // (= inflate-bug). Andere waardes (portrait/tall/landscape/square)
+  // dicteren de cell-size via aspect-ratio. 'tall' is extra-portrait voor
+  // smalle units zoals Paveri's Type-D (8 cellen naast elkaar).
   const sizeClass =
-    aspect === 'fill'      ? 'w-full h-full min-h-[60px]' :
+    aspect === 'fill'      ? 'w-full h-full' :
     aspect === 'landscape' ? 'aspect-[5/3]' :
     aspect === 'square'    ? 'aspect-square' :
+    aspect === 'tall'      ? 'aspect-[2/5]' :
     'aspect-[3/4]'
   return (
     <button
@@ -213,7 +273,7 @@ function renderUnit(u, selectedNumber, setSelectedNumber, onUnitView, aspect) {
       }`}
       title={`unit ${u.number} ${u.type.toLowerCase()}`}
     >
-      <span className="absolute top-1 left-1.5 text-[9px] tracking-wider font-medium opacity-70">
+      <span className="absolute bottom-0.5 left-1 text-[7px] tracking-wider font-medium opacity-60 leading-none">
         {u.type.toLowerCase()}
       </span>
       <span className="absolute inset-0 flex items-center justify-center text-[14px] font-semibold">

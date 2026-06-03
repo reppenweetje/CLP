@@ -126,7 +126,19 @@ async function sendConsentToBackend(entry) {
   // Minimale payload: alleen session_id + source + één consent. De Edge
   // Function upsert't de leads-rij (geen overwrite van bestaande velden
   // omdat ze allemaal undefined zijn) en append't de consent_log-rij.
-  const source = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_CLP_SOURCE) || 'clp_dehofman'
+  //
+  // Source-key: env-var heeft voorrang, anders hostname-afgeleid via
+  // project.id (de-paveri → clp_depaveri). Spiegelt de logica in
+  // api.js + eventsApi.js zodat consent-log dezelfde tenant-tag krijgt.
+  let source = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_CLP_SOURCE) || ''
+  if (!source) {
+    try {
+      const { project } = await import('../data/project.js')
+      source = `clp_${(project?.id || 'de-hofman').replace(/-/g, '')}`
+    } catch {
+      source = 'clp_dehofman'
+    }
+  }
   await pushLead({
     session_id: sessionId,
     source,

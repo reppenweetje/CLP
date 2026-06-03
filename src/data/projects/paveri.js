@@ -13,23 +13,28 @@ export const project = {
   displayName: 'De Paveri',
   tagline: 'Ondernemen in de Zaanstreek.',
   shortDescription: '16 casco bedrijfsunits aan de Industrieweg 9 in Assendelft.',
-  hero: '/projects/depaveri/hero.jpg',
+  hero: '/projects/depaveri/project.jpg',
   logo: '/projects/depaveri/logo.svg',
-  exterior: '/projects/depaveri/exterieur.jpg',
+  exterior: '/projects/depaveri/project.jpg',
 
-  // Portal-strategie + URL. Voor De Paveri wijst de CLP-handoff naar het
-  // generieke REPP-portaal (kopen.repp.nl/depaveri) ipv eigen subsite.
-  // Brevo stuurt simpelere mail (geen portal-code), CtaBubble linkt direct.
+  // Portal-strategie. Voor De Paveri wijst de CLP-handoff naar het generieke
+  // REPP-portaal (kopen.repp.nl/depaveri) ipv eigen subsite. Brevo stuurt
+  // daardoor simpelere mail (geen portal-code), CtaBubble linkt direct door.
+  // De actuele portalUrl + portalLabel staan verderop bij de externe-config
+  // (rond regel 445) — bewust één bron van waarheid om mismatches te
+  // voorkomen.
   portalStrategy: 'kopen-repp-redirect',
-  portalUrl: 'https://kopen.repp.nl/depaveri',
 
-  // Gallery — gerenderd uit de officiële brochure (V2, 2026-05).
+  // Gallery — vijf schone sfeerimpressies die de hero-carousel doorloopt.
+  // Mix van wide-aerial, doorsnede, interieur en detail zodat bezoekers
+  // direct een goed gevoel krijgen bij het project. locatie.jpg is een
+  // kaart en hoort hier niet (die toont LocationBubble apart via aerialImage).
   gallery: [
-    { src: '/projects/depaveri/hero.jpg', alt: 'De Paveri exterieur in de avond' },
-    { src: '/projects/depaveri/cutaway.jpg', alt: 'Doorsnede De Paveri met units' },
-    { src: '/projects/depaveri/showroom.jpg', alt: 'Kantoorruimte ingericht als showroom' },
-    { src: '/projects/depaveri/exterieur.jpg', alt: 'De Paveri vanuit de straat' },
-    { src: '/projects/depaveri/detail-exterieur.jpg', alt: 'Detail gevel met overheaddeur' },
+    { src: '/projects/depaveri/project.jpg', alt: 'De Paveri exterieur overdag' },
+    { src: '/projects/depaveri/avond.jpg', alt: 'De Paveri units in de avond' },
+    { src: '/projects/depaveri/interieur.jpg', alt: 'Interieur Paveri unit met overheaddeur en trap' },
+    { src: '/projects/depaveri/doorsnede.jpg', alt: 'Doorsnede De Paveri met drie lagen interieurs' },
+    { src: '/projects/depaveri/detail.jpg', alt: 'De Paveri detail-gevel overdag' },
   ],
 
   // USP-cards voor de eerste micro-value moment.
@@ -40,63 +45,56 @@ export const project = {
       tag: 'Project',
       title: '16 bedrijfsunits in Assendelft',
       body: 'Hoogwaardige casco nieuwbouw op bedrijventerrein Assendelft Noord, geschikt voor ondernemers en beleggers.',
-      image: '/projects/depaveri/hero.jpg',
+      image: '/projects/depaveri/project.jpg',
     },
     {
       id: 'location',
       tag: 'Locatie',
       title: 'Strategisch in de Zaanstreek',
       body: 'Bedrijventerrein Assendelft Noord, dicht bij N8 en N203. NS Krommenie-Assendelft op 5 minuten fietsen.',
-      image: '/projects/depaveri/exterieur.jpg',
+      image: '/projects/depaveri/locatie.jpg',
     },
     {
       id: 'availability',
       tag: 'Beschikbaarheid',
       title: 'Nog 4 units beschikbaar',
       body: 'Type A en B uitverkocht. Type D bijna volledig vergeven. Vier Type C-units van 178 m² nog vrij.',
-      image: '/projects/depaveri/detail-exterieur.jpg',
+      image: '/projects/depaveri/avond.jpg',
     },
     {
       id: 'price',
       tag: 'Prijs',
       title: 'Vanaf €199.950 v.o.n. excl. btw',
       body: 'Type D van 112 m² vanaf €199.950, Type C van 178 m² voor €305.000. Vrij op naam, exclusief 21% btw.',
-      image: '/projects/depaveri/showroom.jpg',
-    },
-    {
-      id: 'unit-c',
-      tag: 'Unit C',
-      title: '178 m² over twee lagen',
-      body: 'Royale unit met 2 eigen parkeerplaatsen, overheaddeur 4 m breed en kantoor op de verdieping.',
-      image: '/projects/depaveri/showroom.jpg',
+      image: '/projects/depaveri/doorsnede.jpg',
     },
     {
       id: 'unit-d',
       tag: 'Unit D',
       title: '112 m² over twee lagen',
       body: 'Compacte instapunit met overheaddeur 3 m breed en 2 eigen parkeerplaatsen direct voor de deur.',
-      image: '/projects/depaveri/cutaway.jpg',
+      image: '/projects/depaveri/interieur.jpg',
     },
     {
       id: 'practical',
       tag: 'Praktisch',
       title: 'Overheaddeur en eigen parkeerplaats',
       body: 'Casco oplevering met meterkast, 3 x 25A elektra, riool, betonnen verdiepingsvloer en gasloze uitvoering.',
-      image: '/projects/depaveri/detail-exterieur.jpg',
+      image: '/projects/depaveri/praktisch.jpg',
     },
     {
       id: 'investor',
       tag: 'Belegging',
       title: 'Nieuwbouw in de Zaanstreek',
       body: 'Kleinschalig en flexibel indeelbaar. Bij belaste verhuur kunnen fiscale aandachtspunten spelen. Laat je daarover goed adviseren.',
-      image: '/projects/depaveri/cutaway.jpg',
+      image: '/projects/depaveri/doorsnede.jpg',
     },
     {
       id: 'all-in',
       tag: 'Vrij op naam',
       title: 'Geen overdrachtsbelasting',
       body: 'Levering vrij op naam. Geen 10,4% overdrachtsbelasting. Basisnutsaansluitingen tot €2.850 inbegrepen.',
-      image: '/projects/depaveri/showroom.jpg',
+      image: '/projects/depaveri/detail.jpg',
     },
   ],
 
@@ -104,7 +102,7 @@ export const project = {
     address: 'Industrieweg 9, Assendelft',
     city: 'Assendelft',
     district: 'Bedrijventerrein Assendelft Noord',
-    aerialImage: '/projects/depaveri/exterieur.jpg',
+    aerialImage: '/projects/depaveri/locatie.jpg',
     mapsQuery: 'Industrieweg+9+Assendelft',
     mapsLink: 'https://www.google.com/maps?q=Industrieweg+9+Assendelft',
     // Reistijden vanaf Industrieweg 9 Assendelft (auto, normale verkeersomstandigheden).
@@ -145,50 +143,61 @@ export const project = {
 
   // 16 units site plan — L-shape layout matchend met officiële plattegrond
   // (zie /public/projects/depaveri/plattegrond.svg en kopen.repp.nl/depaveri).
-  // layoutRows = drie horizontale rijen, elk met optionele left-grid en
-  // optionele right-sidebar-cell. Sidebar staat IN de grid per rij zodat
-  // alignment exact klopt:
-  //   • Rij 1: 5× Type C (8,7,6,5,4) + Unit 1 (Type A) rechts
-  //   • Rij 2: (lege left) + Unit 2 (Type B) rechts alleen
-  //   • Rij 3: 8× Type D (9-16) + Unit 3 (Type A) rechts
+  //
+  // columns-schema = 2 onafhankelijke kolommen naast elkaar via CSS-grid:
+  //   • LINKS (78%): 2 verticaal gestapelde sections, direct op elkaar
+  //       - Section 1: 5× Type C (8,7,6,5,4) op rij
+  //       - Section 2: 8× Type D (9-16) op rij
+  //   • RECHTS (22%): 3 even hoge cellen die samen de hoogte van de linker-
+  //     kolom matchen (CSS-grid items-stretch + minmax(0,1fr) rows)
+  //       - Unit 1 (Type A) bovenaan
+  //       - Unit 2 (Type B) in 't midden
+  //       - Unit 3 (Type A) onderaan
+  //
+  // De rij-grenzen van rechts hoeven niet uit te lijnen met de section-
+  // grenzen van links — dat klopt geometrisch met de echte plattegrond
+  // waarop unit 2 deels langs C-rij en deels langs D-rij ligt.
   sitePlan: {
-    layoutRows: [
-      {
-        left: {
-          cols: 5,
-          aspect: 'portrait',
-          units: [
-            { number: 8, type: 'C', state: 'available' },
-            { number: 7, type: 'C', state: 'available' },
-            { number: 6, type: 'C', state: 'available' },
-            { number: 5, type: 'C', state: 'available' },
-            { number: 4, type: 'C', state: 'sold' },
-          ],
-        },
-        right: { number: 1, type: 'A', state: 'sold', aspect: 'fill' },
+    columns: {
+      leftFr: 78,
+      rightFr: 22,
+      left: {
+        sections: [
+          {
+            cols: 5,
+            aspect: 'portrait',
+            units: [
+              { number: 8, type: 'C', state: 'available' },
+              { number: 7, type: 'C', state: 'available' },
+              { number: 6, type: 'C', state: 'available' },
+              { number: 5, type: 'C', state: 'available' },
+              { number: 4, type: 'C', state: 'sold' },
+            ],
+          },
+          {
+            cols: 8,
+            aspect: 'tall',
+            units: [
+              { number: 9, type: 'D', state: 'sold' },
+              { number: 10, type: 'D', state: 'sold_ov' },
+              { number: 11, type: 'D', state: 'sold' },
+              { number: 12, type: 'D', state: 'sold' },
+              { number: 13, type: 'D', state: 'sold_ov' },
+              { number: 14, type: 'D', state: 'sold' },
+              { number: 15, type: 'D', state: 'sold' },
+              { number: 16, type: 'D', state: 'sold' },
+            ],
+          },
+        ],
       },
-      {
-        left: null,
-        right: { number: 2, type: 'B', state: 'sold', aspect: 'fill' },
+      right: {
+        units: [
+          { number: 1, type: 'A', state: 'sold' },
+          { number: 2, type: 'B', state: 'sold' },
+          { number: 3, type: 'A', state: 'sold' },
+        ],
       },
-      {
-        left: {
-          cols: 8,
-          aspect: 'portrait',
-          units: [
-            { number: 9, type: 'D', state: 'sold' },
-            { number: 10, type: 'D', state: 'sold_ov' },
-            { number: 11, type: 'D', state: 'sold' },
-            { number: 12, type: 'D', state: 'sold' },
-            { number: 13, type: 'D', state: 'sold_ov' },
-            { number: 14, type: 'D', state: 'sold' },
-            { number: 15, type: 'D', state: 'sold' },
-            { number: 16, type: 'D', state: 'sold' },
-          ],
-        },
-        right: { number: 3, type: 'A', state: 'sold', aspect: 'fill' },
-      },
-    ],
+    },
     legend: [
       { state: 'available', label: 'Beschikbaar' },
       { state: 'sold_ov', label: 'Verkocht ov' },
@@ -211,7 +220,7 @@ export const project = {
       state: 'available',
       stateLabel: 'Bijna vergeven',
       uses: ['Opslag', 'Werkplaats', 'Kantoor', 'Showroom'],
-      image: '/projects/depaveri/cutaway.jpg',
+      image: '/projects/depaveri/interieur.jpg',
       pitch: 'Compacte instapunit van 112 m² over twee lagen. Geschikt voor opslag, werkplaats, showroom of kantoor.',
       specs: [
         '56 m² begane grond + 56 m² verdieping',
@@ -231,7 +240,7 @@ export const project = {
       state: 'available',
       stateLabel: 'Nog enkele beschikbaar',
       uses: ['Opslag', 'Werkplaats', 'Kantoor', 'Showroom', 'Studio'],
-      image: '/projects/depaveri/showroom.jpg',
+      image: '/projects/depaveri/doorsnede.jpg',
       pitch: 'Royale unit van 178 m² over twee lagen. Ruimte voor opslag, werkplaats en een volwaardig kantoor op de verdieping.',
       specs: [
         '89 m² begane grond + 89 m² verdieping',
@@ -251,7 +260,7 @@ export const project = {
       state: 'sold_out',
       stateLabel: 'Uitverkocht',
       uses: ['3-laags bedrijfsunit', 'Dakterras', 'Kantoor of showroom op meerdere lagen'],
-      image: '/projects/depaveri/detail-exterieur.jpg',
+      image: '/projects/depaveri/avond.jpg',
       pitch: 'Drie lagen met dakterras en 3 eigen parkeerplaatsen. Inmiddels uitverkocht.',
       specs: [
         '208 m² verdeeld over 3 lagen',
@@ -271,7 +280,7 @@ export const project = {
       state: 'sold_out',
       stateLabel: 'Uitverkocht',
       uses: ['3-laags bedrijfsunit', 'Dakterras'],
-      image: '/projects/depaveri/detail-exterieur.jpg',
+      image: '/projects/depaveri/avond.jpg',
       pitch: 'Drie lagen met groter dakterras (~23 m²) en 3 eigen parkeerplaatsen. Uitverkocht.',
       specs: [
         '208 m² verdeeld over 3 lagen',
@@ -290,13 +299,17 @@ export const project = {
     'Units in overleg koppelbaar',
   ],
 
+  // "Waarom De Paveri" — zes echte USP's die de bedrijfsunits in Assendelft
+  // onderscheiden van standaard bedrijfsverzamelgebouwen. Geen makelaarstaal,
+  // ieder body één concreet feit waar de bezoeker iets aan heeft. Volgorde
+  // is bewust: financieel voordeel → schaarste → bereikbaarheid → kwaliteit.
   highlights: [
-    { title: 'Kleinschalig', body: '16 units in Fase 2, op menselijke schaal.' },
-    { title: 'Representatief', body: 'Modern bedrijfsverzamelgebouw met robuust metselwerk en strakke gevelpanelen.' },
-    { title: 'Praktisch', body: 'Overheaddeur, eigen parkeerplaats, gasloze uitvoering en hoge vloerbelasting.' },
-    { title: 'Koppelbaar', body: 'Units zijn in overleg combineerbaar bij groeiende bedrijfsruimte.' },
-    { title: 'Strategisch', body: 'Vlak naast N8 en N203, NS station op 5 minuten fietsen.' },
-    { title: 'Mkb-proof', body: 'Geschikt voor opslag, werkplaats, showroom, kantoor of combinatie.' },
+    { title: 'Vrij op naam', body: 'Geen 10,4% overdrachtsbelasting. Direct financieel voordeel ten opzichte van bestaande bouw.' },
+    { title: 'Bijna uitverkocht', body: 'Type A en B verkocht, Type D bijna vergeven. Alleen Type C nog concreet beschikbaar.' },
+    { title: 'Eigen parkeren', body: '2 of 3 plekken per unit, direct voor de deur. Geen gedeelde parkeerruimte.' },
+    { title: 'NS op 5 minuten', body: 'Krommenie-Assendelft op fietsafstand. N8 en N203 op 2 minuten met de auto.' },
+    { title: 'Casco met garanties', body: '1.500 kg/m² vloerbelasting, 3 × 25A elektra, gasloze uitvoering en nieuwbouwgaranties.' },
+    { title: 'Koppelbaar', body: 'Units in overleg combineerbaar. Groeit mee als je bedrijf uitbreidt.' },
   ],
 
   audiences: [
@@ -387,7 +400,7 @@ export const project = {
       title: 'Locatie',
       body: 'Bedrijventerrein Assendelft Noord, vlak naast N8 en N203. NS station Krommenie-Assendelft op 5 minuten fietsen.',
       tag: 'Bereikbaarheid',
-      image: '/projects/depaveri/exterieur.jpg',
+      image: '/projects/depaveri/locatie.jpg',
     },
     {
       id: 'price',
@@ -547,13 +560,39 @@ export const project = {
   flowOverrides: {
     sizeQuestion: {
       label: 'Hoeveel m² zoek je?',
+      // Alle opties wijzen naar Unit C als `unit`: bij De Paveri zijn dat
+      // de enige units die nu nog concreet beschikbaar zijn (Type A en B
+      // uitverkocht, Type D bijna vergeven met enkele sold-ov). De score
+      // en option-id blijven verschillen zodat analytics ziet wat de
+      // bezoeker oorspronkelijk koos. De getoonde bot-intro varieert via
+      // `recommendIntroByChoice` hieronder — niet via een ander unit-type.
       options: [
-        { id: 'around_112', label: '112 m²', score: 12, unit: 'D' },
+        { id: 'around_112', label: '112 m²', score: 12, unit: 'C' },
         { id: 'around_178', label: '178 m²', score: 15, unit: 'C' },
-        { id: 'around_208', label: '208 m²', score: 15, unit: 'A' },
-        { id: 'weet_niet',  label: 'Weet ik nog niet', score: 5 },
+        { id: 'around_208', label: '208 m²', score: 15, unit: 'C' },
+        { id: 'weet_niet',  label: 'Weet ik nog niet', score: 5,  unit: 'C' },
       ],
     },
+  },
+
+  // Per-keuze intro-tekst die de standaard "Op basis van je antwoorden lijkt
+  // vooral de X-unit interessant"-bubble overschrijft. Keyed op de id van de
+  // size-optie. App.jsx kijkt hier eerst naar voordat het de generieke string
+  // pakt. Alleen gedefinieerd voor projecten waar een eerlijke disclosure
+  // nodig is (uitverkochte types, schaarste, etc.). Voor De Paveri sturen we
+  // alle keuzes naar Unit C maar geven we per gekozen oppervlak een eigen
+  // toelichting waarom — voorkomt dat de bezoeker denkt "huh, ik vroeg om
+  // 208 m² en krijg 178 m² terug zonder uitleg".
+  recommendIntroByChoice: {
+    // 208 m² → Type A is uitverkocht. Korte, eerlijke verwijzing naar C.
+    around_208: 'Op basis van de beschikbaarheid is Unit C de meest passende optie voor je.',
+    // 112 m² → Type D is bijna vergeven (2 sold-ov). We houden de deur open
+    // voor terugkomers maar wijzen op de concreet beschikbare Unit C.
+    around_112: 'Voor Type D zijn alleen nog enkele units verkocht onder voorbehoud. Komen die alsnog vrij, dan nemen we contact met je op. Voor nu zijn de Type C-units concreet beschikbaar.',
+    // 178 m² → exact wat Unit C biedt. Natuurlijke fit, geen disclaimer.
+    around_178: 'Op basis van je antwoorden past Unit C goed bij wat je zoekt.',
+    // Geen voorkeur → toon Unit C als concrete vertrekpunt.
+    weet_niet: 'Op basis van de beschikbaarheid is Unit C de meest concrete optie om mee te starten.',
   },
 }
 

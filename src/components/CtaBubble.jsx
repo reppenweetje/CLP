@@ -2,12 +2,16 @@ import Avatar from './Avatar.jsx'
 import { project } from '../data/project.js'
 
 // Laatste cta in de thread. Bel- en WhatsApp-knop voor directe actie,
-// optioneel een brochure-link, een externe Hofman-portal link, en
-// optioneel een mini-table-of-contents van al getoonde info-kaarten zodat
-// de bezoeker direct terug kan naar relevante content zonder te scrollen.
+// optioneel een brochure-link, een externe portal-link, en optioneel een
+// mini-table-of-contents van al getoonde info-kaarten zodat de bezoeker
+// direct terug kan naar relevante content zonder te scrollen.
 //
 // Props:
-//  - portalUrl: string of null. Als gezet, derde pill-knop "Bekijk Hofman portal"
+//  - portalUrl: string of null. Als gezet toont de derde pill-knop met
+//    portalLabel als tekst (per project anders: "Bekijk op dehofman.nl"
+//    voor De Hofman, "Bekijk koopomgeving De Paveri" voor De Paveri).
+//  - portalLabel: string. Tekst voor de portal-knop. Fallback uit
+//    project.portalLabel als prop ontbreekt.
 //  - seenTopics: array van { id, label, anchorId } voor de mini-TOC. Lege
 //    array = TOC verbergen.
 //  - onTopicJump: callback met topicId — App.jsx scrollt dan naar die bubble.
@@ -16,6 +20,7 @@ export default function CtaBubble({
   phoneLink,
   phoneDisplay,
   portalUrl,
+  portalLabel,
   onBrochure,
   onReset,
   onWhatsapp,
@@ -25,6 +30,10 @@ export default function CtaBubble({
   seenTopics = [],
   onTopicJump,
 }) {
+  // Portal-label fallback: prop heeft voorrang (per-bubble override mogelijk),
+  // anders uit project, anders generieke tekst zodat de knop nooit leeg of
+  // met "undefined" rendert.
+  const portalText = portalLabel || project.portalLabel || 'Bekijk koopomgeving'
   const showToc = Array.isArray(seenTopics) && seenTopics.length > 0 && typeof onTopicJump === 'function'
 
   return (
@@ -99,7 +108,7 @@ export default function CtaBubble({
               onClick={onPortalClick}
               className="flex w-full items-center justify-center gap-2 rounded-full border border-midnite/40 bg-paper text-midnite font-medium py-3.5 text-[15px] hover:bg-canvas-2 transition"
             >
-              <span>Bekijk Hofman portal</span>
+              <span>{portalText}</span>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M7 17 17 7" />
                 <path d="M8 7h9v9" />
