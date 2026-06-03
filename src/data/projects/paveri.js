@@ -176,6 +176,12 @@ export const project = {
       { state: 'sold_ov', label: 'Verkocht ov' },
       { state: 'sold', label: 'Verkocht' },
     ],
+    // Orientatie-labels rondom de tegelgrid. Industrieweg ligt langs de
+    // east-zijde van Gebouw A volgens de brochure. Geen recreatie-blok.
+    cardinalLabels: {
+      east: 'Industrieweg',
+      bottom: 'Assendelft Noord',
+    },
   },
 
   units: [
@@ -518,17 +524,20 @@ export const project = {
     },
   },
 
-  // Flow-overrides — per-project chip-opties voor specifieke vragen.
-  // De grootte-vraag heeft voor Paveri andere m²-categorieen dan De Hofman.
-  // TODO: flow.js moet dit veld gaan lezen (Fase: flow-override-support).
-  // Voor MVP: De Hofman's defaults werken nog niet correct voor Paveri's units.
+  // Flow-overrides — per-project label en chip-opties voor specifieke
+  // vragen. App.jsx's getQuestion('size') merget deze met flow.questions.size.
+  // Voor Paveri: andere m²-categorieën (112/178/208 ipv tot_50/rond_100/etc)
+  // en andere vraag-formulering omdat units 2-laags zijn met BG = totaal/2.
   flowOverrides: {
-    sizeOptions: [
-      { id: 'around_112', label: '112 m²', m2: 112 },
-      { id: 'around_178', label: '178 m²', m2: 178 },
-      { id: 'around_208', label: '208 m²', m2: 208 },
-      { id: 'weet_niet', label: 'Weet ik nog niet', m2: null },
-    ],
+    sizeQuestion: {
+      label: 'Hoeveel m² zoek je?',
+      options: [
+        { id: 'around_112', label: '112 m²', score: 12, unit: 'D' },
+        { id: 'around_178', label: '178 m²', score: 15, unit: 'C' },
+        { id: 'around_208', label: '208 m²', score: 15, unit: 'A' },
+        { id: 'weet_niet',  label: 'Weet ik nog niet', score: 5 },
+      ],
+    },
   },
 }
 

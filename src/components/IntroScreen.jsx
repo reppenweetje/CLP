@@ -34,9 +34,9 @@ export default function IntroScreen({ onStart }) {
           </h1>
 
           <div className="grid grid-cols-3 gap-2 lg:gap-3 pt-1">
-            <Stat label="Units" value="14" />
-            <Stat label="Verkocht" value="70%" />
-            <Stat label="Vanaf" value="€239k" />
+            <Stat label="Units" value={String(project.sitePlan?.rows?.reduce((n, r) => n + r.units.length, 0) || '')} />
+            <Stat label="Verkocht" value={`${project.status?.soldPercent ?? ''}%`} />
+            <Stat label="Vanaf" value={formatPriceK(project.units?.find((u) => u.state === 'available')?.priceFrom ?? project.units?.[0]?.priceFrom)} />
           </div>
         </div>
 
@@ -48,9 +48,6 @@ export default function IntroScreen({ onStart }) {
           >
             {CTA_VARIANTS[ctaVariant]}
           </button>
-          <div className="text-[12px] lg:text-[13px] text-ink-mute text-center">
-            Geen spam, alleen relevante info over De Hofman.
-          </div>
           <div className="text-[11px] lg:text-[12px] text-ink-mute italic text-center leading-snug">
             Sfeerimpressies. Inrichting, beplanting en materialen kunnen afwijken. Geen rechten te ontlenen.
           </div>
@@ -67,4 +64,11 @@ function Stat({ label, value }) {
       <div className="text-[16px] lg:text-[20px] font-semibold text-ink mt-0.5">{value}</div>
     </div>
   )
+}
+
+// "€199.950" → "€200k" voor de Stat-tegel. Compacte vorm voor mobile-cards.
+function formatPriceK(amount) {
+  if (typeof amount !== 'number' || isNaN(amount)) return ''
+  if (amount >= 1000) return `€${Math.round(amount / 1000)}k`
+  return `€${amount}`
 }

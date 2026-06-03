@@ -4,9 +4,12 @@ import MortgageCalc from './MortgageCalc.jsx'
 import RentabilityCalc from './RentabilityCalc.jsx'
 import { trackEvent } from '../lib/analytics.js'
 
-// 14 units 2 rijen volgens werkelijke situatietekening
-// status kleuren matchen de officiele kopen repp nl plattegrond
-// klik op een unit voor m² prijs en status detail
+// Situatietekening met units in N×M-grid volgens project.sitePlan.
+// Status-kleuren matchen de officiele kopen.repp.nl plattegrond.
+// Klik op een unit voor m² prijs en status detail.
+// Project-specifieke labels (weg-naam, recreatie-blok, wijk-naam) komen
+// uit sitePlan.cardinalLabels — zodat ééndere component meerdere projecten
+// kan tonen.
 export default function SitePlanBubble({ sitePlan, units, persona, onUnitView, onCalcInteract, onCredionRequest }) {
   const [selectedNumber, setSelectedNumber] = useState(null)
   const allUnits = sitePlan.rows.flatMap((r) => r.units)
@@ -14,6 +17,18 @@ export default function SitePlanBubble({ sitePlan, units, persona, onUnitView, o
   const selectedTypeData = selected ? units?.find((u) => u.type === selected.type) : null
 
   const stats = computeStats(allUnits)
+  const totalUnits = allUnits.length
+
+  // Aantal kolommen = breedste rij. Inline style ipv Tailwind class want
+  // Tailwind compileert grid-cols-N statisch (kan niet dynamisch genereren).
+  const maxCols = Math.max(...sitePlan.rows.map((r) => r.units.length))
+
+  // Orientatie-labels per project. Defaults zijn leeg (helemaal geen
+  // weg/recreatie-strook getoond). Project zet wat 't wil tonen.
+  const cardinal = sitePlan.cardinalLabels || {}
+  const eastLabel = cardinal.east  // bv "A. Hofmanweg" of "Industrieweg"
+  const eastAdjacent = cardinal.eastAdjacent  // optioneel: bv "Recreatie"
+  const bottomLabel = cardinal.bottom  // bv "Waarderpolder" of "Assendelft Noord"
 
   return (
     <div className="flex gap-2.5 items-start fade-up">
@@ -22,7 +37,7 @@ export default function SitePlanBubble({ sitePlan, units, persona, onUnitView, o
         <div className="rounded-3xl rounded-tl-md bg-paper border border-mist-light overflow-hidden">
           <div className="p-4">
             <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium">situatietekening</div>
-            <div className="text-[16px] font-semibold text-ink mt-1.5">14 units in één oogopslag</div>
+            <div className="text-[16px] font-semibold text-ink mt-1.5">{totalUnits} units in één oogopslag</div>
             <div className="text-[12px] text-ink-mute leading-snug mt-1">tik op een unit voor m² prijs en status</div>
 
             <div className="mt-3.5 flex items-center gap-3 text-[12px] text-ink-soft">
@@ -41,14 +56,14 @@ export default function SitePlanBubble({ sitePlan, units, persona, onUnitView, o
             </div>
 
             <div className="mt-3 relative">
-              {/* Boven-label "a hofmanweg" verwijderd, want de weg ligt
-                  feitelijk rechts van het pand niet erboven. Subtiele weg-
-                  plus recreatie-aanduiding staat nu naast de tegels via een
-                  flex-layout. "waarderpolder" onder blijft als wijk-context. */}
               <div className="rounded-2xl bg-canvas-2 border border-mist-light p-3 flex gap-2 items-stretch">
                 <div className="flex-1 min-w-0">
                   {sitePlan.rows.map((row, ri) => (
-                    <div key={ri} className={`grid grid-cols-7 gap-1 ${ri === 0 ? 'mb-1' : ''}`}>
+                    <div
+                      key={ri}
+                      className={`grid gap-1 ${ri === 0 ? 'mb-1' : ''}`}
+                      style={{ gridTemplateColumns: `repeat(${maxCols}, minmax(0, 1fr))` }}
+                    >
                       {row.units.map((u) => {
                         const isSel = selectedNumber === u.number
                         return (
@@ -79,31 +94,37 @@ export default function SitePlanBubble({ sitePlan, units, persona, onUnitView, o
                     </div>
                   ))}
                 </div>
-                {/* Orientatie-strook rechts: dashed weg-lijn met label
-                    A. Hofmanweg plus een smal emerald-tintje voor het
-                    aangrenzende recreatiegebied. Beide ~12px breed dus de
-                    tegelgrid blijft ruim dominant. */}
-                <div className="shrink-0 flex gap-1">
-                  <div className="w-3 relative flex items-center justify-center">
-                    <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px border-l border-dashed border-mist" aria-hidden />
-                    <span
-                      className="relative text-[7px] tracking-[0.2em] text-ink-mute uppercase whitespace-nowrap"
-                      style={{ writingMode: 'vertical-rl' }}
-                    >
-                      A. Hofmanweg
-                    </span>
+                {/* Orientatie-strook rechts — alleen tonen als project er een
+                    label voor levert via sitePlan.cardinalLabels.east. */}
+                {(eastLabel || eastAdjacent) && (
+                  <div className="shrink-0 flex gap-1">
+                    {eastLabel && (
+                      <div className="w-3 relative flex items-center justify-center">
+                        <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px border-l border-dashed border-mist" aria-hidden />
+                        <span
+                          className="relative text-[7px] tracking-[0.2em] text-ink-mute uppercase whitespace-nowrap"
+                          style={{ writingMode: 'vertical-rl' }}
+                        >
+                          {eastLabel}
+                        </span>
+                      </div>
+                    )}
+                    {eastAdjacent && (
+                      <div className="w-3 relative flex items-center justify-center bg-emerald-50/70 rounded-sm">
+                        <span
+                          className="text-[7px] tracking-[0.2em] text-emerald-700/80 uppercase whitespace-nowrap"
+                          style={{ writingMode: 'vertical-rl' }}
+                        >
+                          {eastAdjacent}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  <div className="w-3 relative flex items-center justify-center bg-emerald-50/70 rounded-sm">
-                    <span
-                      className="text-[7px] tracking-[0.2em] text-emerald-700/80 uppercase whitespace-nowrap"
-                      style={{ writingMode: 'vertical-rl' }}
-                    >
-                      Recreatie
-                    </span>
-                  </div>
-                </div>
+                )}
               </div>
-              <div className="text-[9px] tracking-[0.22em] text-ink-mute uppercase mt-1.5 text-center">waarderpolder</div>
+              {bottomLabel && (
+                <div className="text-[9px] tracking-[0.22em] text-ink-mute uppercase mt-1.5 text-center">{bottomLabel}</div>
+              )}
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-1.5">

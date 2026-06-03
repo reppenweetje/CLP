@@ -1,4 +1,5 @@
 import Avatar from './Avatar.jsx'
+import { project } from '../data/project.js'
 
 // Laatste cta in de thread. Bel- en WhatsApp-knop voor directe actie,
 // optioneel een brochure-link, een externe Hofman-portal link, en
@@ -66,7 +67,7 @@ export default function CtaBubble({
               ("Jesse van REPP") maar de CTA-card is het belangrijkste contact-
               moment. Hier maken we expliciet wie achter de knoppen staat. */}
           <div className="text-[12px] text-ink-mute leading-relaxed">
-            REPP is verkopend makelaar van De Hofman.
+            REPP is verkopend makelaar van {project.displayName}.
           </div>
           {phoneLink && (
             <a

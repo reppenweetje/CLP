@@ -50,6 +50,18 @@ import { detectCurrentIp } from './lib/ipExclusion.js'
 let _id = 0
 const nextId = () => ++_id
 const STORAGE_KEY = 'clp-state-v5'
+
+// Project-aware vraag-getter. Geeft de flow.questions[key] terug, maar
+// overschrijft met project.flowOverrides[`${key}Question`] als het project
+// per-project label/options definieert (bv Paveri's grootte-categorieën
+// 112/178/208 m² ipv De Hofman's tot_50/rond_100/meer_dan_100).
+function getQuestion(key) {
+  const base = flow.questions[key]
+  if (!base) return base
+  const override = project.flowOverrides?.[`${key}Question`]
+  if (!override) return base
+  return { ...base, ...override }
+}
 const initial = {
   // Default = 'intro'. Bij cold-start bepaalt de useReducer-initializer
   // (zie Demo()) of we deze waarde overschrijven naar 'chat' op basis van
@@ -313,7 +325,7 @@ const MORE_INFO_DEFS = {
   location: { label: 'Meer over locatie' },
   sitePlan: { label: 'Situatietekening' },
   gallery: { label: 'Sfeerbeelden' },
-  highlights: { label: 'Waarom De Hofman' },
+  highlights: { label: `Waarom ${project.displayName}` },
   price: { label: 'Prijslijst' },
   priceCompare: { label: 'Prijsvergelijking' },
   planning: { label: 'Planning' },
@@ -460,7 +472,7 @@ function buildMoreInfoMessages(id, persona, opts = {}) {
         kind: 'highlights',
         payload: {
           highlights: project.highlights,
-          intro: 'Wat De Hofman onderscheidt.',
+          intro: `Wat ${project.displayName} onderscheidt.`,
         },
       }]
     case 'price':
@@ -479,7 +491,7 @@ function buildMoreInfoMessages(id, persona, opts = {}) {
         payload: {
           benefits: project.investorBenefits,
           investor: project.investor,
-          intro: 'Wat De Hofman voor beleggers interessant maakt.',
+          intro: `Wat ${project.displayName} voor beleggers interessant maakt.`,
         },
       }]
     default:
@@ -1024,7 +1036,7 @@ function Demo() {
       if (opt.id === 'huur' || personaNext === 'huurder') {
         dispatch({ type: 'ANSWER', key: 'intent', value: answerValue(opt), next: 'rentRange' })
         sendSequence(userTextFromOpt(opt), [
-          { kind: 'bot-text', text: 'Helder. De Hofman is een koop-project, maar er zijn beleggers die hun unit verhuren. Met je voorkeur kunnen we je in de toekomst koppelen aan een belegger als er een match is.' },
+          { kind: 'bot-text', text: `Helder. ${project.displayName} is een koop-project, maar er zijn beleggers die hun unit verhuren. Met je voorkeur kunnen we je in de toekomst koppelen aan een belegger als er een match is.` },
           { kind: 'bot-text', text: flow.questions.rentRange.label },
         ])
         return
@@ -1069,7 +1081,7 @@ function Demo() {
       const botMessages = []
       if (opt.id === 'ja') {
         botMessages.push(
-          { kind: 'bot-text', text: 'Hier zijn de 14 units met de actuele status. Tik op een unit voor meer informatie over die unit.' },
+          { kind: 'bot-text', text: `Hier zijn de ${project.sitePlan?.rows?.reduce((n, r) => n + r.units.length, 0) || 'beschikbare'} units met de actuele status. Tik op een unit voor meer informatie over die unit.` },
           { kind: 'site-plan', payload: { sitePlan: project.sitePlan, units: project.units, persona } },
           // Twee-fase wachten voor menselijk gevoel:
           //   silent 13s = bezoeker scant plattegrond in stilte, geen typing
@@ -1104,7 +1116,7 @@ function Demo() {
             payload: {
               benefits: project.investorBenefits,
               investor: project.investor,
-              intro: 'Hoe het rendement op De Hofman opgebouwd wordt.',
+              intro: `Hoe het rendement op ${project.displayName} opgebouwd wordt.`,
             },
           },
           { kind: 'pause', ms: 2500 },
@@ -1132,7 +1144,7 @@ function Demo() {
         dispatch({ type: 'ANSWER', key: 'brochureTrigger', value: answerValue(opt), next: 'size' })
         sendSequence(userTextFromOpt(opt), [
           { kind: 'bot-text', text: 'Top, we sturen je de juiste info.' },
-          { kind: 'bot-text', text: flow.questions.size.label },
+          { kind: 'bot-text', text: getQuestion('size').label },
         ])
         return
       }
@@ -1155,7 +1167,7 @@ function Demo() {
       if (opt.id === 'huur') {
         dispatch({ type: 'ANSWER', key: 'afhaakReason', value: answerValue(opt), next: 'rentRange' })
         sendSequence(userTextFromOpt(opt), [
-          { kind: 'bot-text', text: 'Begrijpelijk. Bij De Hofman zijn er ook beleggers die hun unit verhuren.' },
+          { kind: 'bot-text', text: `Begrijpelijk. Bij ${project.displayName} zijn er ook beleggers die hun unit verhuren.` },
           { kind: 'bot-text', text: 'Met je voorkeur kunnen we je in de toekomst koppelen aan een belegger als er een match is.' },
           { kind: 'bot-text', text: flow.questions.rentRange.label },
         ])
@@ -1481,7 +1493,7 @@ function Demo() {
           next: null,
         })
         sendSequence(userTextFromOpt(opt), [
-          { kind: 'bot-text', text: 'Helder. Je hebt nu alles van De Hofman gezien.' },
+          { kind: 'bot-text', text: `Helder. Je hebt nu alles van ${project.displayName} gezien.` },
           { kind: 'bot-text', text: 'Kijk rustig rond. Hieronder kun je altijd contact opnemen met de makelaar of doorklikken naar het portaal voor de volledige plattegrond.' },
           {
             kind: 'cta-card',
@@ -1545,7 +1557,7 @@ function Demo() {
         trackEvent('flow:complete', { stage: 'self-paced', persona: personaNext })
         trailingMessages.push(
           { kind: 'pause', ms: 1200 },
-          { kind: 'bot-text', text: 'Je hebt nu alles van De Hofman gezien.' },
+          { kind: 'bot-text', text: `Je hebt nu alles van ${project.displayName} gezien.` },
           { kind: 'bot-text', text: 'Kijk rustig rond. Hieronder kun je altijd contact opnemen met de makelaar of doorklikken naar het portaal voor de volledige plattegrond.' },
           {
             kind: 'cta-card',
@@ -1959,7 +1971,7 @@ function Demo() {
         ? []
         : [
             { kind: 'bot-text', text: 'Nog een korte vraag, zodat we de juiste prijslijst en plattegronden meesturen.' },
-            { kind: 'bot-text', text: flow.questions.size.label },
+            { kind: 'bot-text', text: getQuestion('size').label },
           ]
       dispatch({ type: 'ENQUEUE', messages: [...botPrepend, ...credionConfirmation, ...sizeTail] })
       return
@@ -1990,7 +2002,7 @@ function Demo() {
       ? []
       : [
           { kind: 'bot-text', text: 'Goed. Nog even, zodat we de juiste prijslijst en plattegronden meesturen.' },
-          { kind: 'bot-text', text: flow.questions.size.label },
+          { kind: 'bot-text', text: getQuestion('size').label },
         ]
     dispatch({
       type: 'ENQUEUE',
@@ -2278,7 +2290,7 @@ function Demo() {
       scroller.scrollTo({ top: Math.max(0, elTop - 12), behavior: 'smooth' })
     }
   }
-  const headerWaLink = whatsAppDeeplink(project, state.answers.lead?.firstName || '', 'Graag info over De Hofman')
+  const headerWaLink = whatsAppDeeplink(project, state.answers.lead?.firstName || '', `Graag info over ${project.displayName}`)
   const headerPhoneLink = buildPhoneLink(project.phoneNumber)
   // Wijzig een eerder gegeven antwoord vanuit de antwoorden-sheet.
   // De flow rolt terug naar het punt vlak voor de oude user-bubble; de
@@ -2360,8 +2372,8 @@ function Demo() {
   }
   else if (state.currentQuestion === 'afhaakReasons' || state.currentQuestion === 'afhaakReason') chipQuestion = flow.questions.afhaakReasons
   else if (state.currentQuestion === 'rentRange') chipQuestion = flow.questions.rentRange
-  else if (state.currentQuestion === 'size') chipQuestion = flow.questions.size
-  else if (state.currentQuestion === 'timeline') chipQuestion = flow.questions.timeline
+  else if (state.currentQuestion === 'size') chipQuestion = getQuestion('size')
+  else if (state.currentQuestion === 'timeline') chipQuestion = getQuestion('timeline')
   else if (state.currentQuestion === 'followup') chipQuestion = flow.questions.followup
   else if (state.currentQuestion === 'postRecommendation') {
     // Macro-keuze direct na unit-aanbeveling: contact of rondkijken.

@@ -22,6 +22,7 @@ import {
   supabaseRowToLocalEvent,
 } from '../lib/eventsApi.js'
 import { fetchTeamLeads, isLeadsFetchConfigured } from '../lib/api.js'
+import { project } from '../data/project.js'
 import KpiCard from '../components/admin/KpiCard.jsx'
 import FunnelChart from '../components/admin/FunnelChart.jsx'
 import PersonaBreakdown from '../components/admin/PersonaBreakdown.jsx'
@@ -333,7 +334,7 @@ function AdminScreenInner() {
             </div>
             <div className="min-w-0">
               <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium leading-none whitespace-nowrap">REPP CLP analytics</div>
-              <h1 className="text-[18px] font-semibold text-ink mt-1 leading-tight whitespace-nowrap">De Hofman dashboard</h1>
+              <h1 className="text-[18px] font-semibold text-ink mt-1 leading-tight whitespace-nowrap">{project.displayName} dashboard</h1>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0 flex-wrap">
@@ -400,7 +401,7 @@ function AdminScreenInner() {
           )}
           {dataSource === 'team' && !teamError && allSessions.length === 0 && !teamLoading && (
             <div className="rounded-xl border border-mist-light bg-canvas-2 px-4 py-3 text-[13px] text-ink-soft">
-              Nog geen sessies geregistreerd voor tenant <code className="bg-paper px-1.5 py-0.5 rounded">{getTenant() || 'onbekend'}</code>. Open de De Hofman CLP, doorloop de chat-flow, en kom terug.
+              Nog geen sessies geregistreerd voor tenant <code className="bg-paper px-1.5 py-0.5 rounded">{getTenant() || 'onbekend'}</code>. Open de {project.displayName} CLP, doorloop de chat-flow, en kom terug.
             </div>
           )}
 

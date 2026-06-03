@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { project } from '../data/project.js'
 
 // Chips als suggested replies onderaan het scherm.
 //
@@ -188,7 +189,7 @@ export default function SuggestedChips({ options, onPick, hint }) {
               </div>
               <div className="mt-3 space-y-3 text-[13.5px] text-ink-soft leading-relaxed">
                 <p>
-                  Deze landingspagina is in beheer van REPP, verkopend makelaar van De Hofman.
+                  Deze landingspagina is in beheer van REPP, verkopend makelaar van {project.displayName}.
                   We bewaren alleen de antwoorden die je deelt om je goed te helpen.
                 </p>
                 <div className="flex flex-col gap-2 pt-1">

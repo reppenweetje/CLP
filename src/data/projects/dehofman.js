@@ -171,6 +171,12 @@ export const project = {
       { state: 'sold', label: 'Verkocht' },
       { state: 'coming_soon', label: 'Later in verkoop' },
     ],
+    // Orientatie-labels die SitePlanBubble rondom de tegelgrid toont.
+    cardinalLabels: {
+      east: 'A. Hofmanweg',
+      eastAdjacent: 'Recreatie',
+      bottom: 'Waarderpolder',
+    },
   },
 
   units: [
