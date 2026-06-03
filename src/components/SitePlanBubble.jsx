@@ -12,16 +12,24 @@ import { trackEvent } from '../lib/analytics.js'
 // kan tonen.
 export default function SitePlanBubble({ sitePlan, units, persona, onUnitView, onCalcInteract, onCredionRequest }) {
   const [selectedNumber, setSelectedNumber] = useState(null)
-  const allUnits = sitePlan.rows.flatMap((r) => r.units)
+  // Verzamel alle units — werkt voor rows-layout (De Hofman) én sections-
+  // layout (Paveri met L-vorm + sidebar). Lege arrays als beide ontbreken.
+  const allUnits = [
+    ...(sitePlan.rows?.flatMap((r) => r.units) || []),
+    ...(sitePlan.sections?.flatMap((s) => s.units) || []),
+    ...(sitePlan.sidebar?.units || []),
+  ]
   const selected = allUnits.find((u) => u.number === selectedNumber)
   const selectedTypeData = selected ? units?.find((u) => u.type === selected.type) : null
 
   const stats = computeStats(allUnits)
   const totalUnits = allUnits.length
 
-  // Aantal kolommen = breedste rij. Inline style ipv Tailwind class want
-  // Tailwind compileert grid-cols-N statisch (kan niet dynamisch genereren).
-  const maxCols = Math.max(...sitePlan.rows.map((r) => r.units.length))
+  // Aantal kolommen = breedste rij (alleen voor rows-layout). Inline style
+  // ipv Tailwind class want Tailwind compileert grid-cols-N statisch.
+  const maxCols = sitePlan.rows
+    ? Math.max(...sitePlan.rows.map((r) => r.units.length))
+    : 1
 
   // Orientatie-labels per project. Defaults zijn leeg (helemaal geen
   // weg/recreatie-strook getoond). Project zet wat 't wil tonen.
@@ -58,42 +66,45 @@ export default function SitePlanBubble({ sitePlan, units, persona, onUnitView, o
             <div className="mt-3 relative">
               <div className="rounded-2xl bg-canvas-2 border border-mist-light p-3 flex gap-2 items-stretch">
                 <div className="flex-1 min-w-0">
-                  {sitePlan.rows.map((row, ri) => (
-                    <div
-                      key={ri}
-                      className={`grid gap-1 ${ri === 0 ? 'mb-1' : ''}`}
-                      style={{ gridTemplateColumns: `repeat(${maxCols}, minmax(0, 1fr))` }}
-                    >
-                      {row.units.map((u) => {
-                        const isSel = selectedNumber === u.number
-                        return (
-                          <button
-                            key={u.number}
-                            onClick={() => {
-                              const next = isSel ? null : u.number
-                              setSelectedNumber(next)
-                              if (next !== null) {
-                                trackEvent('unit:detail-opened', { number: u.number, type: u.type, state: u.state })
-                                if (onUnitView) onUnitView({ number: u.number, type: u.type, state: u.state })
-                              }
-                            }}
-                            className={`relative aspect-[3/4] rounded-md border transition active:scale-95 ${stateClasses(u.state)} ${
-                              isSel ? 'ring-2 ring-midnite ring-offset-2 ring-offset-canvas-2' : ''
-                            }`}
-                            title={`unit ${u.number} ${u.type.toLowerCase()}`}
-                          >
-                            <span className="absolute top-1 left-1.5 text-[9px] tracking-wider font-medium opacity-70">
-                              {u.type.toLowerCase()}
-                            </span>
-                            <span className="absolute inset-0 flex items-center justify-center text-[14px] font-semibold">
-                              {u.number}
-                            </span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  ))}
+                  {sitePlan.sections ? (
+                    // Sections-layout (Paveri-style): meerdere grids verticaal
+                    // gestapeld voor de hoofd-blokken. Bv. top-rij type C, daar-
+                    // onder bottom-rij type D met verschillende kolom-counts.
+                    sitePlan.sections.map((section, si) => (
+                      <div
+                        key={si}
+                        className={`grid gap-1 ${si > 0 ? 'mt-1' : ''}`}
+                        style={{ gridTemplateColumns: `repeat(${section.cols}, minmax(0, 1fr))` }}
+                      >
+                        {section.units.map((u) => renderUnit(u, selectedNumber, setSelectedNumber, onUnitView, section.aspect))}
+                      </div>
+                    ))
+                  ) : (
+                    // Rows-layout (De Hofman-style): uniforme grid per rij.
+                    sitePlan.rows.map((row, ri) => (
+                      <div
+                        key={ri}
+                        className={`grid gap-1 ${ri === 0 ? 'mb-1' : ''}`}
+                        style={{ gridTemplateColumns: `repeat(${maxCols}, minmax(0, 1fr))` }}
+                      >
+                        {row.units.map((u) => renderUnit(u, selectedNumber, setSelectedNumber, onUnitView))}
+                      </div>
+                    ))
+                  )}
                 </div>
+                {/* Sidebar-kolom rechts (Paveri-style): vertikaal gestapelde
+                    units die naast de hoofd-grid staan. Bv. Type A/B units met
+                    aspect-ratio 'wide' (langer dan hoog). */}
+                {sitePlan.sidebar && (
+                  <div className="shrink-0 w-[28%]">
+                    <div
+                      className="grid gap-1 h-full"
+                      style={{ gridTemplateRows: `repeat(${sitePlan.sidebar.units.length}, minmax(0, 1fr))` }}
+                    >
+                      {sitePlan.sidebar.units.map((u) => renderUnit(u, selectedNumber, setSelectedNumber, onUnitView, sitePlan.sidebar.aspect))}
+                    </div>
+                  </div>
+                )}
                 {/* Orientatie-strook rechts — alleen tonen als project er een
                     label voor levert via sitePlan.cardinalLabels.east. */}
                 {(eastLabel || eastAdjacent) && (
@@ -143,6 +154,42 @@ export default function SitePlanBubble({ sitePlan, units, persona, onUnitView, o
         </div>
       </div>
     </div>
+  )
+}
+
+// Unit-button renderer — gedeeld door rows-, sections- en sidebar-layouts.
+// aspect default = portrait '3/4' (voor Type C, D, L, XL). Voor Type A/B
+// in een sidebar gebruik je 'landscape' = '5/3' om de bredere ratio te
+// matchen met de werkelijke gevel-indeling.
+function renderUnit(u, selectedNumber, setSelectedNumber, onUnitView, aspect) {
+  const isSel = selectedNumber === u.number
+  const aspectClass =
+    aspect === 'landscape' ? 'aspect-[5/3]' :
+    aspect === 'square' ? 'aspect-square' :
+    'aspect-[3/4]'
+  return (
+    <button
+      key={u.number}
+      onClick={() => {
+        const next = isSel ? null : u.number
+        setSelectedNumber(next)
+        if (next !== null) {
+          trackEvent('unit:detail-opened', { number: u.number, type: u.type, state: u.state })
+          if (onUnitView) onUnitView({ number: u.number, type: u.type, state: u.state })
+        }
+      }}
+      className={`relative ${aspectClass} rounded-md border transition active:scale-95 ${stateClasses(u.state)} ${
+        isSel ? 'ring-2 ring-midnite ring-offset-2 ring-offset-canvas-2' : ''
+      }`}
+      title={`unit ${u.number} ${u.type.toLowerCase()}`}
+    >
+      <span className="absolute top-1 left-1.5 text-[9px] tracking-wider font-medium opacity-70">
+        {u.type.toLowerCase()}
+      </span>
+      <span className="absolute inset-0 flex items-center justify-center text-[14px] font-semibold">
+        {u.number}
+      </span>
+    </button>
   )
 }
 

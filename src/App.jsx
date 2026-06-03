@@ -397,11 +397,14 @@ function moreInfoChips(persona, seen, temperature, callbackArranged = false, has
     ? callbackConfirmed
     : { id: '__callback', label: 'Laat de makelaar mij bellen' }
   // Portal-chip: pas zichtbaar zodra een e-mail bekend is. Geeft de bezoeker
-  // een uitnodiging om zelf verder te kijken op dehofman.nl waar 'ie automatisch
-  // ingelogd is via de portal-token. Alleen voor genuine-interest leads — niet
-  // afhakers — vandaar dat we 'm alleen in moreInfo tonen en niet in afhaak/etc.
+  // een uitnodiging om zelf verder te kijken op de project-portal. Voor De
+  // Hofman is dat dehofman.nl (eigen portal), voor andere projecten meestal
+  // kopen.repp.nl/<slug> (kopen-repp-redirect strategie). Label komt uit
+  // project.portalLabel, met fallback op hostname uit portalUrl.
+  const portalLabel = project.portalLabel
+    || (project.portalUrl ? `Bekijk op ${project.portalUrl.replace(/^https?:\/\//, '')}` : 'Bekijk koopomgeving')
   const portalChip = hasEmail
-    ? { id: '__portal', label: 'Bekijk op dehofman.nl', variant: 'portal' }
+    ? { id: '__portal', label: portalLabel, variant: 'portal' }
     : null
   // All-seen-fase: bezoeker is voorbij de discovery-drempel. Naast de
   // resterende info-chips bieden we een expliciete "Ik heb genoeg gezien"-

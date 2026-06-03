@@ -143,43 +143,56 @@ export const project = {
     },
   },
 
-  // 16 units site plan met actuele beschikbaarheid uit kopen.repp.nl/depaveri.
-  // L-shape layout uit brochure pagina 12 vereenvoudigd naar 2 rijen voor
-  // de SitePlanBubble. Werkelijke layout heeft Unit 1/2/3 in rechterkolom
-  // (3 lagen, dakterras) en 4-8 + 9-16 in een horizontaal blok.
-  // Eventueel later SitePlanBubble uitbreiden voor 1:1 L-vorm-rendering.
+  // 16 units site plan — L-shape layout matchend met officiële plattegrond-
+  // SVG (zie /public/projects/depaveri/plattegrond.svg). Drie zones:
+  //   • sections[0]: top-rij 5× Type C (8,7,6,5,4 v.l.n.r.)
+  //   • sections[1]: bottom-rij 8× Type D (9-16 v.l.n.r.)
+  //   • sidebar:    rechter-kolom 3× Type A/B (1,2,3 van boven naar beneden)
+  // SitePlanBubble herkent sections+sidebar en rendert ze in het juiste
+  // L-patroon met landscape-aspect voor de sidebar-tegels (Type A/B zijn
+  // breder dan hoog in de werkelijke plattegrond).
   sitePlan: {
-    rows: [
-      { units: [
+    sections: [
+      {
+        cols: 5,
+        aspect: 'portrait',
+        units: [
+          { number: 8, type: 'C', state: 'available' },
+          { number: 7, type: 'C', state: 'available' },
+          { number: 6, type: 'C', state: 'available' },
+          { number: 5, type: 'C', state: 'available' },
+          { number: 4, type: 'C', state: 'sold' },
+        ],
+      },
+      {
+        cols: 8,
+        aspect: 'portrait',
+        units: [
+          { number: 9, type: 'D', state: 'sold' },
+          { number: 10, type: 'D', state: 'sold_ov' },
+          { number: 11, type: 'D', state: 'sold' },
+          { number: 12, type: 'D', state: 'sold' },
+          { number: 13, type: 'D', state: 'sold_ov' },
+          { number: 14, type: 'D', state: 'sold' },
+          { number: 15, type: 'D', state: 'sold' },
+          { number: 16, type: 'D', state: 'sold' },
+        ],
+      },
+    ],
+    sidebar: {
+      aspect: 'landscape',
+      units: [
         { number: 1, type: 'A', state: 'sold' },
         { number: 2, type: 'B', state: 'sold' },
         { number: 3, type: 'A', state: 'sold' },
-        { number: 4, type: 'C', state: 'sold' },
-        { number: 5, type: 'C', state: 'available' },
-        { number: 6, type: 'C', state: 'available' },
-        { number: 7, type: 'C', state: 'available' },
-        { number: 8, type: 'C', state: 'available' },
-      ]},
-      { units: [
-        { number: 9, type: 'D', state: 'sold' },
-        { number: 10, type: 'D', state: 'sold_ov' },
-        { number: 11, type: 'D', state: 'sold' },
-        { number: 12, type: 'D', state: 'sold' },
-        { number: 13, type: 'D', state: 'sold_ov' },
-        { number: 14, type: 'D', state: 'sold' },
-        { number: 15, type: 'D', state: 'sold' },
-        { number: 16, type: 'D', state: 'sold' },
-      ]},
-    ],
+      ],
+    },
     legend: [
       { state: 'available', label: 'Beschikbaar' },
       { state: 'sold_ov', label: 'Verkocht ov' },
       { state: 'sold', label: 'Verkocht' },
     ],
-    // Orientatie-labels rondom de tegelgrid. Industrieweg ligt langs de
-    // east-zijde van Gebouw A volgens de brochure. Geen recreatie-blok.
     cardinalLabels: {
-      east: 'Industrieweg',
       bottom: 'Assendelft Noord',
     },
   },
@@ -421,6 +434,7 @@ export const project = {
   // Externe portal: kopen-repp-redirect strategie. Lead gaat direct naar
   // het generieke REPP-portaal zonder portal-code of magic-link.
   portalUrl: 'https://kopen.repp.nl/depaveri',
+  portalLabel: 'Bekijk koopomgeving De Paveri',
   // Webhook voor financiering-doorgeven aan Company & Living Finance.
   // TODO: webhook URL afstemmen met Flip indien aparte trigger nodig.
   credionWebhookUrl: null,
