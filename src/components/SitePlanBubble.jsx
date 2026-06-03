@@ -18,6 +18,10 @@ export default function SitePlanBubble({ sitePlan, units, persona, onUnitView, o
     ...(sitePlan.rows?.flatMap((r) => r.units) || []),
     ...(sitePlan.sections?.flatMap((s) => s.units) || []),
     ...(sitePlan.sidebar?.units || []),
+    ...(sitePlan.layoutRows?.flatMap((r) => [
+      ...(r.left?.units || []),
+      ...(r.right ? [r.right] : []),
+    ]) || []),
   ]
   const selected = allUnits.find((u) => u.number === selectedNumber)
   const selectedTypeData = selected ? units?.find((u) => u.type === selected.type) : null
@@ -66,10 +70,32 @@ export default function SitePlanBubble({ sitePlan, units, persona, onUnitView, o
             <div className="mt-3 relative">
               <div className="rounded-2xl bg-canvas-2 border border-mist-light p-3 flex gap-2 items-stretch">
                 <div className="flex-1 min-w-0">
-                  {sitePlan.sections ? (
-                    // Sections-layout (Paveri-style): meerdere grids verticaal
-                    // gestapeld voor de hoofd-blokken. Bv. top-rij type C, daar-
-                    // onder bottom-rij type D met verschillende kolom-counts.
+                  {sitePlan.layoutRows ? (
+                    // LayoutRows (Paveri-style): rij per rij specificeer je
+                    // left-section + right-sidebar-cell. Empty left = lege
+                    // ruimte (bv. middelste rij waar alleen sidebar-unit zit).
+                    // Geeft pixel-control over L-vormen en off-grid sidebars.
+                    <div className="grid gap-1" style={{ gridTemplateColumns: '1fr 24%' }}>
+                      {sitePlan.layoutRows.flatMap((row, ri) => [
+                        <div key={`l-${ri}`} className="min-h-0">
+                          {row.left ? (
+                            <div
+                              className="grid gap-1 h-full"
+                              style={{ gridTemplateColumns: `repeat(${row.left.cols}, minmax(0, 1fr))` }}
+                            >
+                              {row.left.units.map((u) => renderUnit(u, selectedNumber, setSelectedNumber, onUnitView, row.left.aspect))}
+                            </div>
+                          ) : null}
+                        </div>,
+                        <div key={`r-${ri}`} className="min-h-0">
+                          {row.right ? renderUnit(row.right, selectedNumber, setSelectedNumber, onUnitView, row.right.aspect || 'landscape') : null}
+                        </div>,
+                      ])}
+                    </div>
+                  ) : sitePlan.sections ? (
+                    // Sections-layout (intermediate): meerdere grids verticaal
+                    // gestapeld zonder sidebar-aligning. Eenvoudiger maar geen
+                    // pixel-control over alignment met sidebar.
                     sitePlan.sections.map((section, si) => (
                       <div
                         key={si}
@@ -92,10 +118,9 @@ export default function SitePlanBubble({ sitePlan, units, persona, onUnitView, o
                     ))
                   )}
                 </div>
-                {/* Sidebar-kolom rechts (Paveri-style): vertikaal gestapelde
-                    units die naast de hoofd-grid staan. Bv. Type A/B units met
-                    aspect-ratio 'wide' (langer dan hoog). */}
-                {sitePlan.sidebar && (
+                {/* Sidebar-kolom rechts (alleen voor sections-layout — voor
+                    layoutRows zit de sidebar IN de grid per rij). */}
+                {!sitePlan.layoutRows && sitePlan.sidebar && (
                   <div className="shrink-0 w-[28%]">
                     <div
                       className="grid gap-1 h-full"
@@ -163,9 +188,14 @@ export default function SitePlanBubble({ sitePlan, units, persona, onUnitView, o
 // matchen met de werkelijke gevel-indeling.
 function renderUnit(u, selectedNumber, setSelectedNumber, onUnitView, aspect) {
   const isSel = selectedNumber === u.number
-  const aspectClass =
+  // aspect 'fill' = vul cel volledig (h-full w-full, geen vaste ratio).
+  // Gebruikt voor layoutRows sidebar-cellen die de hoogte van hun rij moeten
+  // matchen ipv hun eigen aspect-ratio te dicteren. Andere waardes
+  // (portrait/landscape/square) dicteren de cell-size via aspect-ratio.
+  const sizeClass =
+    aspect === 'fill'      ? 'w-full h-full min-h-[60px]' :
     aspect === 'landscape' ? 'aspect-[5/3]' :
-    aspect === 'square' ? 'aspect-square' :
+    aspect === 'square'    ? 'aspect-square' :
     'aspect-[3/4]'
   return (
     <button
@@ -178,7 +208,7 @@ function renderUnit(u, selectedNumber, setSelectedNumber, onUnitView, aspect) {
           if (onUnitView) onUnitView({ number: u.number, type: u.type, state: u.state })
         }
       }}
-      className={`relative ${aspectClass} rounded-md border transition active:scale-95 ${stateClasses(u.state)} ${
+      className={`relative ${sizeClass} rounded-md border transition active:scale-95 ${stateClasses(u.state)} ${
         isSel ? 'ring-2 ring-midnite ring-offset-2 ring-offset-canvas-2' : ''
       }`}
       title={`unit ${u.number} ${u.type.toLowerCase()}`}

@@ -143,50 +143,52 @@ export const project = {
     },
   },
 
-  // 16 units site plan — L-shape layout matchend met officiële plattegrond-
-  // SVG (zie /public/projects/depaveri/plattegrond.svg). Drie zones:
-  //   • sections[0]: top-rij 5× Type C (8,7,6,5,4 v.l.n.r.)
-  //   • sections[1]: bottom-rij 8× Type D (9-16 v.l.n.r.)
-  //   • sidebar:    rechter-kolom 3× Type A/B (1,2,3 van boven naar beneden)
-  // SitePlanBubble herkent sections+sidebar en rendert ze in het juiste
-  // L-patroon met landscape-aspect voor de sidebar-tegels (Type A/B zijn
-  // breder dan hoog in de werkelijke plattegrond).
+  // 16 units site plan — L-shape layout matchend met officiële plattegrond
+  // (zie /public/projects/depaveri/plattegrond.svg en kopen.repp.nl/depaveri).
+  // layoutRows = drie horizontale rijen, elk met optionele left-grid en
+  // optionele right-sidebar-cell. Sidebar staat IN de grid per rij zodat
+  // alignment exact klopt:
+  //   • Rij 1: 5× Type C (8,7,6,5,4) + Unit 1 (Type A) rechts
+  //   • Rij 2: (lege left) + Unit 2 (Type B) rechts alleen
+  //   • Rij 3: 8× Type D (9-16) + Unit 3 (Type A) rechts
   sitePlan: {
-    sections: [
+    layoutRows: [
       {
-        cols: 5,
-        aspect: 'portrait',
-        units: [
-          { number: 8, type: 'C', state: 'available' },
-          { number: 7, type: 'C', state: 'available' },
-          { number: 6, type: 'C', state: 'available' },
-          { number: 5, type: 'C', state: 'available' },
-          { number: 4, type: 'C', state: 'sold' },
-        ],
+        left: {
+          cols: 5,
+          aspect: 'portrait',
+          units: [
+            { number: 8, type: 'C', state: 'available' },
+            { number: 7, type: 'C', state: 'available' },
+            { number: 6, type: 'C', state: 'available' },
+            { number: 5, type: 'C', state: 'available' },
+            { number: 4, type: 'C', state: 'sold' },
+          ],
+        },
+        right: { number: 1, type: 'A', state: 'sold', aspect: 'fill' },
       },
       {
-        cols: 8,
-        aspect: 'portrait',
-        units: [
-          { number: 9, type: 'D', state: 'sold' },
-          { number: 10, type: 'D', state: 'sold_ov' },
-          { number: 11, type: 'D', state: 'sold' },
-          { number: 12, type: 'D', state: 'sold' },
-          { number: 13, type: 'D', state: 'sold_ov' },
-          { number: 14, type: 'D', state: 'sold' },
-          { number: 15, type: 'D', state: 'sold' },
-          { number: 16, type: 'D', state: 'sold' },
-        ],
+        left: null,
+        right: { number: 2, type: 'B', state: 'sold', aspect: 'fill' },
+      },
+      {
+        left: {
+          cols: 8,
+          aspect: 'portrait',
+          units: [
+            { number: 9, type: 'D', state: 'sold' },
+            { number: 10, type: 'D', state: 'sold_ov' },
+            { number: 11, type: 'D', state: 'sold' },
+            { number: 12, type: 'D', state: 'sold' },
+            { number: 13, type: 'D', state: 'sold_ov' },
+            { number: 14, type: 'D', state: 'sold' },
+            { number: 15, type: 'D', state: 'sold' },
+            { number: 16, type: 'D', state: 'sold' },
+          ],
+        },
+        right: { number: 3, type: 'A', state: 'sold', aspect: 'fill' },
       },
     ],
-    sidebar: {
-      aspect: 'landscape',
-      units: [
-        { number: 1, type: 'A', state: 'sold' },
-        { number: 2, type: 'B', state: 'sold' },
-        { number: 3, type: 'A', state: 'sold' },
-      ],
-    },
     legend: [
       { state: 'available', label: 'Beschikbaar' },
       { state: 'sold_ov', label: 'Verkocht ov' },

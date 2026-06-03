@@ -62,6 +62,18 @@ function getQuestion(key) {
   if (!override) return base
   return { ...base, ...override }
 }
+
+// Telt alle units uit sitePlan, ongeacht of project rows/sections/layoutRows
+// gebruikt. Gebruikt voor bot-text als "Hier zijn de X units".
+function countSitePlanUnits(sp) {
+  if (!sp) return 0
+  return (
+    (sp.rows?.flatMap((r) => r.units).length || 0) +
+    (sp.sections?.flatMap((s) => s.units).length || 0) +
+    (sp.sidebar?.units?.length || 0) +
+    (sp.layoutRows?.reduce((n, r) => n + (r.left?.units?.length || 0) + (r.right ? 1 : 0), 0) || 0)
+  )
+}
 const initial = {
   // Default = 'intro'. Bij cold-start bepaalt de useReducer-initializer
   // (zie Demo()) of we deze waarde overschrijven naar 'chat' op basis van
@@ -1084,7 +1096,7 @@ function Demo() {
       const botMessages = []
       if (opt.id === 'ja') {
         botMessages.push(
-          { kind: 'bot-text', text: `Hier zijn de ${project.sitePlan?.rows?.reduce((n, r) => n + r.units.length, 0) || 'beschikbare'} units met de actuele status. Tik op een unit voor meer informatie over die unit.` },
+          { kind: 'bot-text', text: `Hier zijn de ${countSitePlanUnits(project.sitePlan) || 'beschikbare'} units met de actuele status. Tik op een unit voor meer informatie over die unit.` },
           { kind: 'site-plan', payload: { sitePlan: project.sitePlan, units: project.units, persona } },
           // Twee-fase wachten voor menselijk gevoel:
           //   silent 13s = bezoeker scant plattegrond in stilte, geen typing

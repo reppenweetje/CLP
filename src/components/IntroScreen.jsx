@@ -34,7 +34,7 @@ export default function IntroScreen({ onStart }) {
           </h1>
 
           <div className="grid grid-cols-3 gap-2 lg:gap-3 pt-1">
-            <Stat label="Units" value={String(project.sitePlan?.rows?.reduce((n, r) => n + r.units.length, 0) || '')} />
+            <Stat label="Units" value={String(countProjectUnits(project) || '')} />
             <Stat label="Verkocht" value={`${project.status?.soldPercent ?? ''}%`} />
             <Stat label="Vanaf" value={formatPriceK(project.units?.find((u) => u.state === 'available')?.priceFrom ?? project.units?.[0]?.priceFrom)} />
           </div>
@@ -71,4 +71,16 @@ function formatPriceK(amount) {
   if (typeof amount !== 'number' || isNaN(amount)) return ''
   if (amount >= 1000) return `€${Math.round(amount / 1000)}k`
   return `€${amount}`
+}
+
+// Telt alle units uit project.sitePlan over de drie ondersteunde
+// layout-schemas heen (rows / sections+sidebar / layoutRows).
+function countProjectUnits(project) {
+  const sp = project.sitePlan || {}
+  return (
+    (sp.rows?.flatMap((r) => r.units).length || 0) +
+    (sp.sections?.flatMap((s) => s.units).length || 0) +
+    (sp.sidebar?.units?.length || 0) +
+    (sp.layoutRows?.reduce((n, r) => n + (r.left?.units?.length || 0) + (r.right ? 1 : 0), 0) || 0)
+  )
 }
