@@ -49,18 +49,19 @@ function anonKey() {
   return readEnv('VITE_SUPABASE_ANON_KEY', '')
 }
 
-// Source-key voor lead-tagging in Supabase + n8n routing + CRM project field.
-// Volgorde:
-//   1. VITE_CLP_SOURCE env-var (expliciet — preview-deploys kunnen 'em overriden)
-//   2. Hostname-afgeleid uit project.id (de-paveri → clp_depaveri)
-//   3. Fallback clp_dehofman (legacy default)
+// Source-key voor lead-tagging in Supabase + n8n routing + CRM project field
+// + gemini-followup prompt-selectie. Volgorde:
+//   1. project.crmProject (project-data is bron van waarheid — bv. "Paveri BUnit")
+//   2. VITE_CLP_SOURCE env-var (legacy override, alleen voor edge cases)
+//   3. Hostname-afgeleide fallback (project.id → clp_<slug>)
 //
 // Cruciaal voor hostname-aware routing: dehofman.clp.repp.nl en
 // depaveri.clp.repp.nl delen één Vercel-project (en dus één env-var),
-// dus de hostname-afleiding is wat ze uit elkaar trekt. Zonder dit
-// zouden Paveri-leads ten onrechte als clp_dehofman binnenkomen in
-// outbound_settings + n8n + Brevo.
+// dus de hostname-afleiding via project.crmProject is wat ze uit elkaar
+// trekt. Zonder dit zouden Paveri-leads ten onrechte als clp_dehofman
+// binnenkomen in n8n + Brevo + de Gemini-prompt.
 function source() {
+  if (project?.crmProject) return project.crmProject
   const envSrc = readEnv('VITE_CLP_SOURCE', '')
   if (envSrc) return envSrc
   const id = project?.id || 'de-hofman'
@@ -395,10 +396,13 @@ export function clearQueue() {
 // alleen via de service-role Edge Function gepoort achter X-Admin-Token.
 // Toont dus de dual-write kopieën die pushAnalyticsCopy hierboven schrijft.
 
+// Source-key → admin-tenant. Sleutels moeten matchen met de source() output.
+// "Paveri BUnit" met spatie is bewust — dat is de officiële CRM-project-naam
+// bij Tharwat, niet een technische slug.
 const SOURCE_TO_TENANT = {
-  clp_dehofman: 'dehofman',
-  clp_depaveri: 'depaveri',
-  clp_uitgifte: 'uitgifte',
+  clp_dehofman:  'dehofman',
+  'Paveri BUnit': 'depaveri',
+  clp_uitgifte:  'uitgifte',
 }
 
 function leadsFetchEndpoint() {

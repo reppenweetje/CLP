@@ -49,18 +49,19 @@ function isEnabled() {
 // Source-tag → tenant-naam in events-tabel. Whitelist-gevalideerd door
 // Edge Function — onbekende waardes worden door de Function geweigerd.
 const TENANT_MAP = {
-  clp_uitgifte: 'uitgifte',
-  clp_dehofman: 'dehofman',
-  clp_depaveri: 'depaveri',
+  clp_uitgifte:   'uitgifte',
+  clp_dehofman:   'dehofman',
+  'Paveri BUnit': 'depaveri',
 }
 
 // Source-key + tenant-string voor analytics. Volgorde:
-//   1. VITE_CLP_SOURCE env-var (preview-deploys / clp-didamdesk repo)
-//   2. Hostname-afgeleid uit project.id (de-paveri → clp_depaveri)
-//   3. Fallback clp_dehofman
+//   1. project.crmProject (project-data is bron van waarheid)
+//   2. VITE_CLP_SOURCE env-var (legacy override)
+//   3. Hostname-afgeleid uit project.id (clp_<slug>)
 // Zie dezelfde logica in api.js — bewust gespiegeld zodat lead-upsert
 // en clp-events naar dezelfde tenant-tag verwijzen.
 function resolveSource() {
+  if (project?.crmProject) return project.crmProject
   const envSrc = readEnv('VITE_CLP_SOURCE', '')
   if (envSrc) return envSrc
   const id = project?.id || 'de-hofman'

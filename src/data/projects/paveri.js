@@ -17,6 +17,15 @@ export const project = {
   logo: '/projects/depaveri/logo.svg',
   exterior: '/projects/depaveri/project.jpg',
 
+  // CRM-project key. Wordt als `source` meegestuurd naar Supabase lead-upsert,
+  // clp-events en consent-log. Op basis van deze key kiest n8n de routing
+  // (CRM-project, Brevo-list, WhatsApp-template) EN bepaalt de gemini-followup
+  // Edge Function welk AI-prompt-template gebruikt wordt voor de eerste
+  // bot-samenvatting per WhatsApp. Moet exact matchen met het bestaande
+  // CRM-project — "Paveri BUnit" (mét spatie en hoofdletters) staat al
+  // ingericht bij Tharwat; niet aanpassen zonder afstemming.
+  crmProject: 'Paveri BUnit',
+
   // Portal-strategie. Voor De Paveri wijst de CLP-handoff naar het generieke
   // REPP-portaal (kopen.repp.nl/depaveri) ipv eigen subsite. Brevo stuurt
   // daardoor simpelere mail (geen portal-code), CtaBubble linkt direct door.

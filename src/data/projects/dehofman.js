@@ -10,6 +10,14 @@ export const project = {
   logo: '/images/logo.svg',
   exterior: '/images/exterieur.jpg',
 
+  // CRM-project key — bestaande productie-waarde van de Hofman, gebruikt
+  // door Tharwats n8n-routing, Brevo en de gemini-followup Edge Function.
+  // Komt overeen met de Vercel-env VITE_CLP_SOURCE die nu prod heeft —
+  // door 't ook hier expliciet te zetten worden beide projecten op één
+  // Vercel-project (dehofman + depaveri) automatisch correct getagd
+  // op basis van de hostname.
+  crmProject: 'clp_dehofman',
+
   // Gallery wisselt visueel tussen exterieur en interieur shots zodat de
   // hero-carousel duidelijk transformeert, niet twee bijna-identieke avond-shots.
   gallery: [
