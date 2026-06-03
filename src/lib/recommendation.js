@@ -23,19 +23,46 @@ export function recommendContentCards(answers, persona, project) {
     .filter(Boolean)
 }
 
+// Project-agnostisch unit-recommendation. Gebruikt het `unit`-veld van de
+// size-optie die de bezoeker heeft gekozen om de bijbehorende unit-type in
+// project.units te vinden. Werkt voor elk project zolang de size-opties
+// een `unit`-veld hebben (zie flow.questions.size.options voor De Hofman
+// en project.flowOverrides.sizeQuestion.options voor andere projecten).
+//
+// Fallback-strategie:
+//   1. Match op size.unit → primary
+//   2. Geen match → eerste available unit als primary
+//   3. fallback = eerste andere available unit, anders eerste niet-primary
+//   4. note generated als primary state = coming_soon
 export function recommendUnit(answers, project) {
-  const sizeId = answers.size?.id
-  const L = project.units.find((u) => u.type === 'L')
-  const XXL = project.units.find((u) => u.type === 'XXL')
+  const units = project.units || []
+  if (units.length === 0) return { primary: null, fallback: null, note: null }
 
-  if (sizeId === 'meer_dan_100' || sizeId === 'zo_groot') {
-    return {
-      primary: XXL,
-      fallback: L,
-      note: 'XXL volgt later in verkoop. We kunnen je op de interesselijst zetten. Tot die tijd is de L-unit het meest concreet beschikbaar.',
+  // 1. Probeer op basis van size.unit (de option-keuze van de bezoeker).
+  const preferredType = answers.size?.unit
+  let primary = preferredType ? units.find((u) => u.type === preferredType) : null
+
+  // 2. Geen voorkeur of preferred type bestaat niet → eerste available.
+  if (!primary) {
+    primary = units.find((u) => u.state === 'available') || units[0]
+  }
+
+  // 3. Fallback = eerste andere available, anders eerste niet-primary unit.
+  const fallback =
+    units.find((u) => u !== primary && u.state === 'available') ||
+    units.find((u) => u !== primary) ||
+    null
+
+  // 4. Note bij coming_soon zodat de bezoeker weet dat 't nog niet kan.
+  let note = null
+  if (primary?.state === 'coming_soon') {
+    note = `${primary.type} volgt later in verkoop. We kunnen je op de interesselijst zetten.`
+    if (fallback?.state === 'available') {
+      note += ` Tot die tijd is de ${fallback.type}-unit het meest concreet beschikbaar.`
     }
   }
-  return { primary: L, fallback: XXL, note: null }
+
+  return { primary, fallback, note }
 }
 
 // Hoeveel signalen heeft de bezoeker gegeven? Bepaalt of we stellig

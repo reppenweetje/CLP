@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Laag_1" data-name="Laag 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1497.80005 897.90002">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: none;
+        stroke-width: 2px;
+      }
+
+      .cls-1, .cls-2 {
+        stroke: #1b23aa;
+        stroke-miterlimit: 10;
+      }
+
+      .cls-3 {
+        font-family: Montserrat-Bold, Montserrat;
+        font-size: 58.75583px;
+        font-weight: 700;
+      }
+
+      .cls-3, .cls-4 {
+        fill: #0f005b;
+        isolation: isolate;
+      }
+
+      .cls-2 {
+        fill: #fff;
+      }
+
+      .cls-5 {
+        fill: #0f0f70;
+      }
+
+      .cls-4 {
+        font-family: Montserrat-Regular, Montserrat;
+        font-size: 16.19255px;
+      }
+    </style>
+  </defs>
+  <rect class="cls-5" x="-43.25286" y="-17.5524" width="1575.55223" height="958.19299"/>
+  <g id="F-01">
+    <g id="U-16">
+      <rect id="U-161" class="cls-2" x="965.35978" y="470.41846" width="114.38884" height="266.02042" rx="16" ry="16"/>
+      <text class="cls-3" transform="translate(991.73002 602.15707) rotate(-.8)"><tspan x="0" y="0">16</tspan></text>
+      <text class="cls-4" transform="translate(994.15951 631.07233)"><tspan x="0" y="0">UNIT D</tspan></text>
+    </g>
+    <g id="U-15">
+      <rect id="U-151" class="cls-2" x="842.41192" y="470.53416" width="114.38884" height="266.02049" rx="16" ry="16"/>
+      <text class="cls-3" transform="translate(869.82293 602.38848) rotate(-.8)"><tspan x="0" y="0">15</tspan></text>
+      <text class="cls-4" transform="translate(871.09603 631.30378)"><tspan x="0" y="0">UNIT D</tspan></text>
+    </g>
+    <g id="U-14">
+      <rect id="U-141" class="cls-2" x="719.11724" y="470.53409" width="114.38884" height="266.02049" rx="16" ry="16"/>
+      <text class="cls-3" transform="translate(744.44663 602.15656) rotate(-.8)"><tspan x="0" y="0">14</tspan></text>
+      <text class="cls-4" transform="translate(749.1888 631.07233)"><tspan x="0" y="0">UNIT D</tspan></text>
+    </g>
+    <g id="U-13">
+      <rect id="U-131" class="cls-2" x="596.28522" y="470.6498" width="114.38884" height="266.02049" rx="16" ry="16"/>
+      <text class="cls-3" transform="translate(623.69676 601.92548) rotate(-.8)"><tspan x="0" y="0">13</tspan></text>
+      <text class="cls-4" transform="translate(624.96908 630.84089)"><tspan x="0" y="0">UNIT D</tspan></text>
+    </g>
+    <g id="U-12">
+      <rect id="u-12" class="cls-2" x="473.33751" y="470.41846" width="114.38884" height="266.02049" rx="16" ry="16"/>
+      <text class="cls-3" transform="translate(501.67423 602.38801) rotate(-.8)"><tspan x="0" y="0">12</tspan></text>
+      <text class="cls-4" transform="translate(502.94662 631.30378)"><tspan x="0" y="0">UNIT D</tspan></text>
+    </g>
+    <g id="U-11">
+      <rect id="u-11" class="cls-2" x="350.04275" y="470.41842" width="114.38884" height="266.02045" rx="16" ry="16"/>
+      <text class="cls-3" transform="translate(384.74058 602.85078) rotate(-.8)"><tspan x="0" y="0">11</tspan></text>
+      <text class="cls-4" transform="translate(380.92416 631.30378)"><tspan x="0" y="0">UNIT D</tspan></text>
+    </g>
+    <g id="U-10">
+      <rect id="u-10" class="cls-2" x="227.21074" y="470.41848" width="114.38884" height="266.02047" rx="16" ry="16"/>
+      <text class="cls-3" transform="translate(253.23441 603.08243) rotate(-.8)"><tspan x="0" y="0">10</tspan></text>
+      <text class="cls-4" transform="translate(257.05111 631.07233)"><tspan x="0" y="0">UNIT D</tspan></text>
+    </g>
+    <g id="U-9">
+      <rect id="u-9" class="cls-2" x="104.37865" y="470.53407" width="114.38884" height="266.02051" rx="16" ry="16"/>
+      <text class="cls-3" transform="translate(143.81846 603.08179) rotate(-.8)"><tspan x="0" y="0">9</tspan></text>
+      <text class="cls-4" transform="translate(133.87191 630.95612)"><tspan x="0" y="0">UNIT D</tspan></text>
+    </g>
+    <g id="U-8">
+      <rect id="U-81" class="cls-2" x="103.68471" y="155.70466" width="188.18056" height="306.15492" rx="16" ry="16"/>
+      <text class="cls-3" transform="translate(179.32682 324.9173) rotate(-.8)"><tspan x="0" y="0">8</tspan></text>
+      <text class="cls-4" transform="translate(171.46175 351.17243)"><tspan x="0" y="0">UNIT C</tspan></text>
+    </g>
+    <g id="U-7">
+      <rect id="U-71" class="cls-2" x="301.23383" y="155.58898" width="188.1806" height="306.1549" rx="16" ry="16"/>
+      <text class="cls-3" transform="translate(376.76006 324.10788) rotate(-.8)"><tspan x="0" y="0">7</tspan></text>
+      <text class="cls-4" transform="translate(364.84701 351.28815)"><tspan x="0" y="0">UNIT C</tspan></text>
+    </g>
+    <g id="U-6">
+      <rect id="U-61" class="cls-2" x="498.78301" y="156.05158" width="188.18056" height="306.1549" rx="16" ry="16"/>
+      <text class="cls-3" transform="translate(574.19347 324.57008) rotate(-.8)"><tspan x="0" y="0">6</tspan></text>
+      <text class="cls-4" transform="translate(565.98177 351.40388)"><tspan x="0" y="0">UNIT C</tspan></text>
+    </g>
+    <g id="U-5">
+      <rect id="U-51" class="cls-2" x="694.71285" y="155.47327" width="188.1806" height="306.1549" rx="16" ry="16"/>
+      <text class="cls-3" transform="translate(771.04869 325.38022) rotate(-.8)"><tspan x="0" y="0">5</tspan></text>
+      <text class="cls-4" transform="translate(760.52377 351.5196)"><tspan x="0" y="0">UNIT C</tspan></text>
+    </g>
+    <g id="U-4">
+      <rect id="U-41" class="cls-2" x="892.26196" y="156.05165" width="188.18056" height="306.15483" rx="16" ry="16"/>
+      <text class="cls-3" transform="translate(961.42692 324.10775) rotate(-.8)"><tspan x="0" y="0">4</tspan></text>
+      <text class="cls-4" transform="translate(957.6097 351.28815)"><tspan x="0" y="0">UNIT C</tspan></text>
+    </g>
+    <g id="U-3">
+      <rect id="u-3" class="cls-2" x="1088.42313" y="548.37399" width="306.15497" height="188.1806" rx="16" ry="16"/>
+      <text class="cls-3" transform="translate(1220.97092 651.31272) rotate(-.8)"><tspan x="0" y="0">3</tspan></text>
+      <text class="cls-4" transform="translate(1209.98275 678.60944)"><tspan x="0" y="0">UNIT A</tspan></text>
+    </g>
+    <g id="U-2">
+      <rect id="U-21" class="cls-2" x="1088.19186" y="351.75018" width="306.15497" height="188.18056" rx="16" ry="16"/>
+      <text class="cls-3" transform="translate(1220.62339 457.58091) rotate(-.8)"><tspan x="0" y="0">2</tspan></text>
+      <text class="cls-4" transform="translate(1209.05697 484.99226)"><tspan x="0" y="0">UNIT B</tspan></text>
+    </g>
+    <g id="U-1">
+      <rect id="U-17" class="cls-2" x="1088.3075" y="155.70465" width="306.15483" height="188.18056" rx="16" ry="16"/>
+      <text class="cls-3" transform="translate(1225.71313 258.75902) rotate(-.8)"><tspan x="0" y="0">1</tspan></text>
+      <text class="cls-4" transform="translate(1210.67709 286.28669)"><tspan x="0" y="0">UNIT A</tspan></text>
+    </g>
+    <g id="Lijnen">
+      <rect class="cls-1" x="1088.53876" y="156.05161" width="305.6923" height="187.71796" rx="16" ry="16"/>
+      <rect class="cls-1" x="1088.53876" y="352.32849" width="305.6923" height="187.71796" rx="15.89999" ry="15.89999"/>
+      <rect class="cls-1" x="1088.53876" y="548.48969" width="305.6923" height="187.71792" rx="15.90002" ry="15.90002"/>
+      <rect class="cls-1" x="892.37759" y="156.28292" width="187.71794" height="305.69216" rx="16" ry="16"/>
+      <rect class="cls-1" x="965.47541" y="470.64972" width="114.1575" height="265.67352" rx="16" ry="16"/>
+      <rect class="cls-1" x="842.52762" y="470.76543" width="114.1575" height="265.67352" rx="16" ry="16"/>
+      <rect class="cls-1" x="694.94418" y="155.82038" width="187.71794" height="305.69223" rx="16" ry="16"/>
+      <rect class="cls-1" x="498.78294" y="156.28299" width="187.71794" height="305.69223" rx="16" ry="16"/>
+      <rect class="cls-1" x="301.34946" y="155.82028" width="187.71794" height="305.69226" rx="16" ry="16"/>
+      <rect class="cls-1" x="103.91601" y="155.93596" width="187.71794" height="305.69221" rx="16" ry="16"/>
+      <rect class="cls-1" x="719.23294" y="470.76543" width="114.1575" height="265.67352" rx="16" ry="16"/>
+      <rect class="cls-1" x="596.28529" y="470.76543" width="114.1575" height="265.67352" rx="16" ry="16"/>
+      <rect class="cls-1" x="473.33751" y="470.53409" width="114.1575" height="265.67352" rx="16" ry="16"/>
+      <rect class="cls-1" x="350.04275" y="470.53409" width="114.1575" height="265.67352" rx="16" ry="16"/>
+      <rect class="cls-1" x="227.09503" y="470.76543" width="114.1575" height="265.67352" rx="16" ry="16"/>
+      <rect class="cls-1" x="104.26302" y="470.64974" width="114.1575" height="265.6735" rx="16" ry="16"/>
+    </g>
+  </g>
+</svg>

@@ -143,39 +143,60 @@ export const project = {
     },
   },
 
-  // 16 units site plan met actuele beschikbaarheid uit kopen.repp.nl/depaveri.
-  // L-shape layout uit brochure pagina 12 vereenvoudigd naar 2 rijen voor
-  // de SitePlanBubble. Werkelijke layout heeft Unit 1/2/3 in rechterkolom
-  // (3 lagen, dakterras) en 4-8 + 9-16 in een horizontaal blok.
-  // Eventueel later SitePlanBubble uitbreiden voor 1:1 L-vorm-rendering.
+  // 16 units site plan — L-shape layout matchend met officiële plattegrond
+  // (zie /public/projects/depaveri/plattegrond.svg en kopen.repp.nl/depaveri).
+  // layoutRows = drie horizontale rijen, elk met optionele left-grid en
+  // optionele right-sidebar-cell. Sidebar staat IN de grid per rij zodat
+  // alignment exact klopt:
+  //   • Rij 1: 5× Type C (8,7,6,5,4) + Unit 1 (Type A) rechts
+  //   • Rij 2: (lege left) + Unit 2 (Type B) rechts alleen
+  //   • Rij 3: 8× Type D (9-16) + Unit 3 (Type A) rechts
   sitePlan: {
-    rows: [
-      { units: [
-        { number: 1, type: 'A', state: 'sold' },
-        { number: 2, type: 'B', state: 'sold' },
-        { number: 3, type: 'A', state: 'sold' },
-        { number: 4, type: 'C', state: 'sold' },
-        { number: 5, type: 'C', state: 'available' },
-        { number: 6, type: 'C', state: 'available' },
-        { number: 7, type: 'C', state: 'available' },
-        { number: 8, type: 'C', state: 'available' },
-      ]},
-      { units: [
-        { number: 9, type: 'D', state: 'sold' },
-        { number: 10, type: 'D', state: 'sold_ov' },
-        { number: 11, type: 'D', state: 'sold' },
-        { number: 12, type: 'D', state: 'sold' },
-        { number: 13, type: 'D', state: 'sold_ov' },
-        { number: 14, type: 'D', state: 'sold' },
-        { number: 15, type: 'D', state: 'sold' },
-        { number: 16, type: 'D', state: 'sold' },
-      ]},
+    layoutRows: [
+      {
+        left: {
+          cols: 5,
+          aspect: 'portrait',
+          units: [
+            { number: 8, type: 'C', state: 'available' },
+            { number: 7, type: 'C', state: 'available' },
+            { number: 6, type: 'C', state: 'available' },
+            { number: 5, type: 'C', state: 'available' },
+            { number: 4, type: 'C', state: 'sold' },
+          ],
+        },
+        right: { number: 1, type: 'A', state: 'sold', aspect: 'fill' },
+      },
+      {
+        left: null,
+        right: { number: 2, type: 'B', state: 'sold', aspect: 'fill' },
+      },
+      {
+        left: {
+          cols: 8,
+          aspect: 'portrait',
+          units: [
+            { number: 9, type: 'D', state: 'sold' },
+            { number: 10, type: 'D', state: 'sold_ov' },
+            { number: 11, type: 'D', state: 'sold' },
+            { number: 12, type: 'D', state: 'sold' },
+            { number: 13, type: 'D', state: 'sold_ov' },
+            { number: 14, type: 'D', state: 'sold' },
+            { number: 15, type: 'D', state: 'sold' },
+            { number: 16, type: 'D', state: 'sold' },
+          ],
+        },
+        right: { number: 3, type: 'A', state: 'sold', aspect: 'fill' },
+      },
     ],
     legend: [
       { state: 'available', label: 'Beschikbaar' },
       { state: 'sold_ov', label: 'Verkocht ov' },
       { state: 'sold', label: 'Verkocht' },
     ],
+    cardinalLabels: {
+      bottom: 'Assendelft Noord',
+    },
   },
 
   units: [
@@ -415,6 +436,7 @@ export const project = {
   // Externe portal: kopen-repp-redirect strategie. Lead gaat direct naar
   // het generieke REPP-portaal zonder portal-code of magic-link.
   portalUrl: 'https://kopen.repp.nl/depaveri',
+  portalLabel: 'Bekijk koopomgeving De Paveri',
   // Webhook voor financiering-doorgeven aan Company & Living Finance.
   // TODO: webhook URL afstemmen met Flip indien aparte trigger nodig.
   credionWebhookUrl: null,
@@ -518,17 +540,20 @@ export const project = {
     },
   },
 
-  // Flow-overrides — per-project chip-opties voor specifieke vragen.
-  // De grootte-vraag heeft voor Paveri andere m²-categorieen dan De Hofman.
-  // TODO: flow.js moet dit veld gaan lezen (Fase: flow-override-support).
-  // Voor MVP: De Hofman's defaults werken nog niet correct voor Paveri's units.
+  // Flow-overrides — per-project label en chip-opties voor specifieke
+  // vragen. App.jsx's getQuestion('size') merget deze met flow.questions.size.
+  // Voor Paveri: andere m²-categorieën (112/178/208 ipv tot_50/rond_100/etc)
+  // en andere vraag-formulering omdat units 2-laags zijn met BG = totaal/2.
   flowOverrides: {
-    sizeOptions: [
-      { id: 'around_112', label: '112 m²', m2: 112 },
-      { id: 'around_178', label: '178 m²', m2: 178 },
-      { id: 'around_208', label: '208 m²', m2: 208 },
-      { id: 'weet_niet', label: 'Weet ik nog niet', m2: null },
-    ],
+    sizeQuestion: {
+      label: 'Hoeveel m² zoek je?',
+      options: [
+        { id: 'around_112', label: '112 m²', score: 12, unit: 'D' },
+        { id: 'around_178', label: '178 m²', score: 15, unit: 'C' },
+        { id: 'around_208', label: '208 m²', score: 15, unit: 'A' },
+        { id: 'weet_niet',  label: 'Weet ik nog niet', score: 5 },
+      ],
+    },
   },
 }
 

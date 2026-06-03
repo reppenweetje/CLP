@@ -1,4 +1,5 @@
 import ProgressIndicator from './ProgressIndicator.jsx'
+import { project } from '../data/project.js'
 
 // Header met REPP logomark, dunne goud-divider, WhatsApp escape en
 // een "aanpassen"-icoon dat de antwoorden-sheet opent.
@@ -53,7 +54,7 @@ export default function AppShell({
                 </div>
               )}
               <div className="flex flex-col leading-tight min-w-0">
-                <div className="text-[13px] tracking-[0.18em] text-ink uppercase font-medium whitespace-nowrap">de hofman</div>
+                <div className="text-[13px] tracking-[0.18em] text-ink uppercase font-medium whitespace-nowrap">{project.displayName || project.name}</div>
                 <div className="text-[9px] tracking-[0.14em] text-ink-mute uppercase whitespace-nowrap mt-0.5">exclusief in verkoop bij REPP</div>
               </div>
             </div>

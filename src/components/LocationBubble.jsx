@@ -57,7 +57,7 @@ export default function LocationBubble({ location, projectName }) {
           <div className="p-4 pt-3">
             {tab === 'reach' && <ReachPanel travelTimes={location.travelTimes} />}
             {tab === 'around' && <SurroundingsPanel surroundings={location.surroundings} />}
-            {tab === 'map' && <MapPanel mapsQuery={location.mapsQuery} mapsLink={location.mapsLink} />}
+            {tab === 'map' && <MapPanel mapsQuery={location.mapsQuery} mapsLink={location.mapsLink} address={location.address} />}
           </div>
 
           {location.scarcityNote && (
@@ -133,7 +133,7 @@ function ReachPanel({ travelTimes }) {
         ))}
       </div>
       <p className="text-[12px] text-ink-mute leading-snug mt-3">
-        Reistijden gemeten vanaf A. Hofmanweg buiten spits.
+        Reistijden gemeten vanaf {location.address?.split(',')[0] || 'het project'} buiten spits.
       </p>
     </div>
   )
@@ -192,7 +192,7 @@ function SurroundingsPanel({ surroundings = [] }) {
   )
 }
 
-function MapPanel({ mapsQuery, mapsLink }) {
+function MapPanel({ mapsQuery, mapsLink, address }) {
   // Live Google Maps embed in 4:3 ratio. Zoom-niveau 16 toont straat-context
   // zonder te ver in te zoomen. Lazy loading zodat 'em pas geladen wordt
   // wanneer de bezoeker daadwerkelijk de Kaart-tab opent.
@@ -202,7 +202,7 @@ function MapPanel({ mapsQuery, mapsLink }) {
       <div className="rounded-2xl overflow-hidden border border-mist-light bg-canvas-2 aspect-[4/3]">
         <iframe
           src={embedUrl}
-          title="Kaart van A. Hofmanweg, Haarlem"
+          title={`Kaart van ${address || 'het project'}`}
           loading="lazy"
           referrerPolicy="no-referrer-when-downgrade"
           className="w-full h-full"

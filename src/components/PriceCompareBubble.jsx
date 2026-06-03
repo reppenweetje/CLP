@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Avatar from './Avatar.jsx'
+import { project } from '../data/project.js'
 
 // Interactieve m²-prijs vergelijking. Bezoeker tapt op een staaf om
 // het verschil met De Hofman in euro's per m² te zien.
@@ -93,7 +94,7 @@ export default function PriceCompareBubble({ priceComparison }) {
                   <div className="text-[20px] font-semibold text-ink leading-none tabular-nums">
                     €{formatEuro(selected.price - ours.price)} / m²
                   </div>
-                  <div className="text-[13px] text-ink-soft">duurder dan De Hofman</div>
+                  <div className="text-[13px] text-ink-soft">duurder dan {project.displayName}</div>
                 </div>
                 <div className="text-[12px] text-ink-mute leading-snug mt-1.5">
                   Bij 105 m² is dat €{formatEuro((selected.price - ours.price) * 105)} verschil op de koopsom.
