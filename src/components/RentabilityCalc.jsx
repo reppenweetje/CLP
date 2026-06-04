@@ -10,7 +10,22 @@ function formatEuro(n) {
 }
 
 export default function RentabilityCalc({ price, size, indicative = false, onInteract, onCredionRequest }) {
-  const [marktHuur, setMarktHuur] = useState(175)
+  // BAR-slider grenzen: project kan via investor.barSlider een vaste BAR-range
+  // (5-7% voor Paveri/Zaanstreek) opleggen. We back-rekenen daaruit de
+  // markthuur-grenzen per unit op basis van price + size, zodat de slider
+  // altijd op realistische rendement-bandbreedte zit ongeacht welk unit-type.
+  // Default-fallback = oude Waarderpolder-range €100-250/m² + €175 default
+  // (intact voor De Hofman en projecten zonder barSlider-config).
+  const bs = project.investor?.barSlider
+  const useBarSlider = bs && typeof bs.min === 'number' && typeof bs.max === 'number' && price > 0 && size > 0
+  const huurMin     = useBarSlider ? Math.round((bs.min / 100) * price / size) : 100
+  const huurMax     = useBarSlider ? Math.round((bs.max / 100) * price / size) : 250
+  const huurStep    = useBarSlider ? 1 : 5
+  const huurDefault = useBarSlider
+    ? Math.round(((bs.default ?? bs.max) / 100) * price / size)
+    : 175
+
+  const [marktHuur, setMarktHuur] = useState(huurDefault)
   const interactedRef = useRef(false)
   const yearlyRent = size * marktHuur
   const bar = price > 0 ? (yearlyRent / price) * 100 : 0
@@ -48,9 +63,9 @@ export default function RentabilityCalc({ price, size, indicative = false, onInt
           input={
             <input
               type="range"
-              min={100}
-              max={250}
-              step={5}
+              min={huurMin}
+              max={huurMax}
+              step={huurStep}
               value={marktHuur}
               onChange={(e) => handleSliderChange(Number(e.target.value))}
               className="repp-range"
@@ -61,7 +76,7 @@ export default function RentabilityCalc({ price, size, indicative = false, onInt
       </div>
 
       <div className="mt-3 pt-3 border-t border-mist-light text-[12px] text-ink-mute leading-snug">
-        Indicatief, geen prognose. Exclusief VvE-lasten, onderhoud, leegstand en fiscale invloed. Range markthuur Waarderpolder ligt doorgaans €150 tot €200 per m² per jaar.
+        Indicatief, geen prognose. Exclusief VvE-lasten, onderhoud, leegstand en fiscale invloed.{useBarSlider ? ` Slider tussen ${bs.min}% en ${bs.max}% BAR — realistische bandbreedte voor casco bedrijfsunits in ${project.location?.city || 'deze regio'}.` : ' Range markthuur Waarderpolder ligt doorgaans €150 tot €200 per m² per jaar.'}
       </div>
       {onCredionRequest && (
         <button

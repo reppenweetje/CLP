@@ -99,6 +99,7 @@ function renderMessage(m, { onBrochure, onReset, onUnitView, onCalcInteract, onC
           title={m.payload.title}
           body={m.payload.body}
           image={m.payload.image}
+          imagePosition={m.payload.imagePosition}
         />
       )
     case 'unit-card':

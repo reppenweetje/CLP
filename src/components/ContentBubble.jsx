@@ -1,8 +1,12 @@
 import Avatar from './Avatar.jsx'
 import ImpressionNote from './ImpressionNote.jsx'
 
-// content card als bot bubble compact mooie kaart in de chat
-export default function ContentBubble({ tag, title, body, image }) {
+// content card als bot bubble compact mooie kaart in de chat.
+// imagePosition (optioneel): override van object-position voor de
+// image-crop. Default = "50% 50%" (center-crop). Handig voor kaarten/
+// renders waar de pin of focuspunt niet exact in 't midden zit en je
+// 'm wilt verschuiven (bv. Paveri locatie-kaart: '30% 50%').
+export default function ContentBubble({ tag, title, body, image, imagePosition }) {
   return (
     <div className="flex gap-2.5 items-start fade-up">
       <Avatar />
@@ -10,7 +14,12 @@ export default function ContentBubble({ tag, title, body, image }) {
         <div className="rounded-3xl rounded-tl-md overflow-hidden bg-paper border border-mist-light">
           {image && (
             <div className="aspect-[16/9] overflow-hidden bg-canvas-2">
-              <img src={image} alt="" className="w-full h-full object-cover" />
+              <img
+                src={image}
+                alt=""
+                className="w-full h-full object-cover"
+                style={imagePosition ? { objectPosition: imagePosition } : undefined}
+              />
             </div>
           )}
           <div className="p-4">
