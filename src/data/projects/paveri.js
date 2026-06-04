@@ -94,8 +94,8 @@ export const project = {
     {
       id: 'investor',
       tag: 'Belegging',
-      title: 'Realistisch BAR 5 tot 7%',
-      body: 'In de Zaanstreek-markt is een bruto aanvangsrendement van 5 tot 7% per jaar realistisch voor casco bedrijfsunits. Vrij op naam (geen overdrachtsbelasting), eigen parkeerplaatsen, gasloze nieuwbouw en flexibel indeelbaar. Btw bij belaste verhuur vaak terugvorderbaar — laat je adviseren.',
+      title: 'Realistisch BAR tot 7%',
+      body: 'In de Zaanstreek-markt is een bruto aanvangsrendement tot 7% per jaar realistisch voor casco bedrijfsunits. Vrij op naam (geen overdrachtsbelasting), eigen parkeerplaatsen, gasloze nieuwbouw en flexibel indeelbaar. Btw bij belaste verhuur vaak terugvorderbaar — laat je adviseren.',
       image: '/projects/depaveri/doorsnede.jpg',
     },
     {
@@ -370,12 +370,14 @@ export const project = {
   investor: {
     // Realistische BAR-range voor casco bedrijfsunits in de Zaanstreek-markt.
     // Lager dan Waarderpolder (waar Hofman 6,7-9,0% haalt) vanwege lagere
-    // markthuurniveaus in Assendelft/Wormerveer/Krommenie.
-    barRange: '5,0% tot 7,0%',
-    barSlider: { min: 5, max: 7, default: 7 },
+    // markthuurniveaus in Assendelft/Wormerveer/Krommenie. We tonen alleen
+    // de bovengrens (tot 7%) zodat bezoekers niet aan de ondergrens worden
+    // gepind — slider laat ze tot 3% zakken voor conservatieve scenario's.
+    barRange: 'tot 7%',
+    barSlider: { min: 3, max: 7, default: 7 },
     // Markthuur-range afgeleid uit barSlider × prijs/m² (Type C €1.713/m²
-    // bij 5-7% BAR = €85-120/m²/jaar). Aanname = midden van die range.
-    markthuurRange: '€85 tot €120 per m² per jaar',
+    // bij 3-7% BAR = €51-120/m²/jaar). Aanname = bovengrens-mid.
+    markthuurRange: 'tot €120 per m² per jaar',
     markthuurAanname: 100,
     kernfactoren: [
       'Nieuwbouwkwaliteit op een gevestigd bedrijventerrein.',
@@ -455,7 +457,7 @@ export const project = {
     {
       id: 'investor',
       title: 'Belegging',
-      body: 'BAR 5 tot 7% per jaar realistisch in de Zaanstreek-markt. Vrij op naam, eigen parkeerplaatsen en flexibele indeling. Rendement en verhuurbaarheid niet gegarandeerd.',
+      body: 'BAR tot 7% per jaar realistisch in de Zaanstreek-markt. Vrij op naam, eigen parkeerplaatsen en flexibele indeling. Rendement en verhuurbaarheid niet gegarandeerd.',
       tag: 'Belegger',
     },
   ],
