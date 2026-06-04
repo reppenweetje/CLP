@@ -94,8 +94,8 @@ export const project = {
     {
       id: 'investor',
       tag: 'Belegging',
-      title: 'Nieuwbouw in de Zaanstreek',
-      body: 'Kleinschalig en flexibel indeelbaar. Bij belaste verhuur kunnen fiscale aandachtspunten spelen. Laat je daarover goed adviseren.',
+      title: 'Realistisch BAR 5 tot 7%',
+      body: 'In de Zaanstreek-markt is een bruto aanvangsrendement van 5 tot 7% per jaar realistisch voor casco bedrijfsunits. Vrij op naam (geen overdrachtsbelasting), eigen parkeerplaatsen, gasloze nieuwbouw en flexibel indeelbaar. Btw bij belaste verhuur vaak terugvorderbaar — laat je adviseren.',
       image: '/projects/depaveri/doorsnede.jpg',
     },
     {
@@ -113,12 +113,10 @@ export const project = {
     district: 'Bedrijventerrein Assendelft Noord',
     aerialImage: '/projects/depaveri/locatie.jpg',
     // Blauwe pulse-marker positie binnen het 16:9 viewport (percentages).
-    // De source-image (2050×900) heeft een ingetekende bruine "DE PAVERI"
-    // drop-pin met de tip op ~60% horizontaal en ~55% verticaal van de
-    // source. Met default center-crop (object-position 50% 50%) van het
-    // bredere source → 16:9 viewport, valt die tip op (63%, 55%) van de
-    // visible area. Daar moet 't blauwe puntje overheen.
-    pinPosition: { x: 63, y: 55 },
+    // Source = nieuwe wider locatie-render 400×196 (~2:1) met DE PAVERI
+    // drop-pin links-van-center. Pin-tip op source ~(42%, 65%). Met
+    // default center-crop op 16:9 wordt 't viewport (41%, 65%).
+    pinPosition: { x: 41, y: 65 },
     mapsQuery: 'Industrieweg+9+Assendelft',
     mapsLink: 'https://www.google.com/maps?q=Industrieweg+9+Assendelft',
     // Reistijden vanaf Industrieweg 9 Assendelft (auto, normale verkeersomstandigheden).
@@ -372,14 +370,15 @@ export const project = {
   // automatisch zinnige bandbreedtes geeft, ongeacht welke unit de bezoeker
   // bekijkt.
   investor: {
-    barRange: null,
-    // BAR-slider grenzen voor de rendement-indicator: bezoeker kan tussen
-    // 5% en 7% schuiven, default start op de bovengrens (= meest optimistische
-    // scenario). Zaanstreek-realistic — voorkomt dat slider tot 14%+ kan
-    // wat met Waarderpolder-markthuren (€150-200/m²) wel gebeurde.
+    // Realistische BAR-range voor casco bedrijfsunits in de Zaanstreek-markt.
+    // Lager dan Waarderpolder (waar Hofman 6,7-9,0% haalt) vanwege lagere
+    // markthuurniveaus in Assendelft/Wormerveer/Krommenie.
+    barRange: '5,0% tot 7,0%',
     barSlider: { min: 5, max: 7, default: 7 },
-    markthuurRange: null,
-    markthuurAanname: null,
+    // Markthuur-range afgeleid uit barSlider × prijs/m² (Type C €1.713/m²
+    // bij 5-7% BAR = €85-120/m²/jaar). Aanname = midden van die range.
+    markthuurRange: '€85 tot €120 per m² per jaar',
+    markthuurAanname: 100,
     kernfactoren: [
       'Nieuwbouwkwaliteit op een gevestigd bedrijventerrein.',
       'Eigen parkeerplaatsen, gasloze uitvoering en flexibele indeling.',
@@ -428,11 +427,8 @@ export const project = {
       body: 'Bedrijventerrein Assendelft Noord, vlak naast N8 en N203. NS station Krommenie-Assendelft op 5 minuten fietsen.',
       tag: 'Bereikbaarheid',
       image: '/projects/depaveri/locatie.jpg',
-      // Kaart-source is 2050×900 (2.28:1) maar de card-crop is 16:9.
-      // Default center-crop verbergt te veel van de rechter-context
-      // (Krommenie + N203). Shift naar 30% 50% laat 'm net iets meer
-      // naar rechts vallen — pin staat dan rustiger in de viewport.
-      imagePosition: '30% 50%',
+      // Wide-shot van 04/06 toont al Krommenie + Wormerveer + A8-knooppunt
+      // in het kader; default center-crop is nu prima zonder shift.
     },
     {
       id: 'price',
@@ -461,7 +457,7 @@ export const project = {
     {
       id: 'investor',
       title: 'Belegging',
-      body: 'Nieuwbouwkwaliteit, eigen parkeerplaatsen en flexibele indeling. Rendement en verhuurbaarheid niet gegarandeerd.',
+      body: 'BAR 5 tot 7% per jaar realistisch in de Zaanstreek-markt. Vrij op naam, eigen parkeerplaatsen en flexibele indeling. Rendement en verhuurbaarheid niet gegarandeerd.',
       tag: 'Belegger',
     },
   ],
