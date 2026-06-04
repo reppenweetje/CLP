@@ -154,9 +154,16 @@ interface UpsertLeadResult {
 async function upsertLead(supa: SupabaseClient, p: LeadPayload): Promise<UpsertLeadResult> {
   // portal_token is INTENTIONALLY not in this row object. DB DEFAULT fills it
   // on INSERT, existing value preserved on UPDATE.
+  //
+  // project = source by design. DB-trigger leads_set_clp_project_from_source
+  // mapt source→project alleen voor clp_* + dehofman_portal_* patterns en
+  // mist nieuwe sources zoals "Paveri BUnit" (spatie + caps). Door 't hier
+  // expliciet te zetten heeft de WA-bot-cron + gemini-followup altijd een
+  // project-veld, ongeacht source-naamgeving van toekomstige projecten.
   const row: Record<string, unknown> = {
     session_id:    p.session_id,
     source:        p.source,
+    project:       p.source,
     last_event_at: p.last_event_at ?? new Date().toISOString(),
   }
 
