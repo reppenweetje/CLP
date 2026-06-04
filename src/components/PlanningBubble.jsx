@@ -1,7 +1,12 @@
 import Avatar from './Avatar.jsx'
 
-// indicatieve planning horizontale tijdlijn met fases
+// indicatieve planning horizontale tijdlijn met fases. Project kan per
+// fase `current: true` zetten om aan te geven welke fase nu actief is;
+// dat bolletje wordt blauw, de rest grijs. Als geen enkele fase
+// expliciet `current` heeft, valt 't terug op de eerste (i === 0) zodat
+// bestaande projecten (De Hofman) zonder data-aanpassing blijven werken.
 export default function PlanningBubble({ planning }) {
+  const hasExplicitCurrent = planning?.some((p) => p.current)
   return (
     <div className="flex gap-2.5 items-start fade-up">
       <Avatar />
@@ -13,17 +18,20 @@ export default function PlanningBubble({ planning }) {
             <div className="mt-3 relative">
               <div className="absolute left-3 top-2 bottom-2 w-px bg-mist" />
               <div className="space-y-3">
-                {planning.map((p, i) => (
+                {planning.map((p, i) => {
+                  const isActive = hasExplicitCurrent ? !!p.current : i === 0
+                  return (
                   <div key={i} className="flex items-center gap-3">
                     <div className="relative w-6 h-6 shrink-0 flex items-center justify-center">
-                      <div className={`w-2.5 h-2.5 rounded-full ${i === 0 ? 'bg-midnite' : 'bg-mist'} relative z-10`} />
+                      <div className={`w-2.5 h-2.5 rounded-full ${isActive ? 'bg-midnite' : 'bg-mist'} relative z-10`} />
                     </div>
                     <div className="flex-1 flex items-baseline justify-between gap-2">
                       <span className="text-[14px] font-medium text-ink">{p.phase}</span>
                       <span className="text-[13px] text-ink-soft">{p.date}</span>
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
             <div className="mt-3 pt-3 border-t border-mist-light flex items-start gap-2">
