@@ -39,11 +39,30 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
-    <!-- Privacy-friendly analytics by Plausible -->
-    <script async src="https://plausible.io/js/pa-35jm-s2ndmvndK0WIw3UD.js"></script>
+    <!-- Privacy-friendly analytics by Plausible.
+         Per-project script-URL want elke Plausible-preset bevat een hardcoded
+         data-domain. Hostname-loader kiest de juiste script bij elke pageview
+         zodat Hofman- en Paveri-traffic in aparte Plausible-sites landen
+         (anders mixen ze samen onder de site die in de preset bakte).
+         Nieuwe projecten: voeg hostname → script-key toe aan PLAUSIBLE_SCRIPTS
+         en registreer 't subdomein als nieuwe site in Plausible dashboard. -->
     <script>
       window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
       plausible.init()
+      ;(function() {
+        var PLAUSIBLE_SCRIPTS = {
+          'dehofman.clp.repp.nl': 'pa-35jm-s2ndmvndK0WIw3UD',
+          'depaveri.clp.repp.nl': 'pa-PETFTnFGjqtYeAIxBEcjj',
+        }
+        // Default fallback voor preview-URLs (clp-*.vercel.app), localhost en
+        // onbekende hostnames — landt in de Hofman-site zoals voorheen.
+        var host = window.location.hostname
+        var key  = PLAUSIBLE_SCRIPTS[host] || 'pa-35jm-s2ndmvndK0WIw3UD'
+        var s = document.createElement('script')
+        s.async = true
+        s.src = 'https://plausible.io/js/' + key + '.js'
+        document.head.appendChild(s)
+      })()
     </script>
 
     <!-- Meta Pixel Code -->
