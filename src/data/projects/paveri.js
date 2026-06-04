@@ -112,12 +112,9 @@ export const project = {
     city: 'Assendelft',
     district: 'Bedrijventerrein Assendelft Noord',
     aerialImage: '/projects/depaveri/locatie.jpg',
-    // Aerial-render van De Paveri-complex (1000×1000 square). Met 16:9 crop
-    // wordt verticaal getrimd (~220px top + bottom), horizontaal blijft
-    // de volle 1000 zichtbaar. Pin op iets boven center voor 't gebouw-
-    // cluster — courtyard zit onder, witte daken erboven. Fijn-tune door
-    // x/y procenten van het visible 16:9 viewport aan te passen.
-    pinPosition: { x: 50, y: 45 },
+    // Stylized map heeft al een ingetekende bruine DE PAVERI drop-pin —
+    // pulse-marker bewust uit (null) zodat we geen dubbele pin tonen.
+    pinPosition: null,
     mapsQuery: 'Industrieweg+9+Assendelft',
     mapsLink: 'https://www.google.com/maps?q=Industrieweg+9+Assendelft',
     // Reistijden vanaf Industrieweg 9 Assendelft (auto, normale verkeersomstandigheden).
