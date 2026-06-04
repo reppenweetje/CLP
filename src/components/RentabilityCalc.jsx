@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { project } from '../data/project.js'
 
 // Rendement-indicator voor beleggers. Toont BAR (bruto aanvangsrendement)
 // op basis van een instelbare markthuur per m² per jaar. BAR = jaarhuur
@@ -76,7 +77,7 @@ export default function RentabilityCalc({ price, size, indicative = false, onInt
           className="mt-3 w-full flex items-center justify-between gap-2 rounded-2xl border border-mist hover:border-midnite bg-paper hover:bg-canvas-2 active:scale-[0.99] px-3.5 py-2.5 transition group"
         >
           <div className="flex flex-col items-start min-w-0 text-left">
-            <span className="text-[9px] tracking-[0.18em] uppercase text-midnite font-medium">Partner Credion</span>
+            <span className="text-[9px] tracking-[0.18em] uppercase text-midnite font-medium">Partner {project.financing?.partner || 'Credion'}</span>
             <span className="text-[13.5px] text-ink leading-tight mt-0.5">Vrijblijvende financieringsscan</span>
           </div>
           <span className="text-[15px] text-ink-mute group-hover:text-midnite shrink-0 ml-2 leading-none" aria-hidden>→</span>

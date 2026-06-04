@@ -184,6 +184,7 @@ function renderMessage(m, { onBrochure, onReset, onUnitView, onCalcInteract, onC
           phoneLink={m.payload.phoneLink}
           phoneDisplay={m.payload.phoneDisplay}
           portalUrl={m.payload.portalUrl}
+          portalLabel={m.payload.portalLabel}
           intro={m.payload.intro}
           summary={m.payload.summary}
           seenTopics={m.payload.seenTopics}

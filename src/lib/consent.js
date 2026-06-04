@@ -126,7 +126,19 @@ async function sendConsentToBackend(entry) {
   // Minimale payload: alleen session_id + source + één consent. De Edge
   // Function upsert't de leads-rij (geen overwrite van bestaande velden
   // omdat ze allemaal undefined zijn) en append't de consent_log-rij.
-  const source = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_CLP_SOURCE) || 'clp_dehofman'
+  //
+  // Source-key in volgorde: project.crmProject → env → hostname-afgeleide
+  // fallback. Spiegelt de logica in api.js + eventsApi.js zodat consent-log
+  // dezelfde tag krijgt als lead-upsert ("Paveri BUnit" voor Paveri etc).
+  let source = ''
+  try {
+    const { project } = await import('../data/project.js')
+    if (project?.crmProject) source = project.crmProject
+    else if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_CLP_SOURCE) source = import.meta.env.VITE_CLP_SOURCE
+    else source = `clp_${(project?.id || 'de-hofman').replace(/-/g, '')}`
+  } catch {
+    source = 'clp_dehofman'
+  }
   await pushLead({
     session_id: sessionId,
     source,

@@ -37,20 +37,26 @@ interface BrevoLeadInput {
 }
 
 // Map een source-string naar de bijbehorende project-slug voor Brevo's
-// CLP_PROJECT attribuut. CLP_PROJECT staat in Brevo waarschijnlijk als enum
-// met vaste waarden ('dehofman' en eventueel toekomstige projecten); een
-// onbekende value laat Brevo de attribute stilletjes vallen, wat de
-// segmentatie breekt.
+// PROJECT attribuut. PROJECT staat in Brevo waarschijnlijk als enum met
+// vaste waarden ('dehofman', 'paveri' enz); een onbekende value laat
+// Brevo de attribute stilletjes vallen, wat de segmentatie breekt.
 //
-// Patterns:
-//   clp_dehofman      → 'dehofman'   (CLP)
-//   dehofman_portal   → 'dehofman'   (walk-in op portal)
-//   dehofman_*        → 'dehofman'   (toekomstige sub-bronnen)
+// Explicit-map voor projecten met een non-standaard source-naam
+// (bv. "Paveri BUnit" met spatie kun je niet via prefix-strip slug'en).
+// Fallback-patterns onderaan voor legacy:
+//   clp_<slug>     → '<slug>'    (CLP)
+//   <slug>_*       → '<slug>'    (walk-in op portal, etc)
+const SOURCE_TO_PROJECT_SLUG: Record<string, string> = {
+  clp_dehofman:   'dehofman',
+  'Paveri BUnit': 'paveri',
+}
+
 function projectFromSource(source: string | null | undefined): string | undefined {
   if (!source) return undefined
+  const explicit = SOURCE_TO_PROJECT_SLUG[source]
+  if (explicit) return explicit
   const s = String(source).toLowerCase()
   if (s.startsWith('clp_')) return s.slice(4) || undefined
-  // Bron-prefix `<project>_<variant>` — eerste segment is de project-slug.
   const seg = s.split('_')[0]
   return seg || undefined
 }
@@ -159,28 +165,37 @@ export async function upsertBrevoContact(lead: BrevoLeadInput, leadId?: string |
     return
   }
 
-  // Drie verschillende Brevo-lijsten op basis van source-prefix:
-  //   BREVO_LIST_ID_RESERVATION — leads die op /reserveren een unit op
-  //                               naam laten zetten (source = dehofman_portal_reservation)
-  //   BREVO_LIST_ID_PORTAL      — overige walk-ins op dehofman.nl
-  //                               (insider/interest/xxl/report/notify)
-  //   BREVO_LIST_ID             — CLP-leads (clp_dehofman) en fallback
+  // Lijst-routing per source-string. Volgorde van checks:
+  //   1. BREVO_LIST_ID_<NORMALIZED_SOURCE>  — per-project override
+  //        bv. source="Paveri BUnit"  → BREVO_LIST_ID_PAVERI_BUNIT
+  //        bv. source="clp_dehofman"  → BREVO_LIST_ID_CLP_DEHOFMAN
+  //      Hiermee kan elk nieuw project zijn eigen lijst krijgen zonder
+  //      code-wijziging — alleen een nieuwe env-var in Supabase secrets.
+  //   2. BREVO_LIST_ID_RESERVATION   — dehofman_portal_reservation
+  //   3. BREVO_LIST_ID_PORTAL        — overige dehofman_portal* walk-ins
+  //   4. BREVO_LIST_ID               — algemene fallback (huidige Hofman default)
   //
   // Bestaande Brevo-contacten worden bij upsert ADDED aan deze lijst
   // (Brevo houdt ze ook in hun originele lijst — geen verlies). Sales
-  // kan zo segmenteren op "wie heeft daadwerkelijk een reservering
-  // ingediend" ipv alleen "wie staat in onze CRM".
+  // kan zo segmenteren op project.
+  const sourceRaw = lead.source ?? ''
+  // Env-safe key: uppercase + niet-alfanumeriek vervangen door underscore.
+  // "Paveri BUnit" → "PAVERI_BUNIT"
+  const envSafeSource = sourceRaw.toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '')
+  const perProjectList = envSafeSource ? Deno.env.get(`BREVO_LIST_ID_${envSafeSource}`) : undefined
   const reservationListRaw = Deno.env.get('BREVO_LIST_ID_RESERVATION')
   const portalListRaw = Deno.env.get('BREVO_LIST_ID_PORTAL')
   const defaultListRaw = Deno.env.get('BREVO_LIST_ID')
-  const src = (lead.source ?? '').toLowerCase()
+  const src = sourceRaw.toLowerCase()
   const isReservation = src === 'dehofman_portal_reservation'
   const isPortalSource = src.startsWith('dehofman_portal')
-  const listIdRaw = isReservation && reservationListRaw
-    ? reservationListRaw
-    : isPortalSource && portalListRaw
-      ? portalListRaw
-      : defaultListRaw
+  const listIdRaw = perProjectList
+    ? perProjectList
+    : isReservation && reservationListRaw
+      ? reservationListRaw
+      : isPortalSource && portalListRaw
+        ? portalListRaw
+        : defaultListRaw
   const listId = listIdRaw ? Number.parseInt(listIdRaw, 10) : NaN
 
   const attrs = buildAttributes(lead)

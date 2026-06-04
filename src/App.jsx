@@ -63,22 +63,24 @@ function getQuestion(key) {
   return { ...base, ...override }
 }
 
-// Telt alle units uit sitePlan, ongeacht of project rows/sections/layoutRows
-// gebruikt. Gebruikt voor bot-text als "Hier zijn de X units".
+// Telt alle units uit sitePlan, ongeacht of project rows/sections/layoutRows/
+// columns gebruikt. Gebruikt voor bot-text als "Hier zijn de X units".
 function countSitePlanUnits(sp) {
   if (!sp) return 0
   return (
     (sp.rows?.flatMap((r) => r.units).length || 0) +
     (sp.sections?.flatMap((s) => s.units).length || 0) +
     (sp.sidebar?.units?.length || 0) +
-    (sp.layoutRows?.reduce((n, r) => n + (r.left?.units?.length || 0) + (r.right ? 1 : 0), 0) || 0)
+    (sp.layoutRows?.reduce((n, r) => n + (r.left?.units?.length || 0) + (r.right ? 1 : 0), 0) || 0) +
+    (sp.columns?.left?.sections?.flatMap((s) => s.units).length || 0) +
+    (sp.columns?.right?.units?.length || 0)
   )
 }
 const initial = {
-  // Default = 'intro'. Bij cold-start bepaalt de useReducer-initializer
-  // (zie Demo()) of we deze waarde overschrijven naar 'chat' op basis van
-  // de intro-A/B-variant ('skip' = direct chat, 'show' = klassieke landing).
-  // Persisted state houdt zijn eigen view-waarde (logo-back-pad blijft werken).
+  // Default = 'intro' als fallback voor SSR/initial-mount; de useReducer-
+  // initializer in Demo() forceert 'chat' bij cold-start (IntroScreen is
+  // uitgefaseerd). Persisted state houdt zijn eigen view-waarde — logo-back-
+  // pad (RETURN_TO_INTRO) blijft werken voor sessies die zelf naar intro gaan.
   view: 'intro',
   messages: [],
   messageQueue: [],
@@ -667,12 +669,12 @@ function Demo() {
         debugOpen: false,
       }
     }
-    // Cold start: kies variant en zet de initiële view. Door dit synchroon
-    // in de initializer te doen zien 'skip'-bezoekers geen IntroScreen-flits
-    // voordat React de eerste useEffect heeft uitgevoerd. start() wordt later
-    // door de auto-start-effect aangeroepen om de eerste bot-bubble te queuen.
-    const introVariant = getOrAssignIntroVariant()
-    return { ...init, view: introVariant === 'skip' ? 'chat' : 'intro' }
+    // Cold start: iedereen landt direct op de chat (geen IntroScreen meer).
+    // De getOrAssignIntroVariant-call blijft staan in de useEffect hieronder
+    // zodat de Plausible-variantmeting niet stuk gaat; de view-keuze is hier
+    // geforceerd op 'chat'. start() wordt door de auto-start-effect
+    // aangeroepen om de eerste bot-bubble te queuen.
+    return { ...init, view: 'chat' }
   })
   const [answersOpen, setAnswersOpen] = useState(false)
   const [optionsSheetOpen, setOptionsSheetOpen] = useState(false)
@@ -742,6 +744,16 @@ function Demo() {
     // Faalt-soft als netwerk weigert; gewoon doorgaan met tracking aan.
     detectCurrentIp().catch(() => {})
   }, [])
+  // Document-title per project. index.html heeft een generieke default
+  // ("REPP — brochure en prijzen") en hier overschrijven we 'm runtime
+  // op basis van project.displayName zodat bezoekers de juiste tab-titel
+  // zien. OG-tags blijven nog wel uit de initial HTML komen (crawlers
+  // executen geen JS) — dat is een latere refactor.
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const name = project.displayName || project.name || 'REPP'
+    document.title = `${name}, brochure en prijzen`
+  }, [])
   const persona = derivePersona(state.answers)
   const score = computeScore(state.answers)
   const stage = deriveStage(state.answers)
@@ -793,7 +805,7 @@ function Demo() {
       size: state.answers.size?.label,
       timeline: state.answers.timeline?.label,
       trigger: 'callback-requested',
-      source: 'clp-de-hofman',
+      source: `clp-${project.id || 'unknown'}`,
     })
   }, [
     state.view,
@@ -804,6 +816,13 @@ function Demo() {
   // Onafhankelijk van CTA-variant voor de IntroScreen-knop, zodat we
   // beide A/B-experimenten orthogonaal kunnen analyseren in Plausible.
   const copyVariant = getOrAssignVariant()
+  // Naam van de financieringspartner per project. De Hofman = Credion, De
+  // Paveri = Company & Living Finance. Alle bot-text en CTA-labels die
+  // verwijzen naar de partner gebruiken deze constante zodat we niet meer
+  // hardcoded "Credion" door de codebase hoeven door te zetten. Interne
+  // analytics-event-keys en variabelen heten nog steeds 'credion*' voor
+  // backwards-compat met bestaande dashboards.
+  const financePartner = project.financing?.partner || 'Credion'
   // Supabase lead-upsert: synchroniseert de actuele state als één snapshot
   // naar de Edge Function. Idempotent dankzij upsert op (source, session_id),
   // dus we mogen dit meerdere keren in de flow aanroepen — elke call upsert
@@ -995,15 +1014,16 @@ function Demo() {
     logSessionStartConsent()
     dispatch({ type: 'START_CHAT', bot: project.salesTeam?.bot, copyVariant, typeFirst })
   }
-  // Intro-A/B: log de toegewezen variant zodat we 'm naast conversie-events
-  // kunnen analyseren. Wanneer de bezoeker in de 'skip'-arm zit en nog geen
-  // chat-historie heeft, starten we de chat meteen — start() detecteert zelf
-  // cold-start (geen messages → nieuwe sessie + START_CHAT) versus hervat
-  // (al messages aanwezig, bv. logo-back-pad → RESUME_CHAT).
+  // IntroScreen is uitgefaseerd: iedere bezoeker landt direct in de chat.
+  // We loggen de oude introVariant-toewijzing nog wel zodat lopende Plausible-
+  // dashboards niet stuk gaan, maar de view-keuze is geforceerd op 'chat'
+  // in de useReducer-initializer. start() detecteert cold-start (geen messages
+  // → nieuwe sessie + START_CHAT) versus hervat (messages aanwezig na een
+  // persisted reload → RESUME_CHAT zonder de welkomst-bubbles te herbouwen).
   useEffect(() => {
     const introVariant = getOrAssignIntroVariant()
     try { trackEvent('intro:variant-assigned', { introVariant }) } catch {}
-    if (introVariant === 'skip' && state.messages.length === 0) {
+    if (state.messages.length === 0) {
       start(undefined, { typeFirst: true })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1281,8 +1301,17 @@ function Demo() {
       // op de moreInfo-stap zodat de bezoeker zelf het tempo bepaalt.
       const botMessages = []
       if (confidence >= 2) {
+        // Per-keuze intro-override: projecten kunnen via
+        // project.recommendIntroByChoice[size.id] een eigen tekst leveren
+        // (bv. De Paveri stuurt alle keuzes naar Unit C met disclosure
+        // waarom de oorspronkelijk-gekozen size niet matcht). Fallback is
+        // de generieke "X-unit interessant"-zin.
+        const sizeId = merged.size?.id
+        const introOverride = project.recommendIntroByChoice?.[sizeId]
+        const introText = introOverride
+          || `Op basis van je antwoorden lijkt vooral de ${unit.primary.type}-unit interessant.`
         botMessages.push(
-          { kind: 'bot-text', text: `Op basis van je antwoorden lijkt vooral de ${unit.primary.type}-unit interessant.` },
+          { kind: 'bot-text', text: introText },
           { kind: 'unit-card', payload: unit },
         )
       } else {
@@ -1518,6 +1547,7 @@ function Demo() {
               phoneDisplay: project.phoneNumber,
               summary: customerSummary,
               portalUrl: portalUrlForCta,
+              portalLabel: project.portalLabel,
               seenTopics: seenTopics.map((t) => ({ id: t.id, label: t.label })),
               hideBrochure: true,
               hideReset: true,
@@ -1532,8 +1562,8 @@ function Demo() {
         dispatch({ type: 'MORE_INFO_SEEN', id: 'financing' })
         dispatch({ type: 'BEHAVIOR_MORE_INFO_VIEWED', id: 'financing' })
         sendSequence(userTextFromOpt(opt), [
-          { kind: 'bot-text', text: 'Onze partner Credion kan vrijblijvend met je meedenken over de financiering.' },
-          { kind: 'bot-text', text: 'Mag ik je naam, e-mailadres en 06 met Credion delen voor een vrijblijvende financieringsscan? Zonder je akkoord doen we dat niet.' },
+          { kind: 'bot-text', text: `Onze partner ${financePartner} kan vrijblijvend met je meedenken over de financiering.` },
+          { kind: 'bot-text', text: `Mag ik je naam, e-mailadres en 06 met ${financePartner} delen voor een vrijblijvende financieringsscan? Zonder je akkoord doen we dat niet.` },
         ])
         dispatch({ type: 'SET_QUESTION', next: 'financingAsk' })
         return
@@ -1582,6 +1612,7 @@ function Demo() {
               phoneDisplay: project.phoneNumber,
               summary: customerSummary,
               portalUrl: portalUrlForCta,
+              portalLabel: project.portalLabel,
               seenTopics: seenTopics.map((t) => ({ id: t.id, label: t.label })),
               hideBrochure: true,
               hideReset: true,
@@ -1606,7 +1637,6 @@ function Demo() {
             'Mocht het helpen om kort te schakelen, dat kan altijd.',
             'Verder kijken of zullen we de makelaar erbij vragen?',
             'Tot zover. Iets specifieks waar je dieper op wilt gaan?',
-            'Nog iets onduidelijk, of zien we wat je hebt?',
           ]
           // Pseudo-random op session-id: zelfde bezoeker krijgt steeds
           // dezelfde nudge bij re-visits (consistente ervaring), nieuwe
@@ -1642,7 +1672,7 @@ function Demo() {
           calc: state.behaviors?.credionCalcData || null,
         })
         sendSequence(userTextFromOpt(opt), [
-          { kind: 'bot-text', text: 'Top. We delen je gegevens met Credion. Zij nemen vrijblijvend contact met je op.' },
+          { kind: 'bot-text', text: `Top. We delen je gegevens met ${financePartner}. Zij nemen vrijblijvend contact met je op.` },
         ])
       } else {
         sendSequence(userTextFromOpt(opt), [
@@ -1792,7 +1822,7 @@ function Demo() {
       // waarom we ook nummer vragen, daarna direct de nummer-vraag.
       if (state.behaviors?.credionRequested && !draft.phone) {
         sendSequence(text, [
-          { kind: 'bot-text', text: 'Dank. We delen je gegevens met Credion zodat ze je kunnen bellen voor de financieringsscan. Daarvoor hebben we alleen nog even je nummer nodig. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).' },
+          { kind: 'bot-text', text: `Dank. We delen je gegevens met ${financePartner} zodat ze je kunnen bellen voor de financieringsscan. Daarvoor hebben we alleen nog even je nummer nodig. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).` },
           { kind: 'bot-text', text: 'Wat is je nummer?' },
         ])
         dispatch({ type: 'SET_QUESTION', next: 'lead-phone' })
@@ -1839,7 +1869,7 @@ function Demo() {
     // De brochure-belofte komt aan het eind als we daadwerkelijk versturen.
     if (state.behaviors?.credionRequested) {
       sendSequence(text, [
-        { kind: 'bot-text', text: 'Dank. We delen je gegevens met Credion zodat ze je kunnen bellen voor de financieringsscan. Daarvoor hebben we alleen nog even je naam en nummer nodig. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).' },
+        { kind: 'bot-text', text: `Dank. We delen je gegevens met ${financePartner} zodat ze je kunnen bellen voor de financieringsscan. Daarvoor hebben we alleen nog even je naam en nummer nodig. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).` },
         { kind: 'bot-text', text: 'Wat is je naam?' },
       ])
       dispatch({ type: 'SET_QUESTION', next: 'lead-name' })
@@ -1980,7 +2010,7 @@ function Demo() {
       // combineert. De Credion-deelmelding stond al na email-invoer dus dit
       // is een afsluiting van de capture-flow, niet een nieuwe melding.
       const credionConfirmation = [
-        { kind: 'bot-text', text: 'Top. We delen je gegevens met Credion zodat ze je zo snel mogelijk kunnen bellen voor de financieringsscan. En zullen je tevens alvast de brochure mailen, zodat je het project alvast rustig kunt doorlezen.' },
+        { kind: 'bot-text', text: `Top. We delen je gegevens met ${financePartner} zodat ze je zo snel mogelijk kunnen bellen voor de financieringsscan. En zullen je tevens alvast de brochure mailen, zodat je het project alvast rustig kunt doorlezen.` },
       ]
       const sizeTail = sizeDone
         ? []
@@ -2132,9 +2162,9 @@ function Demo() {
     const hasName  = !!lead.firstName
     // Pad A: gegevens al binnen → bestaande Yes/No-vraag
     if (hasEmail && hasName) {
-      sendSequence('Vraag financieringsscan via Credion', [
-        { kind: 'bot-text', text: 'Onze partner Credion kan vrijblijvend met je meedenken over de financiering.' },
-        { kind: 'bot-text', text: 'Mag ik je naam, e-mailadres en 06 met Credion delen voor een vrijblijvende financieringsscan? Zonder je akkoord doen we dat niet.' },
+      sendSequence(`Vraag financieringsscan via ${financePartner}`, [
+        { kind: 'bot-text', text: `Onze partner ${financePartner} kan vrijblijvend met je meedenken over de financiering.` },
+        { kind: 'bot-text', text: `Mag ik je naam, e-mailadres en 06 met ${financePartner} delen voor een vrijblijvende financieringsscan? Zonder je akkoord doen we dat niet.` },
       ])
       dispatch({ type: 'SET_QUESTION', next: 'financingAsk' })
       return
@@ -2145,8 +2175,8 @@ function Demo() {
     // Boodschap: Credion belt zsm, brochure komt alvast per mail zodat
     // de bezoeker iets te lezen heeft tot Credion belt.
     dispatch({ type: 'BEHAVIOR_CREDION_REQUESTED' })
-    sendSequence('Vraag financieringsscan via Credion', [
-      { kind: 'bot-text', text: 'Mooi. Onze partner Credion belt je zo snel mogelijk om vrijblijvend met je door de financiering te lopen.' },
+    sendSequence(`Vraag financieringsscan via ${financePartner}`, [
+      { kind: 'bot-text', text: `Mooi. Onze partner ${financePartner} belt je zo snel mogelijk om vrijblijvend met je door de financiering te lopen.` },
       { kind: 'bot-text', text: 'We sturen je ook meteen de brochure per mail, zodat je het project alvast rustig kunt doorlezen.' },
       { kind: 'lead-form', payload: {} },
     ])

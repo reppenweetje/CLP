@@ -20,6 +20,8 @@ const MAX_QUEUE = 500          // events kunnen snel oplopen, ruim cap
 const MAX_BATCH = 50           // events per POST (Edge Function max is 100)
 const MAX_RETRIES = 5          // per batch, daarna drop
 
+import { project } from '../data/project.js'
+
 // ── Config ──────────────────────────────────────────────────────────────────
 
 function readEnv(key, fallback) {
@@ -47,17 +49,27 @@ function isEnabled() {
 // Source-tag → tenant-naam in events-tabel. Whitelist-gevalideerd door
 // Edge Function — onbekende waardes worden door de Function geweigerd.
 const TENANT_MAP = {
-  clp_uitgifte: 'uitgifte',
-  clp_dehofman: 'dehofman',
+  clp_uitgifte:   'uitgifte',
+  clp_dehofman:   'dehofman',
+  'Paveri BUnit': 'depaveri',
 }
 
-// Default fallback per-repo: De Hofman gebruikt 'clp_dehofman' als
-// VITE_CLP_SOURCE niet expliciet is gezet in Vercel. clp-didamdesk
-// gebruikt 'clp_uitgifte' als default. Beide mappen via TENANT_MAP
-// naar de juiste tenant-string in de clp_events tabel.
+// Source-key + tenant-string voor analytics. Volgorde:
+//   1. project.crmProject (project-data is bron van waarheid)
+//   2. VITE_CLP_SOURCE env-var (legacy override)
+//   3. Hostname-afgeleid uit project.id (clp_<slug>)
+// Zie dezelfde logica in api.js — bewust gespiegeld zodat lead-upsert
+// en clp-events naar dezelfde tenant-tag verwijzen.
+function resolveSource() {
+  if (project?.crmProject) return project.crmProject
+  const envSrc = readEnv('VITE_CLP_SOURCE', '')
+  if (envSrc) return envSrc
+  const id = project?.id || 'de-hofman'
+  return `clp_${id.replace(/-/g, '')}`
+}
+
 function tenant() {
-  const source = readEnv('VITE_CLP_SOURCE', 'clp_dehofman')
-  return TENANT_MAP[source] || null
+  return TENANT_MAP[resolveSource()] || null
 }
 
 export function isAnalyticsConfigured() {

@@ -73,14 +73,16 @@ function formatPriceK(amount) {
   return `€${amount}`
 }
 
-// Telt alle units uit project.sitePlan over de drie ondersteunde
-// layout-schemas heen (rows / sections+sidebar / layoutRows).
+// Telt alle units uit project.sitePlan over alle ondersteunde layout-schemas
+// heen (rows / sections+sidebar / layoutRows / columns).
 function countProjectUnits(project) {
   const sp = project.sitePlan || {}
   return (
     (sp.rows?.flatMap((r) => r.units).length || 0) +
     (sp.sections?.flatMap((s) => s.units).length || 0) +
     (sp.sidebar?.units?.length || 0) +
-    (sp.layoutRows?.reduce((n, r) => n + (r.left?.units?.length || 0) + (r.right ? 1 : 0), 0) || 0)
+    (sp.layoutRows?.reduce((n, r) => n + (r.left?.units?.length || 0) + (r.right ? 1 : 0), 0) || 0) +
+    (sp.columns?.left?.sections?.flatMap((s) => s.units).length || 0) +
+    (sp.columns?.right?.units?.length || 0)
   )
 }
