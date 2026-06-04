@@ -460,8 +460,11 @@ export const project = {
   portalUrl: 'https://kopen.repp.nl/depaveri',
   portalLabel: 'Bekijk koopomgeving De Paveri',
   // Webhook voor financiering-doorgeven aan Company & Living Finance.
-  // TODO: webhook URL afstemmen met Flip indien aparte trigger nodig.
-  credionWebhookUrl: null,
+  // Variabele-naam blijft credionWebhookUrl voor backwards-compat met
+  // sendCredionLead() in lib/credion.js — alleen de waarde verschilt
+  // per project. Zapier-trigger pikt de payload op en routeert door
+  // naar Company & Living Finance.
+  credionWebhookUrl: 'https://hooks.zapier.com/hooks/catch/2082653/uxf993u/',
 
   // Sales team — identiek aan De Hofman per instructie van Flip.
   salesTeam: {
