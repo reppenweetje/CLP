@@ -475,7 +475,7 @@ export const project = {
   // Externe portal: kopen-repp-redirect strategie. Lead gaat direct naar
   // het generieke REPP-portaal zonder portal-code of magic-link.
   portalUrl: 'https://kopen.repp.nl/depaveri',
-  portalLabel: 'Bekijk koopomgeving De Paveri',
+  portalLabel: 'Bekijk De Paveri website',
   // Webhook voor financiering-doorgeven aan Company & Living Finance.
   // Variabele-naam blijft credionWebhookUrl voor backwards-compat met
   // sendCredionLead() in lib/credion.js — alleen de waarde verschilt
