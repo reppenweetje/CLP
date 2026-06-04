@@ -1,12 +1,13 @@
 import Avatar from './Avatar.jsx'
 
 // indicatieve planning horizontale tijdlijn met fases. Project kan per
-// fase `current: true` zetten om aan te geven welke fase nu actief is;
-// dat bolletje wordt blauw, de rest grijs. Als geen enkele fase
-// expliciet `current` heeft, valt 't terug op de eerste (i === 0) zodat
-// bestaande projecten (De Hofman) zonder data-aanpassing blijven werken.
+// fase `current: true` zetten om de huidige fase te markeren; alle fases
+// VÓÓR en INCLUSIEF die fase worden blauw (progress-indicator). Fases
+// daarna blijven grijs. Als geen enkele fase expliciet `current` heeft,
+// valt 't terug op alleen i === 0 (oude gedrag, De Hofman ongewijzigd).
 export default function PlanningBubble({ planning }) {
-  const hasExplicitCurrent = planning?.some((p) => p.current)
+  const currentIdx = planning?.findIndex((p) => p.current) ?? -1
+  const hasExplicitCurrent = currentIdx >= 0
   return (
     <div className="flex gap-2.5 items-start fade-up">
       <Avatar />
@@ -19,7 +20,7 @@ export default function PlanningBubble({ planning }) {
               <div className="absolute left-3 top-2 bottom-2 w-px bg-mist" />
               <div className="space-y-3">
                 {planning.map((p, i) => {
-                  const isActive = hasExplicitCurrent ? !!p.current : i === 0
+                  const isActive = hasExplicitCurrent ? i <= currentIdx : i === 0
                   return (
                   <div key={i} className="flex items-center gap-3">
                     <div className="relative w-6 h-6 shrink-0 flex items-center justify-center">
