@@ -2160,11 +2160,14 @@ function Demo() {
     const lead = state.answers.lead || {}
     const hasEmail = !!lead.email
     const hasName  = !!lead.firstName
-    // Pad A: gegevens al binnen → bestaande Yes/No-vraag
+    // Pad A: gegevens al binnen → bestaande Yes/No-vraag. Eén bot-bubble met
+    // zowel de partner-introductie als de consent-vraag — bezoeker heeft net
+    // op de "Partner X · Vrijblijvende financieringsscan"-knop geklikt, dus
+    // wie de partner is staat al in de calc-bubble. Een aparte intro-zin
+    // bovenop herhaalt dat zonder waarde toe te voegen en vertraagt de flow.
     if (hasEmail && hasName) {
       sendSequence(`Vraag financieringsscan via ${financePartner}`, [
-        { kind: 'bot-text', text: `Onze partner ${financePartner} kan vrijblijvend met je meedenken over de financiering.` },
-        { kind: 'bot-text', text: `Mag ik je naam, e-mailadres en 06 met ${financePartner} delen voor een vrijblijvende financieringsscan? Zonder je akkoord doen we dat niet.` },
+        { kind: 'bot-text', text: `Mag ik je naam, e-mailadres en 06 met ${financePartner} delen voor de vrijblijvende financieringsscan? Zonder je akkoord doen we dat niet.` },
       ])
       dispatch({ type: 'SET_QUESTION', next: 'financingAsk' })
       return
@@ -2175,9 +2178,13 @@ function Demo() {
     // Boodschap: Credion belt zsm, brochure komt alvast per mail zodat
     // de bezoeker iets te lezen heeft tot Credion belt.
     dispatch({ type: 'BEHAVIOR_CREDION_REQUESTED' })
+    // Pad B: één gecondenseerde bot-bubble met partner + brochure-belofte
+    // gecombineerd. Voorheen drie aparte berichten (intro, brochure-mail,
+    // lead-form) wat de wachttijd voor de lead-form bubble onnodig lang
+    // maakte. Bezoeker heeft net geklikt — minder ophouden, sneller naar
+    // de form-invoer.
     sendSequence(`Vraag financieringsscan via ${financePartner}`, [
-      { kind: 'bot-text', text: `Mooi. Onze partner ${financePartner} belt je zo snel mogelijk om vrijblijvend met je door de financiering te lopen.` },
-      { kind: 'bot-text', text: 'We sturen je ook meteen de brochure per mail, zodat je het project alvast rustig kunt doorlezen.' },
+      { kind: 'bot-text', text: `Mooi. ${financePartner} belt je zo snel mogelijk voor de scan, en we sturen je nu alvast de brochure per mail.` },
       { kind: 'lead-form', payload: {} },
     ])
     // Markeer brochureTrigger impliciet als "ja" (bezoeker heeft via deze

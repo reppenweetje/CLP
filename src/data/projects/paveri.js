@@ -358,10 +358,19 @@ export const project = {
     ],
   },
 
-  // Beleggers-data: TODO. Knowledge base noemt geen BAR-range of markthuur
-  // voor Assendelft. Wachten op aanvulling van Flip voor RentabilityCalc.
+  // Beleggers-data. Markthuur Zaanstreek nog niet aangeleverd; RentabilityCalc
+  // gebruikt daarom de barSlider-range hieronder om de slider te ankeren op
+  // realistische BAR-grenzen (5-7%) voor Zaanstreek-casco. De marktHuur €/m²
+  // wordt back-getrokken uit price + size + BAR per unit zodat de slider
+  // automatisch zinnige bandbreedtes geeft, ongeacht welke unit de bezoeker
+  // bekijkt.
   investor: {
     barRange: null,
+    // BAR-slider grenzen voor de rendement-indicator: bezoeker kan tussen
+    // 5% en 7% schuiven, default start op de bovengrens (= meest optimistische
+    // scenario). Zaanstreek-realistic — voorkomt dat slider tot 14%+ kan
+    // wat met Waarderpolder-markthuren (€150-200/m²) wel gebeurde.
+    barSlider: { min: 5, max: 7, default: 7 },
     markthuurRange: null,
     markthuurAanname: null,
     kernfactoren: [
@@ -412,6 +421,11 @@ export const project = {
       body: 'Bedrijventerrein Assendelft Noord, vlak naast N8 en N203. NS station Krommenie-Assendelft op 5 minuten fietsen.',
       tag: 'Bereikbaarheid',
       image: '/projects/depaveri/locatie.jpg',
+      // Kaart-source is 2050×900 (2.28:1) maar de card-crop is 16:9.
+      // Default center-crop verbergt te veel van de rechter-context
+      // (Krommenie + N203). Shift naar 30% 50% laat 'm net iets meer
+      // naar rechts vallen — pin staat dan rustiger in de viewport.
+      imagePosition: '30% 50%',
     },
     {
       id: 'price',
