@@ -112,6 +112,13 @@ export const project = {
     city: 'Assendelft',
     district: 'Bedrijventerrein Assendelft Noord',
     aerialImage: '/projects/depaveri/locatie.jpg',
+    // Blauwe pulse-marker positie binnen het 16:9 viewport (percentages).
+    // De source-image (2050×900) heeft een ingetekende bruine "DE PAVERI"
+    // drop-pin met de tip op ~60% horizontaal en ~55% verticaal van de
+    // source. Met default center-crop (object-position 50% 50%) van het
+    // bredere source → 16:9 viewport, valt die tip op (63%, 55%) van de
+    // visible area. Daar moet 't blauwe puntje overheen.
+    pinPosition: { x: 63, y: 55 },
     mapsQuery: 'Industrieweg+9+Assendelft',
     mapsLink: 'https://www.google.com/maps?q=Industrieweg+9+Assendelft',
     // Reistijden vanaf Industrieweg 9 Assendelft (auto, normale verkeersomstandigheden).

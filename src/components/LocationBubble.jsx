@@ -31,7 +31,7 @@ export default function LocationBubble({ location, projectName }) {
           <div className="relative aspect-[16/9] bg-canvas-2 overflow-hidden">
             <img src={location.aerialImage} alt="" className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-paper/40 via-transparent to-transparent" />
-            <PinMarker />
+            <PinMarker position={location.pinPosition} />
           </div>
           <div className="p-4 pb-3">
             <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium">Locatie</div>
@@ -287,9 +287,18 @@ function SurroundingIcon({ name }) {
   }
 }
 
-function PinMarker() {
+// Project geeft optioneel een positie op (percentages van het 16:9 viewport)
+// zodat de blauwe pulse-marker precies samenvalt met de tip van een ingetekende
+// pin/pijl in de source-image. Default = midden (50% / 50%) voor projecten
+// zonder ingetekende pin (De Hofman aerial-photo zit gecentreerd op het gebouw).
+function PinMarker({ position }) {
+  const x = position?.x ?? 50
+  const y = position?.y ?? 50
   return (
-    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+    <div
+      className="absolute -translate-x-1/2 -translate-y-1/2"
+      style={{ top: `${y}%`, left: `${x}%` }}
+    >
       <div className="relative">
         <div className="absolute -top-1 -left-1 w-7 h-7 rounded-full bg-midnite/30 animate-ping" />
         <div className="w-5 h-5 rounded-full bg-midnite border-2 border-paper shadow-lg" />
