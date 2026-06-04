@@ -308,13 +308,13 @@ export const project = {
     'Units in overleg koppelbaar',
   ],
 
-  // "Waarom De Paveri" — zes echte USP's die de bedrijfsunits in Assendelft
+  // "Waarom De Paveri" — vijf echte USP's die de bedrijfsunits in Assendelft
   // onderscheiden van standaard bedrijfsverzamelgebouwen. Geen makelaarstaal,
-  // ieder body één concreet feit waar de bezoeker iets aan heeft. Volgorde
-  // is bewust: financieel voordeel → schaarste → bereikbaarheid → kwaliteit.
+  // ieder body één concreet feit waar de bezoeker iets aan heeft. "Bijna
+  // uitverkocht" bewust niet als USP — schaarste hoort in de beschikbaarheid-
+  // bubble en plattegrond-stats, niet onder de project-kwaliteiten.
   highlights: [
     { title: 'Vrij op naam', body: 'Geen 10,4% overdrachtsbelasting. Direct financieel voordeel ten opzichte van bestaande bouw.' },
-    { title: 'Bijna uitverkocht', body: 'Type A en B verkocht, Type D bijna vergeven. Alleen Type C nog concreet beschikbaar.' },
     { title: 'Eigen parkeren', body: '2 of 3 plekken per unit, direct voor de deur. Geen gedeelde parkeerruimte.' },
     { title: 'NS op 5 minuten', body: 'Krommenie-Assendelft op fietsafstand. N8 en N203 op 2 minuten met de auto.' },
     { title: 'Casco met garanties', body: '1.500 kg/m² vloerbelasting, 3 × 25A elektra, gasloze uitvoering en nieuwbouwgaranties.' },
@@ -338,11 +338,13 @@ export const project = {
   ],
 
   // Bouw is gestart, omgevingsvergunning afgegeven. Exacte oplevering hangt
-  // af van bouwvoortgang en koop-aannemingsovereenkomst.
+  // af van bouwvoortgang en koop-aannemingsovereenkomst. `current: true`
+  // markeert welke fase nu actief is — PlanningBubble kleurt dat bolletje
+  // blauw (de eerdere fases zijn done, latere nog future).
   planning: [
     { phase: 'Omgevingsvergunning', date: 'Afgegeven' },
-    { phase: 'Start bouw', date: 'Gestart' },
-    { phase: 'Oplevering', date: 'TBD' },
+    { phase: 'Start bouw',          date: 'Gestart', current: true },
+    { phase: 'Oplevering',          date: 'TBD' },
   ],
 
   // m²-prijs vergelijking voor de Zaanstreek.
