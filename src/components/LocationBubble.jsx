@@ -287,11 +287,13 @@ function SurroundingIcon({ name }) {
   }
 }
 
-// Project geeft optioneel een positie op (percentages van het 16:9 viewport)
-// zodat de blauwe pulse-marker precies samenvalt met de tip van een ingetekende
-// pin/pijl in de source-image. Default = midden (50% / 50%) voor projecten
-// zonder ingetekende pin (De Hofman aerial-photo zit gecentreerd op het gebouw).
+// Project kan via `pinPosition` de blauwe pulse-marker bewust uitzetten
+// (pinPosition: null) of verplaatsen ({x: %, y: %}). Default = midden
+// (50% / 50%) voor projecten die geen ingetekende pin in de source hebben.
+// Explicit null = de source heeft al een ingetekende drop-pin (zoals
+// Paveri's stylized map), dus een extra blauwe overlay zou dubbel zijn.
 function PinMarker({ position }) {
+  if (position === null) return null
   const x = position?.x ?? 50
   const y = position?.y ?? 50
   return (
