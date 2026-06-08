@@ -1,33 +1,33 @@
-// Projectdata PIER14 (Zwijndrecht — voormalig Schokbeton-terrein).
+// Projectdata PIER14 (Zwijndrecht, voormalig Schokbeton-terrein).
 // 26 bedrijfsunits aan de Oude Maas, specifiek voor maritieme/nautische
 // ondernemers. Schema gelijk aan dehofman.js + paveri.js zodat de
 // hostname-loader 'm transparant kan switchen.
 //
 // Slug = `pier14`. Subdomein = pier14.clp.repp.nl.
 //
-// Portal-strategie: kopen-repp-redirect — geen eigen portal-site,
+// Portal-strategie: kopen-repp-redirect, geen eigen portal-site,
 // lead gaat na CLP-chat direct naar https://kopen.repp.nl/pier14.
 //
 // UNIEK voor PIER14:
 //  1. Branche-gate na intent-vraag: "Ben je een nautisch ondernemer?"
 //     (zie flowOverrides.nauticGate). Niet-nautisch → exit-flow.
-//  2. Beleggers-route uitgeschakeld — beleggers kunnen geen unit kopen
+//  2. Beleggers-route uitgeschakeld, beleggers kunnen geen unit kopen
 //     voor PIER14. project.financing-config blijft staan voor Credion
 //     maar persona-flow stuurt belegger naar afhaak.
-//  3. priceComparison NIET ingevuld — nautische units zijn te uniek
+//  3. priceComparison NIET ingevuld, nautische units zijn te uniek
 //     voor zinvolle benchmarks per m².
 export const project = {
   id: 'pier14',
   name: 'pier14',
   displayName: 'PIER14',
   tagline: 'De thuishaven voor maritieme ondernemers.',
-  shortDescription: '26 bedrijfsunits aan de Oude Maas — nautisch-maritiem bedrijventerrein.',
+  shortDescription: '26 bedrijfsunits aan de Oude Maas, nautisch-maritiem bedrijventerrein.',
   hero: '/projects/pier14/hero.jpg',
   logo: '/projects/pier14/logo.svg',
   exterior: '/projects/pier14/hero.jpg',
 
   // CRM-project key. Moet EXACT matchen met Tharwats Supabase projects-tabel.
-  // PIER14 in caps + spatie + "BUnit" — niet aanpassen zonder afstemming.
+  // PIER14 in caps + spatie + "BUnit", niet aanpassen zonder afstemming.
   crmProject: 'PIER14 BUnit',
 
   // Portal-strategie. PIER14 gaat via kopen.repp.nl/pier14 (geen eigen
@@ -35,7 +35,7 @@ export const project = {
   // linkt direct door.
   portalStrategy: 'kopen-repp-redirect',
 
-  // Gallery — vijf schone sfeerimpressies voor de hero-carousel. Mix van
+  // Gallery, vijf schone sfeerimpressies voor de hero-carousel. Mix van
   // exterieur, water (uniek voor PIER14), interieur en doorsnede. locatie.jpg
   // hoort hier niet (die toont LocationBubble apart via aerialImage).
   gallery: [
@@ -80,7 +80,7 @@ export const project = {
       id: 'price',
       tag: 'Prijs',
       title: 'Vanaf €242.500 excl. btw',
-      body: 'Nautic-units vanaf €242.500. Anchor-units €635.500. Casco oplevering — koper richt zelf de unit in.',
+      body: 'Nautic-units vanaf €242.500. Anchor-units €635.500. Casco oplevering, koper richt zelf de unit in.',
       image: '/projects/pier14/doorsnede.jpg',
     },
     {
@@ -94,7 +94,7 @@ export const project = {
       id: 'history',
       tag: 'Historie',
       title: 'Voormalig Schokbeton-terrein',
-      body: 'PIER14 ligt op de plek waar Schokbeton — pionier in prefab-betonbouw — jarenlang gevestigd was. Drie loodsen worden gerenoveerd.',
+      body: 'PIER14 ligt op de plek waar Schokbeton, pionier in prefab-betonbouw, jarenlang gevestigd was. Drie loodsen worden gerenoveerd.',
       image: '/projects/pier14/detail.jpg',
     },
     {
@@ -109,7 +109,7 @@ export const project = {
   location: {
     address: 'Lindtsedijk 14, Zwijndrecht',
     city: 'Zwijndrecht',
-    district: 'PIER14 — voormalig Schokbeton-terrein, industrieterrein Groote Lindt',
+    district: 'PIER14, voormalig Schokbeton-terrein, industrieterrein Groote Lindt',
     aerialImage: '/projects/pier14/locatie.jpg',
     // Default pulse-marker positie; user kan later via screenshot van de
     // gerenderde locatie-image bijschaven (zie Paveri-les: pin op tip van
@@ -137,13 +137,13 @@ export const project = {
     ],
     highlights: [
       'Aan de zuidzijde van Zwijndrecht, omsloten door Oude Maas, Uilenhaven en Schokhaven.',
-      'Historisch terrein van Schokbeton — drie loodsen worden gerenoveerd.',
+      'Historisch terrein van Schokbeton, drie loodsen worden gerenoveerd.',
       'Specifiek aangewezen door de gemeente voor nautisch gerelateerde bedrijven.',
     ],
     scarcityNote: 'Kavel 11 is het laatste beschikbare kavel van PIER14. Veel units zijn al verkocht.',
   },
 
-  // Status van het project. soldPercent is een schatting — moet door
+  // Status van het project. soldPercent is een schatting, moet door
   // user bijgewerkt worden zodra de exacte beschikbaarheid bekend is.
   status: {
     soldPercent: 70,
@@ -159,7 +159,7 @@ export const project = {
     },
   },
 
-  // Plattegrond — uit Situatietekening (brochure pag. 8/18). 26 units verspreid
+  // Plattegrond, uit Situatietekening (brochure pag. 8/18). 26 units verspreid
   // over drie clusters. TODO: user stuurt SVG met exacte unit-coordinaten zoals
   // bij Paveri (PLATTEGROND De Paveri.svg). Dan switch ik naar het `svg`-schema
   // via SitePlanPolygonBubble voor pixel-precieze layout. Tot dan gebruik ik
@@ -268,7 +268,7 @@ export const project = {
       stateLabel: 'Uitverkocht',
       uses: ['Bedrijfsruimte', 'Werkplaats + kantoor'],
       image: '/projects/pier14/interieur.jpg',
-      pitch: 'Middelgrote unit van 214 m² — Tidal-type. Inmiddels uitverkocht.',
+      pitch: 'Middelgrote unit van 214 m², Tidal-type. Inmiddels uitverkocht.',
       specs: [
         '106 m² BG + 108 m² verdieping',
         '2 eigen parkeerplaatsen',
@@ -286,7 +286,7 @@ export const project = {
       stateLabel: 'Uitverkocht',
       uses: ['Bedrijfsruimte met opslag'],
       image: '/projects/pier14/interieur.jpg',
-      pitch: 'Middelgrote unit van 232 m² — Marina-type. Inmiddels uitverkocht.',
+      pitch: 'Middelgrote unit van 232 m², Marina-type. Inmiddels uitverkocht.',
       specs: [
         '153 m² BG + 79 m² verdieping',
         '2 eigen parkeerplaatsen',
@@ -297,7 +297,7 @@ export const project = {
       size: 340,
       levels: 2,
       parking: 6,
-      levelDetail: '248 m² BG + 92 m² verdieping (Harbor-340) — Harbor-289 is 193+96',
+      levelDetail: '248 m² BG + 92 m² verdieping (Harbor-340), Harbor-289 is 193+96',
       priceFrom: 699000,
       pricePerM2: 2056,
       state: 'available',
@@ -363,7 +363,7 @@ export const project = {
       stateLabel: 'Uitverkocht',
       uses: ['Grote bedrijfsruimte met werkplaats én kantoor'],
       image: '/projects/pier14/doorsnede.jpg',
-      pitch: 'Grootste unit van 784 m² — Bow-type. Inmiddels uitverkocht.',
+      pitch: 'Grootste unit van 784 m², Bow-type. Inmiddels uitverkocht.',
       specs: [
         '431 m² BG + 353 m² verdieping',
         'Hoge overheaddeur met tussenbordestrap',
@@ -378,7 +378,7 @@ export const project = {
     'Elektra-aansluiting 3x35A tot 3x80A',
     'Wateraansluiting 2,5 m³/u',
     'Glasvezel tot in de meterkast',
-    'Casco oplevering — koper richt zelf in',
+    'Casco oplevering, koper richt zelf in',
     'Units in overleg koppelbaar',
     'Eigen parkeerplaatsen direct voor de deur',
     'Vloerbelasting BG 1.000–1.500 kg/m²',
@@ -386,7 +386,7 @@ export const project = {
     'VvE voor algemene voorzieningen (terrein, gevelsporen, hemelwater)',
   ],
 
-  // "Waarom PIER14" — vijf scherpe USPs over wat PIER14 onderscheidt.
+  // "Waarom PIER14", vijf scherpe USPs over wat PIER14 onderscheidt.
   // Bewust water + maritiem voorop, daarna bereikbaarheid + kwaliteit.
   highlights: [
     { title: 'Aan het water',         body: 'Direct aan de Oude Maas, met eigen pier en twee insteekhavens (Uilenhaven en Schokhaven). Uniek voor PIER14.' },
@@ -394,13 +394,13 @@ export const project = {
     { title: 'Drie verbindingen',     body: 'A16 op 3 minuten, Zwijndrecht NS op 7 minuten fietsen, geplande waterbushalte naar Rotterdam en Dordrecht.' },
     { title: 'Koppelbare units',      body: '7 unit-types van 108 tot 784 m². Twee of meer units koppelbaar zodat de ruimte meegroeit.' },
     { title: 'Hoogwaardige basis',    body: '3x80A elektra, 2,5 m³/u water, glasvezel, vloerbelasting tot 1.500 kg/m². Casco oplevering naar eigen wens in te delen.' },
-    { title: 'Historische context',   body: 'Voormalig Schokbeton-terrein — pionier in prefab-betonbouw. Drie loodsen worden gerenoveerd.' },
+    { title: 'Historische context',   body: 'Voormalig Schokbeton-terrein, pionier in prefab-betonbouw. Drie loodsen worden gerenoveerd.' },
   ],
 
   audiences: [
-    { id: 'maritime',  title: 'Maritieme ondernemer',  body: 'Scheepvaart, jachtbouw, watersport, scheepsreparatie, maritieme dienstverlening — direct aan het water.' },
+    { id: 'maritime',  title: 'Maritieme ondernemer',  body: 'Scheepvaart, jachtbouw, watersport, scheepsreparatie, maritieme dienstverlening, direct aan het water.' },
     { id: 'service',   title: 'Toeleverancier maritiem', body: 'Bedrijven die maritieme klanten bedienen: techniek, logistiek, onderdelen, opslag.' },
-    { id: 'workplace', title: 'Werkplaats + showroom', body: 'Casco-opzet met hoge overheaddeur — werkplaats op BG, kantoor of showroom op verdieping.' },
+    { id: 'workplace', title: 'Werkplaats + showroom', body: 'Casco-opzet met hoge overheaddeur, werkplaats op BG, kantoor of showroom op verdieping.' },
     { id: 'investor',  title: 'Belegger', body: 'NB: PIER14 is een KOOPproject voor maritieme ondernemers. Beleggers kunnen geen unit kopen voor verhuur.' },
   ],
 
@@ -408,9 +408,9 @@ export const project = {
     { step: 1, title: 'Oriënteren',          body: 'Brochure, plattegronden en prijslijst doornemen.' },
     { step: 2, title: 'Reserveren',          body: 'Gewenste unit reserveren via de koopomgeving.' },
     { step: 3, title: 'Inschrijving',        body: 'Markeer favoriete unit + bespreking met REPP over wensen.' },
-    { step: 4, title: 'Koopovereenkomst',    body: 'Onderteken koopovereenkomst — opstart bouwfase.' },
+    { step: 4, title: 'Koopovereenkomst',    body: 'Onderteken koopovereenkomst, opstart bouwfase.' },
     { step: 5, title: 'Bouwfase',            body: 'Renovatie Schokbeton-loodsen + nieuwbouw. Status: bouw gestart.' },
-    { step: 6, title: 'Oplevering',          body: 'Casco oplevering — koper richt zelf in.' },
+    { step: 6, title: 'Oplevering',          body: 'Casco oplevering, koper richt zelf in.' },
   ],
 
   // Bouw is gestart, omgevingsvergunning afgegeven. Oplevering nog TBD.
@@ -420,7 +420,7 @@ export const project = {
     { phase: 'Oplevering',          date: 'TBD' },
   ],
 
-  // priceComparison: bewust uitgeschakeld voor PIER14 — nautische units
+  // priceComparison: bewust uitgeschakeld voor PIER14, nautische units
   // zijn te uniek (water-locatie, branche-specifiek) voor zinvolle
   // benchmarks tegen reguliere bedrijfsunits in Drechtsteden/Rotterdam-Zuid.
   // PriceCompareBubble wordt niet getoond in de moreInfo-pool als er geen
@@ -431,7 +431,7 @@ export const project = {
   },
 
   investor: {
-    // Beleggers-route is uitgeschakeld voor PIER14 — beleggers kunnen geen
+    // Beleggers-route is uitgeschakeld voor PIER14, beleggers kunnen geen
     // unit kopen. We laten de BAR-config wel staan zodat de rendement-calc
     // technisch werkt voor wie 'em opent, maar persona-flow voor belegger/
     // beide krijgt een nautisch-gate exit. NB: de financing-partner Credion
@@ -468,7 +468,7 @@ export const project = {
     {
       id: 'project',
       title: 'Het project',
-      body: '26 bedrijfsunits op kavel 11 van PIER14 in Zwijndrecht. 5.775 m² totaal — hoogwaardige nieuwbouw plus gerenoveerde Schokbeton-loodsen.',
+      body: '26 bedrijfsunits op kavel 11 van PIER14 in Zwijndrecht. 5.775 m² totaal, hoogwaardige nieuwbouw plus gerenoveerde Schokbeton-loodsen.',
       tag: 'Project',
     },
     {
@@ -530,29 +530,29 @@ export const project = {
     rep: { name: 'Jesse', context: 'PIER14 / Drechtsteden' },
   },
 
-  // Persona-aware copy. Aangepast voor PIER14's maritieme positionering —
+  // Persona-aware copy. Aangepast voor PIER14's maritieme positionering,
   // "thuishaven" + water-context. eigen_gebruiker = maritieme ondernemer
   // is de hoofd-route. belegger/beide → bij flowOverrides.nauticGate al
   // gevangen, dus deze copy is een safety-net voor wie alsnog daar
   // doorheen komt (bv. test-flow zonder gate).
   personaCopy: {
     eigen_gebruiker: {
-      microIntro: 'Helemaal goed. Dan ga ik je wat meer laten zien over PIER14 — speciaal voor maritieme ondernemers aan de Oude Maas.',
+      microIntro: 'Helemaal goed. Dan ga ik je wat meer laten zien over PIER14, speciaal voor maritieme ondernemers aan de Oude Maas.',
       recommendCopy: 'Dan zijn vooral de werkplaats-mogelijkheden, bereikbaarheid en de maritieme cluster belangrijk. PIER14 is casco opgeleverd zodat je de unit naar eigen behoefte inricht.',
       waPhrase: 'Ik zoek voor mijn maritieme bedrijf',
     },
     belegger: {
-      microIntro: 'Helemaal goed. NB: PIER14 is een koopproject voor maritieme ondernemers — beleggers kunnen geen unit kopen voor verhuur.',
+      microIntro: 'Helemaal goed. NB: PIER14 is een koopproject voor maritieme ondernemers, beleggers kunnen geen unit kopen voor verhuur.',
       recommendCopy: 'Ben je zelf actief in de maritieme sector? Dan ben je welkom als koper-gebruiker. Anders kunnen we je doorverwijzen naar andere REPP-projecten waar belegging wel kan.',
       waPhrase: 'Ik kijk als belegger',
     },
     beide: {
       microIntro: 'Helemaal goed. PIER14 is primair voor maritieme ondernemers die zelf de unit gaan gebruiken.',
-      recommendCopy: 'Voor eigen gebruik is dit project ideaal als je in de maritieme sector zit. Voor pure belegging is PIER14 niet geschikt — beleggers kunnen geen unit kopen voor verhuur.',
+      recommendCopy: 'Voor eigen gebruik is dit project ideaal als je in de maritieme sector zit. Voor pure belegging is PIER14 niet geschikt, beleggers kunnen geen unit kopen voor verhuur.',
       waPhrase: 'Ik kijk vanuit beide perspectieven',
     },
     onbekend: {
-      microIntro: 'Helemaal goed. Dan ga ik je wat meer laten zien over PIER14 — bedrijfsunits voor maritieme ondernemers aan de Oude Maas.',
+      microIntro: 'Helemaal goed. Dan ga ik je wat meer laten zien over PIER14, bedrijfsunits voor maritieme ondernemers aan de Oude Maas.',
       recommendCopy: 'PIER14 is ontwikkeld voor de maritieme sector. Als je in scheepvaart, watersport of een aanverwante branche zit, kijken we graag mee.',
       waPhrase: 'Ik wil graag meer weten',
     },
@@ -568,14 +568,14 @@ export const project = {
     nauticGate: {
       enabled: true,
       explanation: 'Een nautisch ondernemer is iemand met een bedrijf in de scheepvaart, watersport, jachtbouw, scheepsreparatie, maritieme dienstverlening of een aanverwante sector. Denk aan rederijen, jachthavens, scheepstoelevering, watersportwinkels, bootverhuur of bedrijven die direct met de maritieme keten samenwerken.',
-      exitMessage: 'Helaas past PIER14 dan niet bij jou — dit project is door de gemeente specifiek aangewezen voor nautisch gerelateerde bedrijven.',
+      exitMessage: 'Helaas past PIER14 dan niet bij jou, dit project is door de gemeente specifiek aangewezen voor nautisch gerelateerde bedrijven.',
       exitReferral: 'Geen probleem. We kunnen je doorverwijzen naar andere REPP-bedrijfsunit-projecten in Nederland waar je wél terecht kunt. Laat hieronder je gegevens achter, dan nemen we contact op.',
     },
 
     sizeQuestion: {
       label: 'Hoe groot wil je dat de unit ongeveer is?',
       // PIER14 units variëren van 108 (Nautic) tot 784 m² (Bow). Categoriseer
-      // op typen ipv abstracte m²-buckets — bezoeker ziet meteen welk type
+      // op typen ipv abstracte m²-buckets, bezoeker ziet meteen welk type
       // bij hem past. Alle opties wijzen naar een beschikbaar unit-type
       // (Nautic of Anchor); Marina/Tidal/Harbor/Stern/Bow zijn uitverkocht
       // dus niet als optie geven om frustratie te voorkomen.
@@ -592,7 +592,7 @@ export const project = {
     compact:   'Op basis van je antwoorden past een Nautic-unit (108 m²) goed bij wat je zoekt.',
     middel:    'Voor middelgrote werkruimte is een Anchor-unit (298 m²) het meest concreet beschikbaar.',
     groot:     'Voor grote bedrijfsruimte is Harbor (340 m²) op dit moment de beschikbare optie.',
-    weet_niet: 'De Nautic-units (108 m²) zijn de meest concrete optie om mee te starten — compact en koppelbaar.',
+    weet_niet: 'De Nautic-units (108 m²) zijn de meest concrete optie om mee te starten, compact en koppelbaar.',
   },
 }
 

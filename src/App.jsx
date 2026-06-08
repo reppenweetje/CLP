@@ -1150,10 +1150,11 @@ function Demo() {
         const explanation = project.flowOverrides?.nauticGate?.explanation
           || 'Een nautisch ondernemer is iemand met een bedrijf in de scheepvaart, watersport, jachtbouw, scheepsreparatie, maritieme dienstverlening of een aanverwante sector. Denk aan rederijen, jachthavens, scheepstoelevering, watersportwinkels of bootverhuur.'
         // currentQuestion blijft 'nauticGate' zodat de chip-bar terugkomt
-        // (zonder uitleg-chip — die filter zit in chipQuestion-setup hieronder).
+        // (zonder uitleg-chip, die filter zit in chipQuestion-setup hieronder
+        // en zwapt ook de chip-labels naar "Ik ben (geen) nautische ondernemer").
         sendSequence(userTextFromOpt(opt), [
           { kind: 'bot-text', text: explanation },
-          { kind: 'bot-text', text: 'En, ben je een nautisch ondernemer?' },
+          { kind: 'bot-text', text: 'Nu je weet of je een nautisch ondernemer bent of niet, geef aan:' },
         ])
         return
       }
@@ -2472,12 +2473,27 @@ function Demo() {
   let inputConfig = null
   if (state.currentQuestion === 'intent') chipQuestion = flow.questions.intent
   else if (state.currentQuestion === 'nauticGate') {
-    // Verberg de uitleg-chip nadat de uitleg al een keer is getoond, anders
-    // krijgt de bezoeker een loop. Daarna blijven alleen ja/nee over.
+    // Twee passes:
+    //   1e pass (bezoeker komt net binnen op de gate): "Ja" / "Nee" / "Wat
+    //      houdt nautisch in?" — korte labels want de vraag is op zichzelf
+    //      duidelijk genoeg.
+    //   2e pass (na uitleg): bezoeker heeft net uitleg gelezen. We zwapen
+    //      naar volzin-labels "Ik ben (geen) nautische ondernemer" zodat de
+    //      antwoorden expliciet voelen na de uitleg, en verbergen de
+    //      uitleg-chip (anders krijg je een loop).
     const explained = !!state.behaviors?.nauticExplanationShown
     const base = flow.questions.nauticGate
     chipQuestion = explained
-      ? { ...base, options: base.options.filter((o) => o.id !== 'uitleg') }
+      ? {
+          ...base,
+          options: base.options
+            .filter((o) => o.id !== 'uitleg')
+            .map((o) => o.id === 'ja'
+              ? { ...o, label: 'Ik ben een nautische ondernemer' }
+              : o.id === 'nee'
+                ? { ...o, label: 'Ik ben geen nautische ondernemer' }
+                : o),
+        }
       : base
   }
   else if (state.currentQuestion === 'availabilityCheck') {
