@@ -503,6 +503,11 @@ export const project = {
   // en option-id verschillen zodat analytics ziet wat de bezoeker oorspronkelijk
   // koos; de `unit`-waarde stuurt recommendUnit naar het juiste type.
   flowOverrides: {
+    // Pin de eerste vraag op de vraag-variant; de copy-variant B
+    // ("Eigen gebruik of belegging?") schakelen we voor ELSTER uit zodat
+    // iedere bezoeker dezelfde opening ziet. De intro-A/B (begin-scherm
+    // wel/niet) loopt los hiervan gewoon door.
+    intentLabel: 'Waarom ben je op zoek naar een bedrijfsunit?',
     sizeQuestion: {
       label: 'Hoe groot wil je dat de begane grond is?',
       options: [

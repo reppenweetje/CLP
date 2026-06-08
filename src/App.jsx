@@ -151,7 +151,10 @@ function reducer(state, action) {
       const typeFirst = action.typeFirst === true
       const greeting = { kind: 'bot-text', text: `Hoi, ik ben ${bot.name} van ${bot.org}.` }
       const followup = { kind: 'bot-text', text: 'Om de juiste brochure en prijzen met je te delen heb ik een korte vraag.' }
-      const question = { kind: 'bot-text', text: getLabel('intent', copyVariant) }
+      // Project mag de copy-variant van de intent-vraag overschrijven met
+      // één vaste tekst (flowOverrides.intentLabel). Zonder override blijft
+      // de A/B copy-variant per bezoeker gewoon werken.
+      const question = { kind: 'bot-text', text: project.flowOverrides?.intentLabel ?? getLabel('intent', copyVariant) }
       return {
         ...state,
         view: 'chat',
