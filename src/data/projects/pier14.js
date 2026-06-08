@@ -22,9 +22,9 @@ export const project = {
   displayName: 'PIER14',
   tagline: 'De thuishaven voor maritieme ondernemers.',
   shortDescription: '26 bedrijfsunits aan de Oude Maas, nautisch-maritiem bedrijventerrein.',
-  hero: '/projects/pier14/hero.png',
+  hero: '/projects/pier14/beschikbaarheid.png',
   logo: '/projects/pier14/logo.svg',
-  exterior: '/projects/pier14/hero.png',
+  exterior: '/projects/pier14/beschikbaarheid.png',
 
   // CRM-project key. Moet EXACT matchen met Tharwats Supabase projects-tabel.
   // PIER14 in caps + spatie + "BUnit", niet aanpassen zonder afstemming.
@@ -39,11 +39,11 @@ export const project = {
   // exterieur, water (uniek voor PIER14), interieur en doorsnede. locatie.jpg
   // hoort hier niet (die toont LocationBubble apart via aerialImage).
   gallery: [
-    { src: '/projects/pier14/hero.png', alt: 'PIER14 thuishaven voor maritieme ondernemers' },
     { src: '/projects/pier14/project.png', alt: 'PIER14 luchtaanzicht units' },
     { src: '/projects/pier14/luchtfoto-haven.png', alt: 'PIER14 kavel aan de Oude Maas' },
     { src: '/projects/pier14/beschikbaarheid.png', alt: 'PIER14 exterieur overdag' },
     { src: '/projects/pier14/pier-overview.png', alt: 'PIER14 overview met pier en haven' },
+    { src: '/projects/pier14/praktisch.png', alt: 'PIER14 interieur Schokbeton-loods' },
   ],
 
   // USP-cards voor het eerste micro-value moment.
@@ -143,6 +143,10 @@ export const project = {
     scarcityNote: 'Kavel 11 is het laatste beschikbare kavel van PIER14. Veel units zijn al verkocht.',
   },
 
+  // Status per type aggregeert uit sitePlan.sections hierboven (schema-rename
+  // van layoutRows → sections; layoutRows-renderer verwachtte nested
+  // left/right-structuur die PIER14 niet heeft, gaf daarom "0 units").
+  //
   // Status van het project. soldPercent is een schatting, moet door
   // user bijgewerkt worden zodra de exacte beschikbaarheid bekend is.
   status: {
@@ -171,7 +175,12 @@ export const project = {
   //   Sub-cluster: 19 (Harbor), 17 (Tidal), 20a-b, 16a-b (Nautic)
   //   Onderaan:    23-24 (Anchor), 22, 21 (Anchor), 18 (Harbor)
   sitePlan: {
-    layoutRows: [
+    // 'sections' schema (Paveri-stijl simpel): meerdere grids gestapeld
+    // zonder sidebar-aligning. Per sectie eigen cols + uniforme aspect.
+    // 'layoutRows' (nested left/right) en 'svg' zijn alternatieven die
+    // SitePlanBubble óók ondersteunt, maar voor PIER14 past 'sections'
+    // het beste bij de rij-gewijze opbouw met variërende kolombreedte.
+    sections: [
       {
         cols: 11,
         aspect: 'portrait',
@@ -234,7 +243,6 @@ export const project = {
   },
 
   // 7 unit-types. Prijzen en m² uit brochure-prijslijst (pag. 18 screenshot).
-  // Status per type aggregeert uit sitePlan.layoutRows hierboven.
   units: [
     {
       type: 'Nautic',
@@ -247,7 +255,7 @@ export const project = {
       state: 'available',
       stateLabel: 'Nog enkele beschikbaar',
       uses: ['Opslag', 'Werkplaats', 'Kantoor', 'Showroom', 'Combinatie werk + opslag'],
-      image: '/projects/pier14/luchtfoto-detail.png',
+      image: '/projects/pier14/prijs.png',
       pitch: 'Compacte unit van 108 m² over twee lagen. Standaardtype, meest beschikbaar.',
       specs: [
         '54 m² BG + 54 m² verdieping',
@@ -267,7 +275,7 @@ export const project = {
       state: 'sold_out',
       stateLabel: 'Uitverkocht',
       uses: ['Bedrijfsruimte', 'Werkplaats + kantoor'],
-      image: '/projects/pier14/praktisch.png',
+      image: '/projects/pier14/prijs.png',
       pitch: 'Middelgrote unit van 214 m², Tidal-type. Inmiddels uitverkocht.',
       specs: [
         '106 m² BG + 108 m² verdieping',
@@ -285,7 +293,7 @@ export const project = {
       state: 'sold_out',
       stateLabel: 'Uitverkocht',
       uses: ['Bedrijfsruimte met opslag'],
-      image: '/projects/pier14/pier-overview.png',
+      image: '/projects/pier14/prijs.png',
       pitch: 'Middelgrote unit van 232 m², Marina-type. Inmiddels uitverkocht.',
       specs: [
         '153 m² BG + 79 m² verdieping',
@@ -323,7 +331,7 @@ export const project = {
       state: 'available',
       stateLabel: 'Nog enkele beschikbaar',
       uses: ['Werkplaats', 'Bedrijfsruimte met kantoor', 'Productie'],
-      image: '/projects/pier14/beschikbaarheid.png',
+      image: '/projects/pier14/prijs.png',
       pitch: 'Anchor-unit van 298 m². Ruimte voor werkplaats én volwaardig kantoor.',
       specs: [
         '190 m² BG + 108 m² verdieping',
@@ -343,7 +351,7 @@ export const project = {
       state: 'sold_out',
       stateLabel: 'Uitverkocht',
       uses: ['Grote bedrijfsruimte'],
-      image: '/projects/pier14/huidige-situatie.png',
+      image: '/projects/pier14/prijs.png',
       pitch: 'Stern-unit van 416 m². Inmiddels uitverkocht.',
       specs: [
         '278 m² BG + 138 m² verdieping',
@@ -362,7 +370,7 @@ export const project = {
       state: 'sold_out',
       stateLabel: 'Uitverkocht',
       uses: ['Grote bedrijfsruimte met werkplaats én kantoor'],
-      image: '/projects/pier14/luchtfoto-haven.png',
+      image: '/projects/pier14/prijs.png',
       pitch: 'Grootste unit van 784 m², Bow-type. Inmiddels uitverkocht.',
       specs: [
         '431 m² BG + 353 m² verdieping',
@@ -527,7 +535,7 @@ export const project = {
   brochureUrl: 'https://repp.nl/wp-content/uploads/2026/06/28.05.2026-Brochure-PIER14-BVG-2.pdf',
   priceListUrl: '/projects/pier14/prijslijst.pdf',
   portalUrl: 'https://kopen.repp.nl/pier14',
-  portalLabel: 'Bekijk PIER14 koopomgeving',
+  portalLabel: 'Bekijk PIER14 website',
   // Zapier-webhook voor Credion financierings-aanvraag (uit intake).
   credionWebhookUrl: 'https://hooks.zapier.com/hooks/catch/2082653/4b7r5qv/',
 
@@ -615,10 +623,12 @@ export const project = {
 // UspCardsBubble direct .image/.tag/.title kan lezen. Zonder deze .map-stap
 // krijgt de carousel kale grijze placeholders ipv echte foto's.
 export function uspCardOrder(persona) {
+  // 'history' card weggehaald op verzoek: voegt te weinig waarde toe naast
+  // 'project'+'maritime' die het Schokbeton-verhaal al aanstippen.
   const ids =
     persona === 'belegger' || persona === 'beide'
-      ? ['project', 'maritime', 'price', 'location', 'practical', 'history']
-      : ['project', 'maritime', 'location', 'availability', 'practical', 'history']
+      ? ['project', 'maritime', 'price', 'location', 'practical']
+      : ['project', 'maritime', 'location', 'availability', 'practical']
   return ids
     .map((id) => project.uspCards.find((c) => c.id === id))
     .filter(Boolean)
