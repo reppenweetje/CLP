@@ -28,7 +28,14 @@ export default function RentabilityCalc({ price, size, indicative = false, onInt
   const [marktHuur, setMarktHuur] = useState(huurDefault)
   const interactedRef = useRef(false)
   const yearlyRent = size * marktHuur
-  const bar = price > 0 ? (yearlyRent / price) * 100 : 0
+  const barRaw = price > 0 ? (yearlyRent / price) * 100 : 0
+  // Bij barSlider-projecten is de bovengrens de bewust gepubliceerde BAR-cap
+  // (bv. ELSTER 11 / Paveri = 7%). De markthuur-slider is daar al op
+  // begrensd, maar het naar hele euro's afronden van huurMax kan de getoonde
+  // BAR met een paar honderdsten boven bs.max duwen. We clampen daarom het
+  // weergegeven percentage op bs.max zodat nooit meer dan de cap verschijnt.
+  // Projecten zonder barSlider (De Hofman) houden het ongeclampte getal.
+  const bar = useBarSlider ? Math.min(barRaw, bs.max) : barRaw
 
   const handleSliderChange = (value) => {
     setMarktHuur(value)
