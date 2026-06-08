@@ -83,6 +83,7 @@ function countProjectUnits(project) {
     (sp.sidebar?.units?.length || 0) +
     (sp.layoutRows?.reduce((n, r) => n + (r.left?.units?.length || 0) + (r.right ? 1 : 0), 0) || 0) +
     (sp.columns?.left?.sections?.flatMap((s) => s.units).length || 0) +
-    (sp.columns?.right?.units?.length || 0)
+    (sp.columns?.right?.units?.length || 0) +
+    (sp.svg?.units?.length || 0)
   )
 }

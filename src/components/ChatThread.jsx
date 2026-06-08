@@ -10,6 +10,7 @@ import GalleryBubble from './GalleryBubble.jsx'
 import UspCardsBubble from './UspCardsBubble.jsx'
 import LocationBubble from './LocationBubble.jsx'
 import SitePlanBubble from './SitePlanBubble.jsx'
+import SitePlanPolygonBubble from './SitePlanPolygonBubble.jsx'
 import HighlightsBubble from './HighlightsBubble.jsx'
 import ProcessBubble from './ProcessBubble.jsx'
 import PlanningBubble from './PlanningBubble.jsx'
@@ -26,7 +27,7 @@ import LeadFormBubble from './LeadFormBubble.jsx'
 // niet als "bubble" want dat zijn loutere chat-tekens, geen content-units.
 const TRACKABLE_BUBBLE_KINDS = new Set([
   'content-card', 'unit-card', 'gallery', 'usp-cards', 'location',
-  'site-plan', 'highlights', 'process', 'planning', 'investor',
+  'site-plan', 'site-plan-svg', 'highlights', 'process', 'planning', 'investor',
   'price', 'price-compare', 'brochure', 'cta-card', 'warm-handoff',
   'service-card', 'lead-form',
 ])
@@ -113,6 +114,17 @@ function renderMessage(m, { onBrochure, onReset, onUnitView, onCalcInteract, onC
     case 'site-plan':
       return (
         <SitePlanBubble
+          sitePlan={m.payload.sitePlan}
+          units={m.payload.units}
+          persona={m.payload.persona}
+          onUnitView={onUnitView}
+          onCalcInteract={onCalcInteract}
+          onCredionRequest={onCredionRequest}
+        />
+      )
+    case 'site-plan-svg':
+      return (
+        <SitePlanPolygonBubble
           sitePlan={m.payload.sitePlan}
           units={m.payload.units}
           persona={m.payload.persona}
@@ -211,6 +223,7 @@ function bubbleSummary(m) {
     case 'gallery':       return { count: Array.isArray(p?.images) ? p.images.length : 0 }
     case 'usp-cards':     return { count: Array.isArray(p?.cards) ? p.cards.length : 0 }
     case 'site-plan':     return { persona: p?.persona }
+    case 'site-plan-svg': return { persona: p?.persona }
     case 'price':         return { count: Array.isArray(p?.units) ? p.units.length : 0 }
     case 'warm-handoff':  return { hasPhone: !!p?.hasPhone }
     case 'service-card':  return { unitId: p?.unit?.id, hasPhone: !!p?.hasPhone }
