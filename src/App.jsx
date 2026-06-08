@@ -395,6 +395,9 @@ function countAvailableMoreInfo(persona) {
   for (const id of order) {
     const def = MORE_INFO_DEFS[id]
     if (!def) continue
+    // Project kan onderwerpen uitschakelen (bv. ELSTER 11 heeft geen
+    // financiering en geen prijsvergelijking). Additief en opt-in.
+    if (project.disabledTopics?.includes(id)) continue
     if (def.personas && !def.personas.includes(persona)) continue
     count++
   }
@@ -411,6 +414,8 @@ function moreInfoChips(persona, seen, temperature, callbackArranged = false, has
     const def = MORE_INFO_DEFS[id]
     if (!def) continue
     if (seen.includes(id)) continue
+    // Project-niveau uitgeschakelde onderwerpen (zie project.disabledTopics).
+    if (project.disabledTopics?.includes(id)) continue
     if (def.personas && !def.personas.includes(persona)) continue
     opts.push({ id, label: def.label })
   }
@@ -1258,7 +1263,7 @@ function Demo() {
         trackEvent('brochure-trigger:rendement-shown', {})
         dispatch({ type: 'BEHAVIOR_RENDEMENT_SHOWN' })
         sendSequence(userTextFromOpt(opt), [
-          { kind: 'bot-text', text: 'Goed dat je daarnaar vraagt. Bij beleggen op de Waarderpolder is het rendement de kern.' },
+          { kind: 'bot-text', text: project.investor?.rendementIntro || `Goed dat je daarnaar vraagt. Bij beleggen op de ${project.location?.district} is het rendement de kern.` },
           {
             kind: 'investor',
             payload: {
@@ -2719,7 +2724,7 @@ function Demo() {
             const order = MORE_INFO_PERSONA_ORDER[persona] || MORE_INFO_PERSONA_ORDER.onbekend
             return order
               .map((id) => ({ id, def: MORE_INFO_DEFS[id] }))
-              .filter(({ id, def }) => def && !state.moreInfoSeen.includes(id) && (!def.personas || def.personas.includes(persona)))
+              .filter(({ id, def }) => def && !state.moreInfoSeen.includes(id) && !project.disabledTopics?.includes(id) && (!def.personas || def.personas.includes(persona)))
               .map(({ id, def }) => ({ id, label: def.label }))
           })()}
           onPick={(opt) => {
