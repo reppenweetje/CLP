@@ -169,28 +169,31 @@ export async function upsertBrevoContact(lead: BrevoLeadInput, leadId?: string |
     return
   }
 
-  // Lijst-routing per source-string. Volgorde van checks:
-  //   1. BREVO_LIST_ID_<NORMALIZED_SOURCE>  — per-project override
+  // Lijst-routing per source-string. Volgorde van checks (van specifiek naar
+  // generiek — eerste match wint):
+  //   1. BREVO_LIST_ID_<NORMALIZED_SOURCE>_<NORMALIZED_VARIANT>
+  //        per-project + per-variant override. attributes.leadVariant uit
+  //        de payload bepaalt de variant. Bv:
+  //          source="PIER14 BUnit" + leadVariant="not_nautical"
+  //          → BREVO_LIST_ID_PIER14_BUNIT_NOT_NAUTICAL
+  //        Gebruikt voor sub-doelgroepen binnen één crmProject (PIER14 wil
+  //        niet-nautische leads naar lijst #300 ipv default-lijst #299).
+  //   2. BREVO_LIST_ID_<NORMALIZED_SOURCE>  — per-project default
   //        bv. source="Paveri BUnit"  → BREVO_LIST_ID_PAVERI_BUNIT
   //        bv. source="clp_dehofman"  → BREVO_LIST_ID_CLP_DEHOFMAN
-  //      Hiermee kan elk nieuw project zijn eigen lijst krijgen zonder
-  //      code-wijziging — alleen een nieuwe env-var in Supabase secrets.
-  //   2. BREVO_LIST_ID_RESERVATION   — dehofman_portal_reservation
-  //   3. BREVO_LIST_ID_PORTAL        — overige dehofman_portal* walk-ins
-  //   4. BREVO_LIST_ID               — algemene fallback (huidige Hofman default)
+  //   3. BREVO_LIST_ID_RESERVATION   — dehofman_portal_reservation
+  //   4. BREVO_LIST_ID_PORTAL        — overige dehofman_portal* walk-ins
+  //   5. BREVO_LIST_ID               — algemene fallback (huidige Hofman default)
   //
   // Bestaande Brevo-contacten worden bij upsert ADDED aan deze lijst
-  // (Brevo houdt ze ook in hun originele lijst — geen verlies). Sales
-  // kan zo segmenteren op project.
+  // (Brevo houdt ze ook in hun originele lijst, geen verlies). Sales
+  // kan zo segmenteren op project + sub-doelgroep.
   const sourceRaw = lead.source ?? ''
   // Env-safe key: uppercase + niet-alfanumeriek vervangen door underscore.
   // "Paveri BUnit" → "PAVERI_BUNIT"
   const envSafeSource = sourceRaw.toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '')
-  const perProjectList = envSafeSource ? Deno.env.get(`BREVO_LIST_ID_${envSafeSource}`) : undefined
-  // Per-variant override: sommige projecten (PIER14) splitsen leads naar
-  // aparte lijsten op basis van een sub-doelgroep (bv. nautisch vs niet-
-  // nautisch). leadVariant komt uit lead.attributes, env-key is dan
-  // BREVO_LIST_ID_<SOURCE>_<VARIANT>. Wint van perProjectList.
+  // Variant-override: leadVariant uit attributes (door frontend gezet).
+  // Bv. 'not_nautical' → 'NOT_NAUTICAL'.
   const leadVariantRaw = typeof (lead.attributes as Record<string, unknown> | undefined)?.leadVariant === 'string'
     ? String((lead.attributes as Record<string, unknown>).leadVariant)
     : ''
@@ -198,6 +201,7 @@ export async function upsertBrevoContact(lead: BrevoLeadInput, leadId?: string |
   const variantList = (envSafeSource && envSafeVariant)
     ? Deno.env.get(`BREVO_LIST_ID_${envSafeSource}_${envSafeVariant}`)
     : undefined
+  const perProjectList = envSafeSource ? Deno.env.get(`BREVO_LIST_ID_${envSafeSource}`) : undefined
   const reservationListRaw = Deno.env.get('BREVO_LIST_ID_RESERVATION')
   const portalListRaw = Deno.env.get('BREVO_LIST_ID_PORTAL')
   const defaultListRaw = Deno.env.get('BREVO_LIST_ID')
