@@ -49,7 +49,12 @@ import { useSmartResume, useInactivityRescue, useExitIntent, getOrAssignVariant,
 import { detectCurrentIp } from './lib/ipExclusion.js'
 let _id = 0
 const nextId = () => ++_id
-const STORAGE_KEY = 'clp-state-v5'
+// Bump het versie-suffix wanneer de gepersisteerde state-shape wijzigt. Een
+// oude state uit een vorige bundle kan messages bevatten zonder messageQueue;
+// de mount-init slaat dan start() over (messages.length > 0) terwijl de queue
+// leeg is, waardoor de followup- en intent-vraag-bubbles nooit verschijnen
+// (alleen begroeting plus chips). Een nieuwe key forceert een schone cold start.
+const STORAGE_KEY = 'clp-state-v6'
 
 // Project-aware vraag-getter. Geeft de flow.questions[key] terug, maar
 // overschrijft met project.flowOverrides[`${key}Question`] als het project
