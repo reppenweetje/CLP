@@ -5,9 +5,11 @@
 // Slug = `elster11`, subdomein wordt elster11.clp.repp.nl.
 //
 // Afwijkend t.o.v. de andere projecten:
-//   • Geen eigen portal (portalStrategy/portalUrl weggelaten).
-//   • Geen financieringspartner (financing-blok + credionWebhookUrl weggelaten,
-//     en geen 'financing' contentCard).
+//   • Geen koop-portaal, maar wel een publieke projectpagina op repp.nl
+//     (portalUrl + portalLabel verwijzen daarheen, geen auto-login token).
+//   • Geen financiering: geen financieringspartner/credionWebhookUrl en het
+//     'financing'-onderwerp staat uit via disabledTopics.
+//   • Geen prijsvergelijking: 'priceCompare' staat uit via disabledTopics.
 //   • Onregelmatige plattegrond — daarom `sitePlan.svg` met exacte polygon-
 //     coordinaten (zie SitePlanPolygonBubble.jsx). Geen rows/columns-schema.
 export const project = {
@@ -295,20 +297,8 @@ export const project = {
     { phase: 'Oplevering',          date: 'Nader te bepalen', current: true },
   ],
 
-  // m²-prijs vergelijking. De drie regio-rijen zijn marktconforme referenties
-  // voor nieuwbouw-bedrijfsunits in de regio (Elst/Veenendaal/Wageningen),
-  // bewust als "(referentie)" gelabeld zodat ze als context-band lezen en niet
-  // als exacte concurrent-quote. ELSTER-rijen zijn de eigen vraagprijzen per m².
-  priceComparison: {
-    peildatum: '2026-06',
-    rows: [
-      { name: 'ELSTER 11 Type A', price: 1985, isOurs: true },
-      { name: 'ELSTER 11 Type C', price: 1945, isOurs: true },
-      { name: 'Elst (referentie)', price: 2100 },
-      { name: 'Veenendaal (referentie)', price: 2050 },
-      { name: 'Wageningen (referentie)', price: 2150 },
-    ],
-  },
+  // Geen prijsvergelijking voor ELSTER 11: het 'priceCompare'-onderwerp staat
+  // uit via disabledTopics (zie onder), dus er is geen priceComparison-data.
 
   // Beleggers-data. We tonen alleen de bovengrens (tot 7%) zodat bezoekers niet
   // aan de ondergrens worden gepind — de slider laat ze tot 3% zakken voor
@@ -317,6 +307,10 @@ export const project = {
   // blijft het cijfer kloppend met de markt. markthuurAanname blijft numeriek
   // voor eventuele calc-fallback (niet getoond bij barSlider-projecten).
   investor: {
+    // Rendement-introzin voor de brochureTrigger-rendementuitleg. Override van
+    // de gedeelde fallback (die naar location.district verwijst) zodat ELSTER
+    // 11 niet per ongeluk een andere wijknaam toont.
+    rendementIntro: 'Goed dat je daarnaar vraagt. Bij beleggen in een bedrijfsunit aan de A12 is het rendement de kern.',
     barRange: 'tot 7%',
     barSlider: { min: 3, max: 7, default: 7 },
     markthuurRange: 'op marktconform niveau',
@@ -392,9 +386,21 @@ export const project = {
 
   whatsappNumber: '+31617192538',
   phoneNumber: '020-2610080',
-  // Brochure + prijslijst: lokaal opgeslagen onder /public/projects/elster11/.
-  // TODO: bestanden zijn nog niet aangeleverd (open item).
-  brochureUrl: '/projects/elster11/brochure.pdf',
+
+  // Geen koop-portaal voor ELSTER 11, maar wel een publieke projectpagina op
+  // repp.nl. De moreInfo "portal"-chip linkt daarheen met een eigen label
+  // ("Bekijk ELSTER 11 website") ipv het generieke "Bekijk koopomgeving".
+  portalLabel: 'Bekijk ELSTER 11 website',
+  portalUrl: 'https://repp.nl/elster11',
+
+  // Onderwerpen die voor ELSTER 11 niet van toepassing zijn en uit de
+  // moreInfo-chips worden gefilterd (zie disabledTopics-filter in App.jsx):
+  //  • priceCompare — geen prijsvergelijking voor dit project.
+  //  • financing    — REPP biedt geen financiering aan voor ELSTER 11.
+  disabledTopics: ['priceCompare', 'financing'],
+  // Brochure: gehost op repp.nl (officiële ELSTER 11-brochure). Prijslijst
+  // lokaal onder /public/projects/elster11/.
+  brochureUrl: 'https://repp.nl/wp-content/uploads/2026/03/Brochure-ELSTER-11-Elst.pdf',
   priceListUrl: '/projects/elster11/prijslijst.pdf',
 
   // Sales team — Jesse namens REPP.
