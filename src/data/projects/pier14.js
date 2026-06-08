@@ -114,7 +114,7 @@ export const project = {
     // Default pulse-marker positie; user kan later via screenshot van de
     // gerenderde locatie-image bijschaven (zie Paveri-les: pin op tip van
     // ingetekende drop-pin → pinPosition: null).
-    pinPosition: { x: 50, y: 50 },
+    pinPosition: null,
     mapsQuery: 'Lindtsedijk+14+Zwijndrecht',
     mapsLink: 'https://www.google.com/maps?q=Lindtsedijk+14+Zwijndrecht',
     // Reistijden uit brochure pag. 4. A16 + treinstation + bushalte
@@ -518,7 +518,7 @@ export const project = {
 
   whatsappNumber: '+31617192538',
   phoneNumber: '020-2610080',
-  brochureUrl: '/projects/pier14/brochure.pdf',
+  brochureUrl: 'https://repp.nl/wp-content/uploads/2026/06/28.05.2026-Brochure-PIER14-BVG-2.pdf',
   priceListUrl: '/projects/pier14/prijslijst.pdf',
   portalUrl: 'https://kopen.repp.nl/pier14',
   portalLabel: 'Bekijk PIER14 koopomgeving',
@@ -569,7 +569,7 @@ export const project = {
       enabled: true,
       explanation: 'Een nautisch ondernemer is iemand met een bedrijf in de scheepvaart, watersport, jachtbouw, scheepsreparatie, maritieme dienstverlening of een aanverwante sector. Denk aan rederijen, jachthavens, scheepstoelevering, watersportwinkels, bootverhuur of bedrijven die direct met de maritieme keten samenwerken.',
       exitMessage: 'Helaas past PIER14 dan niet bij jou, dit project is door de gemeente specifiek aangewezen voor nautisch gerelateerde bedrijven.',
-      exitReferral: 'Geen probleem. We kunnen je doorverwijzen naar andere REPP-bedrijfsunit-projecten in Nederland waar je wél terecht kunt. Laat hieronder je gegevens achter, dan nemen we contact op.',
+      exitReferral: 'We kunnen je doorverwijzen naar andere REPP-bedrijfsunit-projecten in Nederland waar je wél terecht kunt. Laat hieronder je gegevens achter, dan nemen we contact op.',
     },
 
     sizeQuestion: {
@@ -580,19 +580,19 @@ export const project = {
       // (Nautic of Anchor); Marina/Tidal/Harbor/Stern/Bow zijn uitverkocht
       // dus niet als optie geven om frustratie te voorkomen.
       options: [
-        { id: 'compact',   label: 'Compact (~108 m²)',       score: 12, unit: 'Nautic' },
-        { id: 'middel',    label: 'Middel (~298 m²)',         score: 15, unit: 'Anchor' },
-        { id: 'groot',     label: 'Groot (~340 m²)',          score: 15, unit: 'Harbor' },
-        { id: 'weet_niet', label: 'Weet ik nog niet',         score: 5,  unit: 'Nautic' },
+        { id: 'nautic',   label: '108 m² Nautic',            score: 12, unit: 'Nautic' },
+        { id: 'harbor',   label: '289 m² Harbor',            score: 15, unit: 'Harbor' },
+        { id: 'anchor',   label: '298 m² Anchor',            score: 15, unit: 'Anchor' },
+        { id: 'koppelen', label: 'Ik wil units koppelen',    score: 15, unit: 'Anchor' },
       ],
     },
   },
 
   recommendIntroByChoice: {
-    compact:   'Op basis van je antwoorden past een Nautic-unit (108 m²) goed bij wat je zoekt.',
-    middel:    'Voor middelgrote werkruimte is een Anchor-unit (298 m²) het meest concreet beschikbaar.',
-    groot:     'Voor grote bedrijfsruimte is Harbor (340 m²) op dit moment de beschikbare optie.',
-    weet_niet: 'De Nautic-units (108 m²) zijn de meest concrete optie om mee te starten, compact en koppelbaar.',
+    nautic:   'Op basis van je antwoorden past een Nautic-unit (108 m²) goed bij wat je zoekt.',
+    harbor:   'De Harbor-units (289 m²) bieden hoge overheaddeuren en zijn geschikt voor productie of grotere werkplaatsen.',
+    anchor:   'De Anchor-units (298 m²) zijn een goede match: ruime werkplaats op de begane grond en kantoor op de verdieping.',
+    koppelen: 'Voor gekoppelde units adviseren we een gesprek, dan kunnen we kijken welke beschikbare units naast elkaar liggen en het beste passen. Als basis nemen we Anchor (298 m²) als startpunt.',
   },
 }
 

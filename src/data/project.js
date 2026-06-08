@@ -55,9 +55,29 @@ function getOverride() {
   return null
 }
 
+function getUrlOverride() {
+  // URL-param override (alleen runtime, handig op Vercel preview-URLs waar
+  // je geen custom hostname hebt: ?project=pier14.clp.repp.nl forceert die
+  // module. Geen DNS of env-var nodig — gewoon link delen.
+  try {
+    if (typeof window !== 'undefined' && window.location?.search) {
+      const params = new URLSearchParams(window.location.search)
+      return params.get('project') || null
+    }
+  } catch {
+    /* ignore */
+  }
+  return null
+}
+
 function resolveProjectModule() {
   // SSR / build-time: geen window, val terug op default.
   if (typeof window === 'undefined') return DEFAULT_MODULE
+
+  // URL-param override wint van alles — handig om op een Vercel preview-URL
+  // (clp-*.vercel.app) een specifiek project te tonen zonder DNS-setup.
+  const urlOverride = getUrlOverride()
+  if (urlOverride && PROJECTS[urlOverride]) return PROJECTS[urlOverride]
 
   // Dev/preview override via env-var (handig bij testen van nieuwe projecten
   // zonder dat je een DNS-entry of custom-domain hoeft op te zetten).

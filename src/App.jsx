@@ -298,6 +298,13 @@ function reducer(state, action) {
       const b = state.behaviors || EMPTY_BEHAVIORS
       return { ...state, behaviors: { ...b, nauticExplanationShown: true } }
     }
+    case 'BEHAVIOR_SET_LEAD_VARIANT': {
+      // Sub-doelgroep tag voor lead-routing. PIER14 zet 'not_nautical' bij
+      // de exit-flow zodat brevo.ts naar een aparte lijst (300) routet via
+      // BREVO_LIST_ID_<SOURCE>_<VARIANT>-pattern.
+      const b = state.behaviors || EMPTY_BEHAVIORS
+      return { ...state, behaviors: { ...b, leadVariant: action.variant ?? null } }
+    }
     case 'BEHAVIOR_MORE_INFO_VIEWED': {
       const b = state.behaviors || EMPTY_BEHAVIORS
       const ids = b.moreInfoIds || []
@@ -888,6 +895,7 @@ function Demo() {
         buyingSignals: buying.signals.map((s) => s.id),
         moreInfoSeen:  state.moreInfoSeen,
         rentRange:     state.answers.rentRange?.id ?? null,
+        leadVariant:   state.behaviors?.leadVariant ?? null,
         flags: {
           credionRequested:   !!state.behaviors?.credionRequested,
           rentMatchRequested: !!state.behaviors?.rentMatchRequested,
@@ -1168,6 +1176,10 @@ function Demo() {
       const exitReferral = project.flowOverrides?.nauticGate?.exitReferral
         || 'We kunnen je doorverwijzen naar andere REPP-bedrijfsunit-projecten in de regio. Laat hieronder je gegevens achter en we nemen contact op.'
       dispatch({ type: 'ANSWER', key: 'afhaakReason', value: answerValue({ id: 'not_branche', label: 'Niet nautisch ondernemer', score: 0 }), next: 'lead-form' })
+      // Tag de lead met variant zodat brevo.ts hem naar een aparte lijst routet
+      // (BREVO_LIST_ID_<SOURCE>_NOT_NAUTICAL). PIER14 stuurt deze leads naar
+      // lijst 300 ipv de standaard project-lijst 299.
+      dispatch({ type: 'BEHAVIOR_SET_LEAD_VARIANT', variant: 'not_nautical' })
       sendSequence(userTextFromOpt(opt), [
         { kind: 'bot-text', text: exitMessage },
         { kind: 'bot-text', text: exitReferral },

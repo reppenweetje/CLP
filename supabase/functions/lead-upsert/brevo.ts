@@ -187,19 +187,32 @@ export async function upsertBrevoContact(lead: BrevoLeadInput, leadId?: string |
   // "Paveri BUnit" → "PAVERI_BUNIT"
   const envSafeSource = sourceRaw.toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '')
   const perProjectList = envSafeSource ? Deno.env.get(`BREVO_LIST_ID_${envSafeSource}`) : undefined
+  // Per-variant override: sommige projecten (PIER14) splitsen leads naar
+  // aparte lijsten op basis van een sub-doelgroep (bv. nautisch vs niet-
+  // nautisch). leadVariant komt uit lead.attributes, env-key is dan
+  // BREVO_LIST_ID_<SOURCE>_<VARIANT>. Wint van perProjectList.
+  const leadVariantRaw = typeof (lead.attributes as Record<string, unknown> | undefined)?.leadVariant === 'string'
+    ? String((lead.attributes as Record<string, unknown>).leadVariant)
+    : ''
+  const envSafeVariant = leadVariantRaw.toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '')
+  const variantList = (envSafeSource && envSafeVariant)
+    ? Deno.env.get(`BREVO_LIST_ID_${envSafeSource}_${envSafeVariant}`)
+    : undefined
   const reservationListRaw = Deno.env.get('BREVO_LIST_ID_RESERVATION')
   const portalListRaw = Deno.env.get('BREVO_LIST_ID_PORTAL')
   const defaultListRaw = Deno.env.get('BREVO_LIST_ID')
   const src = sourceRaw.toLowerCase()
   const isReservation = src === 'dehofman_portal_reservation'
   const isPortalSource = src.startsWith('dehofman_portal')
-  const listIdRaw = perProjectList
-    ? perProjectList
-    : isReservation && reservationListRaw
-      ? reservationListRaw
-      : isPortalSource && portalListRaw
-        ? portalListRaw
-        : defaultListRaw
+  const listIdRaw = variantList
+    ? variantList
+    : perProjectList
+      ? perProjectList
+      : isReservation && reservationListRaw
+        ? reservationListRaw
+        : isPortalSource && portalListRaw
+          ? portalListRaw
+          : defaultListRaw
   const listId = listIdRaw ? Number.parseInt(listIdRaw, 10) : NaN
 
   const attrs = buildAttributes(lead)
