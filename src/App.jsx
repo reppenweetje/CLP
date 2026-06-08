@@ -515,7 +515,12 @@ function buildMoreInfoMessages(id, persona, opts = {}) {
           // perspectief), eigen-gebruiker eerst interieur (functioneel
           // perspectief). Elke bezoeker krijgt zo een eerste foto die
           // resoneert met z'n eigen reden van zoeken.
-          images: orderGalleryForPersona(project.gallery, persona),
+          //
+          // project.sfeerbeelden override (optioneel per project): laat de
+          // hero-carousel op IntroScreen kort zijn (alleen scherpe beelden)
+          // terwijl de sfeerbeelden-bubble in de chat meer mag tonen. Fallback
+          // op project.gallery voor projecten die geen aparte set hebben.
+          images: orderGalleryForPersona(project.sfeerbeelden || project.gallery, persona),
           intro: 'Sfeerbeelden van de buitenkant en mogelijke inrichtingen.',
         },
       }]
@@ -2109,6 +2114,20 @@ function Demo() {
     const botPrepend = prependMessages.filter((m) => m.kind !== 'user-text')
     if (userMsgs.length > 0) {
       dispatch({ type: 'APPEND', messages: userMsgs })
+    }
+    // Not-nautical exit: bezoeker zat in de nauticGate=nee tak en heeft net
+    // contactgegevens achtergelaten. We sluiten de chat hier af met een
+    // dank-bericht, geen brochure-belofte want bezoeker krijgt PIER14 niet.
+    // currentQuestion expliciet null zodat geen vervolgvragen meer komen.
+    if (state.behaviors?.leadVariant === 'not_nautical') {
+      dispatch({ type: 'SET_QUESTION', next: null })
+      trackEvent('flow:complete', { stage: 'not-nautical', persona })
+      const firstName = lead.firstName || ''
+      const tail = [
+        { kind: 'bot-text', text: `Bedankt${firstName ? ', ' + firstName : ''}. We hebben je gegevens. We nemen binnenkort contact met je op om te kijken welke andere REPP-projecten wél bij je passen.` },
+      ]
+      dispatch({ type: 'ENQUEUE', messages: [...botPrepend, ...tail] })
+      return
     }
     // Credion-eerst-pad: bezoeker klikte op de Credion-link in de calc
     // VÓÓR de standaard lead-capture. Nu data binnen is, sturen we direct
