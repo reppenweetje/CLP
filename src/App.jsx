@@ -302,9 +302,19 @@ function reducer(state, action) {
     }
     case 'BEHAVIOR_NAUTIC_EXPLANATION_SHOWN': {
       // Bezoeker heeft de "Wat houdt nautisch in?"-uitleg bekeken. Vlag
-      // verbergt de uitleg-chip bij de tweede pass — daarna alleen ja/nee.
+      // verbergt de uitleg-chip bij de tweede pass, daarna alleen ja/nee.
       const b = state.behaviors || EMPTY_BEHAVIORS
       return { ...state, behaviors: { ...b, nauticExplanationShown: true } }
+    }
+    case 'BEHAVIOR_SET_LEAD_VARIANT': {
+      // Per-lead routing-vlag voor Brevo. Frontend zet 'em (bv. 'not_nautical'
+      // bij PIER14 nauticGate=nee) en pushSnapshot stuurt 'em mee als
+      // attributes.leadVariant. brevo.ts in lead-upsert leest dat veld en
+      // routeert naar BREVO_LIST_ID_<SOURCE>_<NORMALIZED_VARIANT> ipv de
+      // default project-list. Zo blijft één crmProject één CRM-rij maar
+      // splitsen we Brevo-lijsten per sub-doelgroep.
+      const b = state.behaviors || EMPTY_BEHAVIORS
+      return { ...state, behaviors: { ...b, leadVariant: action.variant || null } }
     }
     case 'BEHAVIOR_MORE_INFO_VIEWED': {
       const b = state.behaviors || EMPTY_BEHAVIORS
@@ -896,6 +906,11 @@ function Demo() {
         buyingSignals: buying.signals.map((s) => s.id),
         moreInfoSeen:  state.moreInfoSeen,
         rentRange:     state.answers.rentRange?.id ?? null,
+        // leadVariant: sub-doelgroep binnen hetzelfde crmProject. Wordt
+        // door brevo.ts in lead-upsert gebruikt om naar een alt-list te
+        // routeren (bv. PIER14 nauticGate=nee → 'not_nautical' → lijst #300
+        // ipv default PIER14-lijst). Default null = standaard project-list.
+        leadVariant:   state.behaviors?.leadVariant ?? null,
         flags: {
           credionRequested:   !!state.behaviors?.credionRequested,
           rentMatchRequested: !!state.behaviors?.rentMatchRequested,
@@ -1160,21 +1175,31 @@ function Demo() {
         // currentQuestion blijft 'nauticGate' zodat de chip-bar terugkomt
         // (zonder uitleg-chip, die filter zit in chipQuestion-setup hieronder
         // en zwapt ook de chip-labels naar "Ik ben (geen) nautische ondernemer").
+        // Split de uitleg op \n\n zodat lange explanations als losse bubbles
+        // ademen ipv één muur tekst. Chat-conventie: 1-2 zinnen per bubble.
+        const explanationBubbles = explanation
+          .split(/\n{2,}/)
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .map((text) => ({ kind: 'bot-text', text }))
         sendSequence(userTextFromOpt(opt), [
-          { kind: 'bot-text', text: explanation },
+          ...explanationBubbles,
           { kind: 'bot-text', text: 'Nu je weet of je een nautisch ondernemer bent of niet, geef aan:' },
         ])
         return
       }
       // opt.id === 'nee' — exit-flow. Bezoeker hoort niet bij de doelgroep
-      // maar we capture'n wel even contact-gegevens zodat we kunnen
-      // doorverwijzen naar andere projecten of regio's waar 'ie wél past.
-      // Markeer als afhaak met reden 'not_branche' zodat CRM 'em apart kan
-      // sorteren van koop-leads.
+      // maar we capture'n wel contact-gegevens zodat we kunnen doorverwijzen
+      // naar andere projecten of regio's waar 'ie wél past.
+      // Markeer als afhaak met reden 'not_branche' EN zet leadVariant op
+      // 'not_nautical' zodat brevo.ts naar de aparte niet-nautisch-Brevo-
+      // lijst routeert (BREVO_LIST_ID_PIER14_BUNIT_NOT_NAUTICAL=300) ipv
+      // de default project-lijst.
       const exitMessage = project.flowOverrides?.nauticGate?.exitMessage
-        || `Helaas past ${project.displayName} dan niet bij jou — dit project is specifiek voor maritieme/nautische ondernemers.`
+        || `Helaas past ${project.displayName} dan niet bij jou, dit project is specifiek voor maritieme/nautische ondernemers.`
       const exitReferral = project.flowOverrides?.nauticGate?.exitReferral
         || 'We kunnen je doorverwijzen naar andere REPP-bedrijfsunit-projecten in de regio. Laat hieronder je gegevens achter en we nemen contact op.'
+      dispatch({ type: 'BEHAVIOR_SET_LEAD_VARIANT', variant: 'not_nautical' })
       dispatch({ type: 'ANSWER', key: 'afhaakReason', value: answerValue({ id: 'not_branche', label: 'Niet nautisch ondernemer', score: 0 }), next: 'lead-form' })
       sendSequence(userTextFromOpt(opt), [
         { kind: 'bot-text', text: exitMessage },
