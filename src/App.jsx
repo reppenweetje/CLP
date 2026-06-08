@@ -73,7 +73,8 @@ function countSitePlanUnits(sp) {
     (sp.sidebar?.units?.length || 0) +
     (sp.layoutRows?.reduce((n, r) => n + (r.left?.units?.length || 0) + (r.right ? 1 : 0), 0) || 0) +
     (sp.columns?.left?.sections?.flatMap((s) => s.units).length || 0) +
-    (sp.columns?.right?.units?.length || 0)
+    (sp.columns?.right?.units?.length || 0) +
+    (sp.svg?.units?.length || 0)
   )
 }
 const initial = {
@@ -465,7 +466,12 @@ function buildMoreInfoMessages(id, persona, opts = {}) {
       // availabilityCheck-flow vroeg in de chat) kennen ze de plattegrond
       // al, dus chips komen meteen, geen pauze nodig.
       const messages = [
-        { kind: 'site-plan', payload: { sitePlan: project.sitePlan, units: project.units, persona } },
+        {
+          // Projecten met een onregelmatige plattegrond leveren sitePlan.svg
+          // en krijgen de polygon-renderer; de rest blijft het grid-schema.
+          kind: project.sitePlan.svg ? 'site-plan-svg' : 'site-plan',
+          payload: { sitePlan: project.sitePlan, units: project.units, persona },
+        },
       ]
       if (!opts.sitePlanAlreadyShown) {
         messages.push({ kind: 'pause', ms: 8000 })
@@ -644,7 +650,7 @@ function computeReleaseDelay(message) {
   }
   // Rich cards en interactieve bubbles vragen iets meer aandacht. Lijst is
   // synchroon met ChatThread renderkinds; nieuwe rich bubbles hier toevoegen.
-  if (['site-plan', 'usp-cards', 'unit-card', 'gallery', 'investor', 'price', 'price-compare', 'location', 'cta-card', 'warm-handoff', 'service-card', 'brochure', 'highlights', 'process', 'planning', 'content-card'].includes(message.kind)) {
+  if (['site-plan', 'site-plan-svg', 'usp-cards', 'unit-card', 'gallery', 'investor', 'price', 'price-compare', 'location', 'cta-card', 'warm-handoff', 'service-card', 'brochure', 'highlights', 'process', 'planning', 'content-card'].includes(message.kind)) {
     return 700
   }
   return 500
@@ -1117,7 +1123,7 @@ function Demo() {
       if (opt.id === 'ja') {
         botMessages.push(
           { kind: 'bot-text', text: `Hier zijn de ${countSitePlanUnits(project.sitePlan) || 'beschikbare'} units met de actuele status. Tik op een unit voor meer informatie over die unit.` },
-          { kind: 'site-plan', payload: { sitePlan: project.sitePlan, units: project.units, persona } },
+          { kind: project.sitePlan.svg ? 'site-plan-svg' : 'site-plan', payload: { sitePlan: project.sitePlan, units: project.units, persona } },
           // Twee-fase wachten voor menselijk gevoel:
           //   silent 13s = bezoeker scant plattegrond in stilte, geen typing
           //                indicator zodat 't niet voelt alsof de bot druk
@@ -1654,7 +1660,7 @@ function Demo() {
       // bezoeker eerder 'ja' koos op availabilityCheck en nu via moreInfo
       // opnieuw de plattegrond opvraagt.
       const moreInfoOpts = {
-        sitePlanAlreadyShown: state.messages.some((m) => m.kind === 'site-plan'),
+        sitePlanAlreadyShown: state.messages.some((m) => m.kind === 'site-plan' || m.kind === 'site-plan-svg'),
       }
       sendSequence(userTextFromOpt(opt), [...buildMoreInfoMessages(opt.id, persona, moreInfoOpts), ...trailingMessages])
       return
@@ -2323,7 +2329,7 @@ function Demo() {
         planning: 'planning', process: 'process', brochure: 'brochure',
         investor: 'investor',
       }[id]
-      const msg = state.messages.find((m) => m.kind === kindOf)
+      const msg = state.messages.find((m) => m.kind === kindOf || (id === 'sitePlan' && m.kind === 'site-plan-svg'))
       if (!msg) return null
       return { id, label: def.label, messageId: msg.id }
     })

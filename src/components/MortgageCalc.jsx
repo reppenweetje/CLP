@@ -107,7 +107,7 @@ export default function MortgageCalc({ price, indicative = false, onInteract, on
           ? 'Geen financiering, geen maandlast. Wel houden we rekening met onderhoud, VvE-lasten en fiscale invloed.'
           : 'Indicatie, geen advies. Lening tot 75 procent van de koopsom is gangbaar voor bedrijfsunits.'}
       </div>
-      {!noFinancing && onCredionRequest && (
+      {!noFinancing && onCredionRequest && project.financing && (
         <button
           type="button"
           onClick={() => onCredionRequest({

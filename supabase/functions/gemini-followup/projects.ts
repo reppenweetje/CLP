@@ -111,11 +111,34 @@ export const PAVERI_CONFIG: ProjectPromptConfig = {
   // Geen rent_range_translations: De Paveri-flow heeft geen huur-pad.
 }
 
+// ── ELSTER 11 ─────────────────────────────────────────────────────────────
+// 15 casco bedrijfsunits aan de Veenendaalsestraatweg 11 in Elst (Utrecht),
+// strategisch aan de A12. Type A (~68 m², vanaf €135.000), Type B (90-115 m²,
+// vanaf €175.000) en Type C (150-310 m², vanaf €300.000, deels met verdieping).
+// Units 1, 2, 8 en 9 verkocht; 11 nog beschikbaar. Geen huur-pad en geen
+// financieringspartner, dus geen rent_range_translations.
+export const ELSTER_CONFIG: ProjectPromptConfig = {
+  project_name: 'ELSTER 11',
+  city: 'Elst',
+  area_label: 'Veenendaalsestraatweg / A12',
+  units_left_phrase: 'nog 11 units in Type A, B en C',
+  price_route_sentence: 'Met circa €1.985 per m² voor Type A en vanaf €300.000 voor de ruime Type C-units ligt ELSTER 11 scherp voor casco nieuwbouw aan de A12, inclusief eigen parkeerplaats. Levering is vrij op naam, exclusief 21% btw.',
+  location_route_question: 'In welke regio of plaats zou een bedrijfsunit wél beter bij je passen?',
+  size_translations: {
+    around_70:  'rond 70 m² (Type A)',
+    around_100: '90 tot 115 m² (Type B)',
+    around_200: '150 tot 310 m² (Type C)',
+    weet_niet:  '',
+  },
+  // Geen rent_range_translations: ELSTER 11-flow heeft geen huur-pad.
+}
+
 // Source-string (= public.leads.source = project.crmProject) → config.
 // Sleutels moeten exact matchen met wat de frontend stuurt.
 const CONFIGS: Record<string, ProjectPromptConfig> = {
   clp_dehofman:   HOFMAN_CONFIG,
   'Paveri BUnit': PAVERI_CONFIG,
+  'Elst BUnit':   ELSTER_CONFIG,
 }
 
 // Fallback voor onbekende project-keys: De Hofman. Dat is de oudste config

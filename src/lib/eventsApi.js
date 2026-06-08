@@ -52,6 +52,7 @@ const TENANT_MAP = {
   clp_uitgifte:   'uitgifte',
   clp_dehofman:   'dehofman',
   'Paveri BUnit': 'depaveri',
+  'Elst BUnit':   'elst',
 }
 
 // Source-key + tenant-string voor analytics. Volgorde:

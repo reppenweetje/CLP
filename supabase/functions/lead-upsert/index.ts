@@ -54,6 +54,7 @@ const DEFAULT_ALLOWED = [
   // CLP-hostnames per project + lokale dev + Vercel preview
   'https://dehofman.clp.repp.nl',
   'https://depaveri.clp.repp.nl',
+  'https://elster11.clp.repp.nl',
   'https://clp-xi-tan.vercel.app',
   'http://localhost:5173',
   'http://localhost:5174',

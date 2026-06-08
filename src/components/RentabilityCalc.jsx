@@ -78,7 +78,7 @@ export default function RentabilityCalc({ price, size, indicative = false, onInt
       <div className="mt-3 pt-3 border-t border-mist-light text-[12px] text-ink-mute leading-snug">
         Indicatief, geen prognose. Exclusief VvE-lasten, onderhoud, leegstand en fiscale invloed.{useBarSlider ? ` BAR tot ${bs.max}% per jaar realistisch voor casco bedrijfsunits in ${project.location?.city || 'deze regio'}.` : ' Range markthuur Waarderpolder ligt doorgaans €150 tot €200 per m² per jaar.'}
       </div>
-      {onCredionRequest && (
+      {onCredionRequest && project.financing && (
         <button
           type="button"
           onClick={() => onCredionRequest({

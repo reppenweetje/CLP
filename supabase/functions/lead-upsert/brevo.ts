@@ -49,6 +49,10 @@ interface BrevoLeadInput {
 const SOURCE_TO_PROJECT_SLUG: Record<string, string> = {
   clp_dehofman:   'dehofman',
   'Paveri BUnit': 'paveri',
+  // Zonder expliciete map zou "Elst BUnit" via de fallback "elst bunit"
+  // (mét spatie) opleveren — ongeldig voor de Brevo PROJECT-enum. TODO:
+  // Tharwat bevestigen of de Brevo-enum 'elster11' of een andere waarde is.
+  'Elst BUnit':   'elster11',
 }
 
 function projectFromSource(source: string | null | undefined): string | undefined {

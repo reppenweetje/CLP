@@ -398,7 +398,7 @@ export function filterByDateRange(sessions, rangeId = 'all') {
 // src/components/ChatThread.jsx — auto-track via useBubbleExposure() hook.
 export const BUBBLE_KINDS = [
   'content-card', 'unit-card', 'gallery', 'usp-cards', 'location',
-  'site-plan', 'highlights', 'process', 'planning', 'investor',
+  'site-plan', 'site-plan-svg', 'highlights', 'process', 'planning', 'investor',
   'price', 'price-compare', 'brochure', 'cta-card', 'warm-handoff',
   'service-card',
 ]
@@ -411,6 +411,7 @@ export function humanizeBubble(kind) {
     case 'usp-cards':      return 'USP-kaarten'
     case 'location':       return 'Locatie-kaart'
     case 'site-plan':      return 'Plattegrond'
+    case 'site-plan-svg':  return 'Plattegrond'
     case 'highlights':     return 'Highlights'
     case 'process':        return 'Proces-uitleg'
     case 'planning':       return 'Planning'

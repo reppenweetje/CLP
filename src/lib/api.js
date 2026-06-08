@@ -402,6 +402,7 @@ export function clearQueue() {
 const SOURCE_TO_TENANT = {
   clp_dehofman:  'dehofman',
   'Paveri BUnit': 'depaveri',
+  'Elst BUnit':  'elst',
   clp_uitgifte:  'uitgifte',
 }
 
