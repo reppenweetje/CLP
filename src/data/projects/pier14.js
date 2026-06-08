@@ -35,15 +35,13 @@ export const project = {
   // linkt direct door.
   portalStrategy: 'kopen-repp-redirect',
 
-  // Gallery, vijf schone sfeerimpressies voor de hero-carousel. Mix van
-  // exterieur, water (uniek voor PIER14), interieur en doorsnede. locatie.jpg
-  // hoort hier niet (die toont LocationBubble apart via aerialImage).
+  // Gallery = HeroCarousel op IntroScreen + Sfeerbeelden-bubble. Bewust
+  // teruggebracht naar 2 beelden op verzoek: alleen de scherpste renders/
+  // foto's tonen, andere visuals worden alleen in latere bubbles gebruikt
+  // (USP-cards, unit-detail, contentCards).
   gallery: [
-    { src: '/projects/pier14/project.png', alt: 'PIER14 luchtaanzicht units' },
-    { src: '/projects/pier14/luchtfoto-haven.png', alt: 'PIER14 kavel aan de Oude Maas' },
-    { src: '/projects/pier14/beschikbaarheid.png', alt: 'PIER14 exterieur overdag' },
-    { src: '/projects/pier14/pier-overview.png', alt: 'PIER14 overview met pier en haven' },
-    { src: '/projects/pier14/praktisch.png', alt: 'PIER14 interieur Schokbeton-loods' },
+    { src: '/projects/pier14/project.png',         alt: 'PIER14 luchtaanzicht units (rendering)' },
+    { src: '/projects/pier14/luchtfoto-haven.png', alt: 'PIER14 kavel aan de Oude Maas (drone)' },
   ],
 
   // USP-cards voor het eerste micro-value moment.
@@ -72,8 +70,8 @@ export const project = {
     {
       id: 'availability',
       tag: 'Beschikbaarheid',
-      title: 'Nog enkele units beschikbaar',
-      body: 'Veel units zijn al verkocht. Alleen enkele Nautic (108 m²) en Anchor (298 m²) zijn nu nog beschikbaar.',
+      title: 'Nog 5 units beschikbaar',
+      body: '81% verkocht. Nog beschikbaar: 3 Nautic (108 m²), 1 Harbor+ (340 m²) en 1 Anchor (298 m²).',
       image: '/projects/pier14/beschikbaarheid.png',
     },
     {
@@ -150,15 +148,15 @@ export const project = {
   // Status van het project. soldPercent is een schatting, moet door
   // user bijgewerkt worden zodra de exacte beschikbaarheid bekend is.
   status: {
-    soldPercent: 70,
-    headline: 'Circa 70% verkocht. Stern, Marina, Tidal, Harbor en Bow uitverkocht. Alleen enkele Nautic en Anchor beschikbaar.',
+    soldPercent: 81,
+    headline: 'Circa 81% verkocht. Nog 5 units beschikbaar: 3 Nautic (108 m²), 1 Harbor+ (340 m²) en 1 Anchor (298 m²). Stern, Marina, Tidal, Bow en Harbor- uitverkocht.',
     units: {
       Stern:  { label: 'Uitverkocht', state: 'sold_out' },
       Marina: { label: 'Uitverkocht', state: 'sold_out' },
-      Nautic: { label: 'Nog enkele beschikbaar', state: 'available' },
+      Nautic: { label: 'Nog 3 beschikbaar', state: 'available' },
       Tidal:  { label: 'Uitverkocht', state: 'sold_out' },
-      Harbor: { label: 'Uitverkocht', state: 'sold_out' },
-      Anchor: { label: 'Nog enkele beschikbaar', state: 'available' },
+      Harbor: { label: 'Harbor+ beschikbaar (Harbor- uitverkocht)', state: 'available' },
+      Anchor: { label: 'Nog 1 beschikbaar', state: 'available' },
       Bow:    { label: 'Uitverkocht', state: 'sold_out' },
     },
   },
@@ -181,55 +179,54 @@ export const project = {
     // SitePlanBubble óók ondersteunt, maar voor PIER14 past 'sections'
     // het beste bij de rij-gewijze opbouw met variërende kolombreedte.
     sections: [
+      // Top-rij (achterzijde gebouw): 11 cellen. 26→22 grote sold units,
+      // dan 12-15 (Nautics sold), 19 (Harbor+ beschikbaar), 18 (Harbor- sold).
       {
         cols: 11,
         aspect: 'portrait',
         units: [
           { number: 26, type: 'Bow',    state: 'sold' },
           { number: 25, type: 'Anchor', state: 'sold' },
-          { number: 1,  type: 'Stern',  state: 'sold' },
-          { number: 2,  type: 'Marina', state: 'sold' },
-          { number: 3,  type: 'Nautic', state: 'sold' },
-          { number: 4,  type: 'Nautic', state: 'sold' },
-          { number: 5,  type: 'Nautic', state: 'available' },
-          { number: 6,  type: 'Nautic', state: 'sold' },
-          { number: 7,  type: 'Nautic', state: 'sold' },
-          { number: 8,  type: 'Nautic', state: 'available' },
-          { number: 9,  type: 'Nautic', state: 'available' },
-        ],
-      },
-      {
-        cols: 6,
-        aspect: 'portrait',
-        units: [
-          { number: 10, type: 'Nautic', state: 'sold' },
-          { number: 11, type: 'Nautic', state: 'sold' },
+          { number: 24, type: 'Anchor', state: 'sold' },
+          { number: 23, type: 'Anchor', state: 'sold' },
+          { number: 22, type: 'Anchor', state: 'sold' },
           { number: 12, type: 'Nautic', state: 'sold' },
           { number: 13, type: 'Nautic', state: 'sold' },
           { number: 14, type: 'Nautic', state: 'sold' },
           { number: 15, type: 'Nautic', state: 'sold' },
+          { number: 19, type: 'Harbor', state: 'available' },  // Harbor+ 340 m²
+          { number: 18, type: 'Harbor', state: 'sold' },        // Harbor- 289 m²
         ],
       },
+      // Front-rij (voorzijde gebouw): 11 cellen. 1+2 grote sold, 3-5 Nautics
+      // beschikbaar (de drie groene per koopsommen-tabel), 6-11 sold Nautics.
       {
-        cols: 6,
+        cols: 11,
         aspect: 'portrait',
         units: [
-          { number: 19,  type: 'Harbor', state: 'sold' },
-          { number: 17,  type: 'Tidal',  state: 'sold' },
-          { number: 16,  type: 'Nautic', state: 'sold' },  // 16a en 16b samen
-          { number: 20,  type: 'Nautic', state: 'sold' },  // 20a en 20b samen
-          { number: 18,  type: 'Harbor', state: 'available' },
-          { number: 23,  type: 'Anchor', state: 'sold' },
+          { number: 1,  type: 'Stern',  state: 'sold' },
+          { number: 2,  type: 'Marina', state: 'sold' },
+          { number: 3,  type: 'Nautic', state: 'available' },
+          { number: 4,  type: 'Nautic', state: 'available' },
+          { number: 5,  type: 'Nautic', state: 'available' },
+          { number: 6,  type: 'Nautic', state: 'sold' },
+          { number: 7,  type: 'Nautic', state: 'sold' },
+          { number: 8,  type: 'Nautic', state: 'sold' },
+          { number: 9,  type: 'Nautic', state: 'sold' },
+          { number: 10, type: 'Nautic', state: 'sold' },
+          { number: 11, type: 'Nautic', state: 'sold' },
         ],
       },
+      // Side-cluster: 4 cellen. 21 (Anchor beschikbaar), 20 + 16 (Nautic 2x
+      // gesplitst in a/b, sold), 17 (Tidal sold).
       {
         cols: 4,
         aspect: 'landscape',
         units: [
-          { number: 24, type: 'Anchor', state: 'sold' },
-          { number: 22, type: 'Anchor', state: 'available' },
           { number: 21, type: 'Anchor', state: 'available' },
-          { number: 18, type: 'Harbor', state: 'available' },
+          { number: 20, type: 'Nautic', state: 'sold' },  // 20a + 20b samen
+          { number: 16, type: 'Nautic', state: 'sold' },  // 16a + 16b samen
+          { number: 17, type: 'Tidal',  state: 'sold' },
         ],
       },
     ],
@@ -603,7 +600,7 @@ export const project = {
       // gesprek met sales over beschikbaarheid).
       options: [
         { id: 'nautic',   label: '108 m² Nautic',            score: 12, unit: 'Nautic' },
-        { id: 'harbor',   label: '289 m² Harbor',            score: 15, unit: 'Harbor' },
+        { id: 'harbor',   label: '340 m² Harbor +',          score: 15, unit: 'Harbor' },
         { id: 'anchor',   label: '298 m² Anchor',            score: 15, unit: 'Anchor' },
         { id: 'koppelen', label: 'Ik wil units koppelen',     score: 15, unit: 'Anchor' },
       ],
