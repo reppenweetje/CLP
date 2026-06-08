@@ -58,8 +58,8 @@ export const project = {
     {
       id: 'availability',
       tag: 'Beschikbaarheid',
-      title: 'Nog 11 units beschikbaar',
-      body: 'Een aantal Type A-units en de ruimere Type B- en C-units zijn nog beschikbaar.',
+      title: 'Meerdere units beschikbaar',
+      body: 'Type A, B en C zijn nog beschikbaar, van compacte units tot ruimere bedrijfsruimtes met verdieping.',
       image: '/projects/elster11/interieur.jpg',
     },
     {
@@ -265,7 +265,7 @@ export const project = {
   highlights: [
     { title: 'Besloten eigen terrein', body: 'Veilig, afgesloten bedrijventerrein met een eigen parkeerplaats per unit.' },
     { title: 'Strategisch bij de A12', body: 'Aan de Veenendaalsestraatweg, met de A12 binnen enkele minuten bereikbaar.' },
-    { title: 'Industriële uitstraling', body: 'Hoogwaardige, moderne uitstraling die past bij professioneel ondernemen.' },
+    { title: 'Keuze uit drie types', body: 'Type A, B en C van circa 68 tot 310 m², passend bij elke onderneming.' },
     { title: 'Functioneel casco', body: 'Overheaddeur 3,0 m breed × 3,2 m hoog en een ruime vrije hoogte.' },
     { title: 'Eigen parkeerplaats', body: 'Eigen parkeerplaats per unit, direct op het terrein.' },
   ],
@@ -503,6 +503,11 @@ export const project = {
   // en option-id verschillen zodat analytics ziet wat de bezoeker oorspronkelijk
   // koos; de `unit`-waarde stuurt recommendUnit naar het juiste type.
   flowOverrides: {
+    // Pin de eerste vraag op de vraag-variant; de copy-variant B
+    // ("Eigen gebruik of belegging?") schakelen we voor ELSTER uit zodat
+    // iedere bezoeker dezelfde opening ziet. De intro-A/B (begin-scherm
+    // wel/niet) loopt los hiervan gewoon door.
+    intentLabel: 'Waarom ben je op zoek naar een bedrijfsunit?',
     sizeQuestion: {
       label: 'Hoe groot wil je dat de begane grond is?',
       options: [
