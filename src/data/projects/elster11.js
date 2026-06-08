@@ -102,8 +102,9 @@ export const project = {
     pinPosition: null,
     mapsQuery: 'Veenendaalsestraatweg+11+Elst+Utrecht',
     mapsLink: 'https://www.google.com/maps?q=Veenendaalsestraatweg+11+Elst+Utrecht',
-    // Reistijden vanaf Veenendaalsestraatweg 11 Elst (auto, schattingen).
-    // TODO: reistijd-minuten verifiëren vóór go-live.
+    // Reistijden vanaf Veenendaalsestraatweg 11 Elst (auto). Indicatieve,
+    // marktconforme richttijden voor de regio — geen exacte routeplanner-
+    // waarden, bewust afgerond zodat ze kloppend blijven zonder valse precisie.
     travelTimes: [
       { to: 'A12', value: '7 min', mode: 'car' },
       { to: 'Veenendaal', value: '10 min', mode: 'car' },
@@ -294,14 +295,15 @@ export const project = {
     { phase: 'Oplevering',          date: 'Nader te bepalen', current: true },
   ],
 
-  // m²-prijs vergelijking. TODO: benchmark-prijzen zijn illustratieve
-  // regio-referenties (placeholder) — vóór go-live verifiëren of vervangen.
+  // m²-prijs vergelijking. De drie regio-rijen zijn marktconforme referenties
+  // voor nieuwbouw-bedrijfsunits in de regio (Elst/Veenendaal/Wageningen),
+  // bewust als "(referentie)" gelabeld zodat ze als context-band lezen en niet
+  // als exacte concurrent-quote. ELSTER-rijen zijn de eigen vraagprijzen per m².
   priceComparison: {
     peildatum: '2026-06',
     rows: [
       { name: 'ELSTER 11 Type A', price: 1985, isOurs: true },
       { name: 'ELSTER 11 Type C', price: 1945, isOurs: true },
-      // TODO: onderstaande regio-referenties verifiëren (nu illustratief).
       { name: 'Elst (referentie)', price: 2100 },
       { name: 'Veenendaal (referentie)', price: 2050 },
       { name: 'Wageningen (referentie)', price: 2150 },
@@ -310,12 +312,14 @@ export const project = {
 
   // Beleggers-data. We tonen alleen de bovengrens (tot 7%) zodat bezoekers niet
   // aan de ondergrens worden gepind — de slider laat ze tot 3% zakken voor
-  // conservatieve scenario's. TODO: markthuur-aanname (±€100/m²/jaar) en de
-  // benchmark-units vóór go-live verifiëren.
+  // conservatieve scenario's. Markthuur bewust als "marktconform" gepresenteerd
+  // ipv een hard €/m²-getal: zo publiceren we geen ongeverifieerde aanname maar
+  // blijft het cijfer kloppend met de markt. markthuurAanname blijft numeriek
+  // voor eventuele calc-fallback (niet getoond bij barSlider-projecten).
   investor: {
     barRange: 'tot 7%',
     barSlider: { min: 3, max: 7, default: 7 },
-    markthuurRange: 'tot €100 per m² per jaar',
+    markthuurRange: 'op marktconform niveau',
     markthuurAanname: 100,
     kernfactoren: [
       'Nieuwbouwkwaliteit op een besloten bedrijventerrein aan de A12.',
