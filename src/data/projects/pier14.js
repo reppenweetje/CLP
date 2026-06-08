@@ -35,13 +35,26 @@ export const project = {
   // linkt direct door.
   portalStrategy: 'kopen-repp-redirect',
 
-  // Gallery = HeroCarousel op IntroScreen + Sfeerbeelden-bubble. Bewust
-  // teruggebracht naar 2 beelden op verzoek: alleen de scherpste renders/
-  // foto's tonen, andere visuals worden alleen in latere bubbles gebruikt
-  // (USP-cards, unit-detail, contentCards).
+  // Gallery = HeroCarousel op IntroScreen (eerste pagina). Bewust beperkt
+  // tot de 2 scherpste beelden op verzoek: rendering top-down + drone-foto.
+  // Andere visuals zijn renders die op groot formaat te onscherp zijn.
   gallery: [
     { src: '/projects/pier14/project.png',         alt: 'PIER14 luchtaanzicht units (rendering)' },
     { src: '/projects/pier14/luchtfoto-haven.png', alt: 'PIER14 kavel aan de Oude Maas (drone)' },
+  ],
+
+  // Sfeerbeelden-bubble in de chat krijgt een uitgebreidere set. Begint
+  // met dezelfde 2 scherpe als de IntroScreen en breidt uit met de overige
+  // exterieur-foto's. Renderings die niet scherp genoeg zijn voor het hero-
+  // formaat zijn hier wel acceptabel op de kleinere carousel-thumbnail.
+  // App.jsx GalleryBubble valt terug op project.gallery als project.sfeerbeelden
+  // niet bestaat — andere projecten hoeven dus niet aangepast.
+  sfeerbeelden: [
+    { src: '/projects/pier14/project.png',         alt: 'PIER14 luchtaanzicht units (rendering)' },
+    { src: '/projects/pier14/luchtfoto-haven.png', alt: 'PIER14 kavel aan de Oude Maas (drone)' },
+    { src: '/projects/pier14/pier-overview.png',   alt: 'PIER14 overview met pier en haven' },
+    { src: '/projects/pier14/beschikbaarheid.png', alt: 'PIER14 exterieur overdag' },
+    { src: '/projects/pier14/praktisch.png',       alt: 'PIER14 interieur Schokbeton-loods' },
   ],
 
   // USP-cards voor het eerste micro-value moment.
@@ -71,7 +84,7 @@ export const project = {
       id: 'availability',
       tag: 'Beschikbaarheid',
       title: 'Nog 5 units beschikbaar',
-      body: '81% verkocht. Nog beschikbaar: 3 Nautic (108 m²), 1 Harbor+ (340 m²) en 1 Anchor (298 m²).',
+      body: '81% verkocht. Nog beschikbaar: 3 Nautic (108 m²), 1 Harbor+ (289 m²) en 1 Anchor (298 m²).',
       image: '/projects/pier14/beschikbaarheid.png',
     },
     {
@@ -149,7 +162,7 @@ export const project = {
   // user bijgewerkt worden zodra de exacte beschikbaarheid bekend is.
   status: {
     soldPercent: 81,
-    headline: 'Circa 81% verkocht. Nog 5 units beschikbaar: 3 Nautic (108 m²), 1 Harbor+ (340 m²) en 1 Anchor (298 m²). Stern, Marina, Tidal, Bow en Harbor- uitverkocht.',
+    headline: 'Circa 81% verkocht. Nog 5 units beschikbaar: 3 Nautic (108 m²), 1 Harbor+ (289 m²) en 1 Anchor (298 m²). Stern, Marina, Tidal, Bow en Harbor- uitverkocht.',
     units: {
       Stern:  { label: 'Uitverkocht', state: 'sold_out' },
       Marina: { label: 'Uitverkocht', state: 'sold_out' },
@@ -194,8 +207,8 @@ export const project = {
           { number: 13, type: 'Nautic', state: 'sold' },
           { number: 14, type: 'Nautic', state: 'sold' },
           { number: 15, type: 'Nautic', state: 'sold' },
-          { number: 19, type: 'Harbor', state: 'available' },  // Harbor+ 340 m²
-          { number: 18, type: 'Harbor', state: 'sold' },        // Harbor- 289 m²
+          { number: 19, type: 'Harbor', state: 'available' },  // Harbor+ 289 m²
+          { number: 18, type: 'Harbor', state: 'sold' },        // Harbor- 340 m²
         ],
       },
       // Front-rij (voorzijde gebouw): 11 cellen. 1+2 grote sold, 3-5 Nautics
@@ -299,19 +312,23 @@ export const project = {
     },
     {
       type: 'Harbor',
-      size: 340,
+      // Harbor+ (289 m²) is de beschikbare variant — unit 19 op situatietekening.
+      // Harbor- (340 m²) is uitverkocht (unit 18). Type-detail beschrijft de
+      // Harbor+ omdat dat is wat sales nu aanbeveelt; de groter Harbor- staat
+      // alleen ter context erbij in de specs.
+      size: 289,
       levels: 2,
       parking: 6,
-      levelDetail: '248 m² BG + 92 m² verdieping (Harbor-340), Harbor-289 is 193+96',
+      levelDetail: '193 m² BG + 96 m² verdieping (Harbor+); Harbor- variant 340 m² is uitverkocht.',
       priceFrom: 699000,
-      pricePerM2: 2056,
+      pricePerM2: 2418,
       state: 'available',
-      stateLabel: 'Nog enkele beschikbaar',
+      stateLabel: 'Harbor+ beschikbaar',
       uses: ['Werkplaats', 'Productie', 'Opslag met kantoor'],
       image: '/projects/pier14/prijs.png',
-      pitch: 'Grote Harbor-unit voor productie of opslag, met hoge overheaddeur en tussenbordestrap.',
+      pitch: 'Harbor+ (289 m²) voor productie of opslag, met hoge overheaddeur en tussenbordestrap. De grotere Harbor- (340 m²) is uitverkocht.',
       specs: [
-        '193-248 m² BG + 92-96 m² verdieping',
+        '193 m² BG + 96 m² verdieping (Harbor+)',
         'Hoge overheaddeur (extra hoog)',
         '6 eigen parkeerplaatsen',
         'Vloerbelasting BG ca. 1.500 kg/m²',
@@ -418,11 +435,12 @@ export const project = {
     { step: 6, title: 'Oplevering',          body: 'Casco oplevering, koper richt zelf in.' },
   ],
 
-  // Bouw is gestart, omgevingsvergunning afgegeven. Oplevering nog TBD.
+  // Bouw is gestart, omgevingsvergunning afgegeven. Oplevering begin
+  // december 2026 conform laatste planning van de ontwikkelaar.
   planning: [
     { phase: 'Omgevingsvergunning', date: 'Afgegeven' },
     { phase: 'Start bouw',          date: 'Gestart', current: true },
-    { phase: 'Oplevering',          date: 'TBD' },
+    { phase: 'Oplevering',          date: 'Begin december 2026' },
   ],
 
   // priceComparison: bewust uitgeschakeld voor PIER14, nautische units
@@ -460,8 +478,12 @@ export const project = {
   investorBenefits: [],
 
   financing: {
-    partner: 'Credion',
-    description: 'Vrijblijvende financieringsscan via Credion, onze financieringspartner.',
+    // Op verzoek geen partner-merknaam in bezoeker-copy: gebruik consistent
+    // 'onze bedrijfs- en vastgoedfinanciering partner' in alle bot-strings.
+    // App.jsx leest project.financing.partner als generic-replacer voor
+    // {financePartner}-templates dus deze waarde verschijnt in copy.
+    partner: 'onze bedrijfs- en vastgoedfinanciering partner',
+    description: 'Vrijblijvende financieringsscan via onze bedrijfs- en vastgoedfinanciering partner.',
     bullets: [
       'Onafhankelijk advies over zakelijke financiering',
       'Bedrijfsfinanciering tot circa 70% van de koopsom',
@@ -507,7 +529,7 @@ export const project = {
     {
       id: 'financing',
       title: 'Financiering',
-      body: 'Vrijblijvende financieringsscan via Credion. Tot circa 70% van de koopsom is gangbaar.',
+      body: 'Vrijblijvende financieringsscan via onze bedrijfs- en vastgoedfinanciering partner. Tot circa 70% van de koopsom is gangbaar.',
       tag: 'Financiering',
     },
     {
@@ -600,7 +622,7 @@ export const project = {
       // gesprek met sales over beschikbaarheid).
       options: [
         { id: 'nautic',   label: '108 m² Nautic',            score: 12, unit: 'Nautic' },
-        { id: 'harbor',   label: '340 m² Harbor +',          score: 15, unit: 'Harbor' },
+        { id: 'harbor',   label: '289 m² Harbor +',          score: 15, unit: 'Harbor' },
         { id: 'anchor',   label: '298 m² Anchor',            score: 15, unit: 'Anchor' },
         { id: 'koppelen', label: 'Ik wil units koppelen',     score: 15, unit: 'Anchor' },
       ],
