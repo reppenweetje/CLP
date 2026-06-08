@@ -611,10 +611,15 @@ export const project = {
 }
 
 // Volgorde van USP-cards aangepast per persona. Voor PIER14 maritiem-eerst.
-export const uspCardOrder = (persona) => {
-  if (persona === 'belegger' || persona === 'beide') {
-    return ['project', 'maritime', 'price', 'location', 'practical', 'history']
-  }
-  // eigen_gebruiker of onbekend
-  return ['project', 'maritime', 'location', 'availability', 'practical', 'history']
+// Net als Paveri/Elster: resolveer ID's naar volledige card-objecten zodat
+// UspCardsBubble direct .image/.tag/.title kan lezen. Zonder deze .map-stap
+// krijgt de carousel kale grijze placeholders ipv echte foto's.
+export function uspCardOrder(persona) {
+  const ids =
+    persona === 'belegger' || persona === 'beide'
+      ? ['project', 'maritime', 'price', 'location', 'practical', 'history']
+      : ['project', 'maritime', 'location', 'availability', 'practical', 'history']
+  return ids
+    .map((id) => project.uspCards.find((c) => c.id === id))
+    .filter(Boolean)
 }
