@@ -55,18 +55,42 @@ function getOverride() {
   return null
 }
 
+function getUrlOverride() {
+  // Runtime URL-param override: ?project=pier14.clp.repp.nl op een
+  // Vercel preview-URL forceert het juiste project zonder DNS. Bewust
+  // alleen actief als de hostname zelf niet al in PROJECTS staat,
+  // zodat productie-domeinen (dehofman.clp.repp.nl etc.) niet
+  // bestuurbaar zijn via een query-param.
+  if (typeof window === 'undefined') return null
+  try {
+    const params = new URLSearchParams(window.location.search)
+    const p = params.get('project')
+    if (p && PROJECTS[p]) return p
+  } catch {
+    /* ignore */
+  }
+  return null
+}
+
 function resolveProjectModule() {
   // SSR / build-time: geen window, val terug op default.
   if (typeof window === 'undefined') return DEFAULT_MODULE
 
   // Dev/preview override via env-var (handig bij testen van nieuwe projecten
   // zonder dat je een DNS-entry of custom-domain hoeft op te zetten).
-  const override = getOverride()
-  if (override && PROJECTS[override]) return PROJECTS[override]
+  const envOverride = getOverride()
+  if (envOverride && PROJECTS[envOverride]) return PROJECTS[envOverride]
 
-  // Hostname-based lookup.
+  // Hostname-based lookup heeft voorrang voor live subdomeinen.
   const host = window.location.hostname
-  return PROJECTS[host] || DEFAULT_MODULE
+  if (PROJECTS[host]) return PROJECTS[host]
+
+  // Geen hostname-match (= Vercel preview-URL of localhost):
+  // probeer URL-param ?project=<hostname> voor handmatig testen.
+  const urlOverride = getUrlOverride()
+  if (urlOverride) return PROJECTS[urlOverride]
+
+  return DEFAULT_MODULE
 }
 
 const resolved = resolveProjectModule()
