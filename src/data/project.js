@@ -22,6 +22,7 @@
 import * as dehofman from './projects/dehofman.js'
 import * as paveri   from './projects/paveri.js'
 import * as elster11 from './projects/elster11.js'
+import * as pier14   from './projects/pier14.js'
 
 // Map van hostname (zonder protocol of path) → module met { project, uspCardOrder }.
 // Productie-pattern: <slug>.clp.repp.nl.
@@ -31,6 +32,7 @@ const PROJECTS = {
   'dehofman.clp.repp.nl': dehofman,
   'depaveri.clp.repp.nl': paveri,
   'elster11.clp.repp.nl': elster11,
+  'pier14.clp.repp.nl':   pier14,
   'localhost':            dehofman,
   '127.0.0.1':            dehofman,
 }

@@ -53,6 +53,29 @@ export const flow = {
       ],
     },
 
+    // Project-specifieke "branche-gate" — optioneel tussen intent en de
+    // USP-cards. Wordt alleen actief als project.flowOverrides.nauticGate.enabled
+    // = true (PIER14 gebruikt 'em: alleen maritieme/nautische ondernemers
+    // mogen koper zijn van een unit, niet-maritieme leads worden vriendelijk
+    // doorverwezen). Default flow zit geen gate in — Hofman + Paveri slaan
+    // 'em automatisch over.
+    //
+    // Drie chips:
+    //   ja      → continue normal flow (intent-handler doet microIntro + USP)
+    //   uitleg  → bot toont uitleg-bubble + herhaalt de vraag met alleen ja/nee
+    //   nee     → exit-flow met afhaak-reason 'not_branche' + contact-pad
+    //
+    // De 'uitleg'-chip wordt na één keer tonen verborgen (behaviors.nauticExplanationShown).
+    nauticGate: {
+      key: 'nauticGate',
+      label: 'Ben je een nautisch ondernemer?',
+      options: [
+        { id: 'ja',     label: 'Ja',                          score: 10 },
+        { id: 'nee',    label: 'Nee',                         score: 0, afhaak: true },
+        { id: 'uitleg', label: 'Wat houdt nautisch in?',      score: 0 },
+      ],
+    },
+
     // Brochure-gate na de USP cards. Twee chips: door naar lead capture,
     // of naar de afhaak-redenen vraag voor marktonderzoek.
     // Live beschikbaarheid kan vroeg worden getoond zodat de bezoeker

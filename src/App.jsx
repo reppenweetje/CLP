@@ -292,6 +292,12 @@ function reducer(state, action) {
       const b = state.behaviors || EMPTY_BEHAVIORS
       return { ...state, behaviors: { ...b, rendementInfoShown: true } }
     }
+    case 'BEHAVIOR_NAUTIC_EXPLANATION_SHOWN': {
+      // Bezoeker heeft de "Wat houdt nautisch in?"-uitleg bekeken. Vlag
+      // verbergt de uitleg-chip bij de tweede pass — daarna alleen ja/nee.
+      const b = state.behaviors || EMPTY_BEHAVIORS
+      return { ...state, behaviors: { ...b, nauticExplanationShown: true } }
+    }
     case 'BEHAVIOR_MORE_INFO_VIEWED': {
       const b = state.behaviors || EMPTY_BEHAVIORS
       const ids = b.moreInfoIds || []
@@ -1082,6 +1088,17 @@ function Demo() {
         ])
         return
       }
+      // Project-specifieke branche-gate: PIER14 wil alleen maritieme/nautische
+      // ondernemers, dus na intent vragen we eerst expliciet of de bezoeker
+      // bij de doelgroep hoort. Default-projecten (Hofman/Paveri) hebben deze
+      // gate uit en gaan direct door naar microIntro + USP-cards zoals voorheen.
+      if (project.flowOverrides?.nauticGate?.enabled) {
+        dispatch({ type: 'ANSWER', key: 'intent', value: answerValue(opt), next: 'nauticGate' })
+        sendSequence(userTextFromOpt(opt), [
+          { kind: 'bot-text', text: flow.questions.nauticGate.label },
+        ])
+        return
+      }
       const microIntro = pickMicroIntro(personaNext)
       const cards = uspCardOrder(personaNext)
       dispatch({ type: 'ANSWER', key: 'intent', value: answerValue(opt), next: 'availabilityCheck' })
@@ -1098,6 +1115,62 @@ function Demo() {
         { kind: 'pause', ms: 8000, silent: true },
         { kind: 'pause', ms: 3000 },
         { kind: 'bot-text', text: flow.questions.availabilityCheck.label },
+      ])
+      return
+    }
+    // Branche-gate (PIER14): "Ben je een nautisch ondernemer?"
+    // Drie routes:
+    //   ja      → ga door naar microIntro + USP + availabilityCheck (= wat
+    //              intent-handler normaal doet)
+    //   nee     → exit-flow: vriendelijk doorverwijzen + lead-capture voor
+    //              eventuele contact-afspraak. Markeer als afhaak voor CRM.
+    //   uitleg  → toon uitleg-bubble, blijf op nauticGate. De chip-filter
+    //              onder in chipQuestion-setup verbergt 'uitleg' bij tweede
+    //              pass via behaviors.nauticExplanationShown.
+    if (q === 'nauticGate') {
+      trackEvent('nautic-gate:answered', { id: opt.id, label: opt.label })
+      if (opt.id === 'ja') {
+        const personaNow = state.answers.intent?.persona || persona || 'onbekend'
+        const microIntro = pickMicroIntro(personaNow)
+        const cards = uspCardOrder(personaNow)
+        dispatch({ type: 'ANSWER', key: 'nauticGate', value: answerValue(opt), next: 'availabilityCheck' })
+        sendSequence(userTextFromOpt(opt), [
+          { kind: 'bot-text', text: microIntro },
+          { kind: 'usp-cards', payload: { cards } },
+          { kind: 'pause', ms: 8000, silent: true },
+          { kind: 'pause', ms: 3000 },
+          { kind: 'bot-text', text: flow.questions.availabilityCheck.label },
+        ])
+        return
+      }
+      if (opt.id === 'uitleg') {
+        dispatch({ type: 'BEHAVIOR_NAUTIC_EXPLANATION_SHOWN' })
+        // Project levert eigen uitlegtekst via flowOverrides.nauticGate.explanation.
+        // Default-fallback is generiek over de maritieme sector.
+        const explanation = project.flowOverrides?.nauticGate?.explanation
+          || 'Een nautisch ondernemer is iemand met een bedrijf in de scheepvaart, watersport, jachtbouw, scheepsreparatie, maritieme dienstverlening of een aanverwante sector. Denk aan rederijen, jachthavens, scheepstoelevering, watersportwinkels of bootverhuur.'
+        // currentQuestion blijft 'nauticGate' zodat de chip-bar terugkomt
+        // (zonder uitleg-chip — die filter zit in chipQuestion-setup hieronder).
+        sendSequence(userTextFromOpt(opt), [
+          { kind: 'bot-text', text: explanation },
+          { kind: 'bot-text', text: 'En, ben je een nautisch ondernemer?' },
+        ])
+        return
+      }
+      // opt.id === 'nee' — exit-flow. Bezoeker hoort niet bij de doelgroep
+      // maar we capture'n wel even contact-gegevens zodat we kunnen
+      // doorverwijzen naar andere projecten of regio's waar 'ie wél past.
+      // Markeer als afhaak met reden 'not_branche' zodat CRM 'em apart kan
+      // sorteren van koop-leads.
+      const exitMessage = project.flowOverrides?.nauticGate?.exitMessage
+        || `Helaas past ${project.displayName} dan niet bij jou — dit project is specifiek voor maritieme/nautische ondernemers.`
+      const exitReferral = project.flowOverrides?.nauticGate?.exitReferral
+        || 'We kunnen je doorverwijzen naar andere REPP-bedrijfsunit-projecten in de regio. Laat hieronder je gegevens achter en we nemen contact op.'
+      dispatch({ type: 'ANSWER', key: 'afhaakReason', value: answerValue({ id: 'not_branche', label: 'Niet nautisch ondernemer', score: 0 }), next: 'lead-form' })
+      sendSequence(userTextFromOpt(opt), [
+        { kind: 'bot-text', text: exitMessage },
+        { kind: 'bot-text', text: exitReferral },
+        { kind: 'lead-form', payload: {} },
       ])
       return
     }
@@ -2398,6 +2471,15 @@ function Demo() {
   let chipQuestion = null
   let inputConfig = null
   if (state.currentQuestion === 'intent') chipQuestion = flow.questions.intent
+  else if (state.currentQuestion === 'nauticGate') {
+    // Verberg de uitleg-chip nadat de uitleg al een keer is getoond, anders
+    // krijgt de bezoeker een loop. Daarna blijven alleen ja/nee over.
+    const explained = !!state.behaviors?.nauticExplanationShown
+    const base = flow.questions.nauticGate
+    chipQuestion = explained
+      ? { ...base, options: base.options.filter((o) => o.id !== 'uitleg') }
+      : base
+  }
   else if (state.currentQuestion === 'availabilityCheck') {
     // Filter de 'locatie'-chip zodra LocationBubble al eens getoond is om
     // herhaalde clicks te voorkomen. Bezoeker houdt dan alleen ja/nee

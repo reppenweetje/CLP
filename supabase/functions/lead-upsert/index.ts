@@ -55,6 +55,7 @@ const DEFAULT_ALLOWED = [
   'https://dehofman.clp.repp.nl',
   'https://depaveri.clp.repp.nl',
   'https://elster11.clp.repp.nl',
+  'https://pier14.clp.repp.nl',
   'https://clp-xi-tan.vercel.app',
   'http://localhost:5173',
   'http://localhost:5174',
