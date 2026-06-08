@@ -5,8 +5,8 @@
 // Slug = `elster11`, subdomein wordt elster11.clp.repp.nl.
 //
 // Afwijkend t.o.v. de andere projecten:
-//   • Geen koop-portaal, maar wel een publieke projectpagina op repp.nl
-//     (portalUrl + portalLabel verwijzen daarheen, geen auto-login token).
+//   • Koopomgeving op kopen.repp.nl/elster11 (portalUrl + portalLabel
+//     verwijzen daarheen, geen auto-login token zoals De Hofman wel heeft).
 //   • Geen financiering: geen financieringspartner/credionWebhookUrl en het
 //     'financing'-onderwerp staat uit via disabledTopics.
 //   • Geen prijsvergelijking: 'priceCompare' staat uit via disabledTopics.
@@ -288,13 +288,13 @@ export const project = {
     { step: 6, title: 'Oplevering', body: 'Sleuteloverdracht inclusief opleverkeuring.' },
   ],
 
-  // Planning tijdelijk: data nog niet definitief. `current: true` markeert de
-  // actieve fase (PlanningBubble kleurt dat bolletje blauw). TODO: definitieve
-  // data invullen zodra bekend.
+  // `current: true` markeert de actieve fase (PlanningBubble kleurt dat
+  // bolletje blauw). We zitten nu in de fase Start herontwikkeling; oplevering
+  // staat gepland voor Q4 2026.
   planning: [
-    { phase: 'Omgevingsvergunning', date: 'Nader te bepalen' },
-    { phase: 'Start bouw',          date: 'Nader te bepalen' },
-    { phase: 'Oplevering',          date: 'Nader te bepalen', current: true },
+    { phase: 'Omgevingsvergunning',   date: 'Nader te bepalen' },
+    { phase: 'Start herontwikkeling', date: 'Nader te bepalen', current: true },
+    { phase: 'Oplevering',            date: 'Q4 2026' },
   ],
 
   // Geen prijsvergelijking voor ELSTER 11: het 'priceCompare'-onderwerp staat
@@ -387,11 +387,12 @@ export const project = {
   whatsappNumber: '+31617192538',
   phoneNumber: '020-2610080',
 
-  // Geen koop-portaal voor ELSTER 11, maar wel een publieke projectpagina op
-  // repp.nl. De moreInfo "portal"-chip linkt daarheen met een eigen label
-  // ("Bekijk ELSTER 11 website") ipv het generieke "Bekijk koopomgeving".
+  // ELSTER 11-koopomgeving op kopen.repp.nl. De moreInfo "portal"-chip linkt
+  // daarheen met een eigen label ("Bekijk ELSTER 11 website") ipv het
+  // generieke "Bekijk koopomgeving". Geen auto-login token: ad-verkeer heeft er
+  // geen, dus portalUrlForCta blijft de kale URL.
   portalLabel: 'Bekijk ELSTER 11 website',
-  portalUrl: 'https://repp.nl/elster11',
+  portalUrl: 'https://kopen.repp.nl/elster11',
 
   // Onderwerpen die voor ELSTER 11 niet van toepassing zijn en uit de
   // moreInfo-chips worden gefilterd (zie disabledTopics-filter in App.jsx):
