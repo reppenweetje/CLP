@@ -470,6 +470,7 @@ export const project = {
       title: 'Het project',
       body: '26 bedrijfsunits op kavel 11 van PIER14 in Zwijndrecht. 5.775 m² totaal, hoogwaardige nieuwbouw plus gerenoveerde Schokbeton-loodsen.',
       tag: 'Project',
+      image: '/projects/pier14/pier-overview.png',
     },
     {
       id: 'location',
@@ -483,12 +484,14 @@ export const project = {
       title: 'Prijs',
       body: 'Vanaf €242.500 excl. btw voor een Nautic (108 m²). Anchor-units €635.500. Casco oplevering.',
       tag: 'Prijs',
+      image: '/projects/pier14/prijs.png',
     },
     {
       id: 'scarcity',
       title: 'Beschikbaarheid',
       body: 'Veel units zijn al verkocht. Stern, Marina, Tidal, Harbor (kleine variant) en Bow zijn uitverkocht. Alleen enkele Nautic en Anchor nog beschikbaar.',
       tag: 'Schaarste',
+      image: '/projects/pier14/luchtfoto-detail.png',
     },
     {
       id: 'features',
@@ -507,6 +510,7 @@ export const project = {
       title: 'Maritieme buren',
       body: 'Deen Shipping, Aqualiner, Vos Sliedrecht, EMS/Oechies, Bode Packaging zijn al verbonden aan PIER14.',
       tag: 'Cluster',
+      image: '/projects/pier14/huidige-situatie.png',
     },
   ],
 
@@ -561,6 +565,13 @@ export const project = {
   },
 
   flowOverrides: {
+    // Pin de intent-vraag op de open "Waarom"-variant. Default zit in een
+    // A/B test (a = "Waarom ben je op zoek...", b = "Eigen gebruik of belegging?")
+    // en de B-variant landt te smal voor PIER14 omdat we daar de extra
+    // nauticGate-vraag al achteraan zetten — twee binaire vragen op rij
+    // voelt verhoor-achtig. Open framing wint hier.
+    intentLabel: 'Waarom ben je op zoek naar een bedrijfsunit?',
+
     // Branche-gate aan voor PIER14: na de intent-vraag krijgt elke
     // bezoeker de extra vraag "Ben je een nautisch ondernemer?". Niet-
     // nautische leads worden via een exit-flow doorverwezen naar andere
