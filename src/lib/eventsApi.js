@@ -49,10 +49,11 @@ function isEnabled() {
 // Source-tag → tenant-naam in events-tabel. Whitelist-gevalideerd door
 // Edge Function — onbekende waardes worden door de Function geweigerd.
 const TENANT_MAP = {
-  clp_uitgifte:   'uitgifte',
-  clp_dehofman:   'dehofman',
-  'Paveri BUnit': 'depaveri',
-  'Elst BUnit':   'elst',
+  clp_uitgifte:    'uitgifte',
+  clp_dehofman:    'dehofman',
+  'Paveri BUnit':  'depaveri',
+  'Elst BUnit':    'elst',
+  'PIER14 BUnit':  'pier14',
 }
 
 // Source-key + tenant-string voor analytics. Volgorde:
