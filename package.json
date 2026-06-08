@@ -6,6 +6,7 @@
   "description": "REPP Conversational Landing Page demo — pilot De Hofman",
   "scripts": {
     "dev": "vite",
+    "dev:elster": "VITE_PROJECT_OVERRIDE=elster11.clp.repp.nl vite",
     "build": "vite build",
     "preview": "vite preview",
     "check-copy": "node scripts/check-copy.mjs",
