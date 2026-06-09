@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Laag_1" data-name="Laag 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1497.80005 897.90002">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #0f005b;
+        font-family: Montserrat-Bold, Montserrat;
+        font-size: 25px;
+        font-weight: 700;
+      }
+
+      .cls-1, .cls-2 {
+        isolation: isolate;
+      }
+
+      .cls-3 {
+        fill: #b3b3bc;
+        stroke: #000;
+        stroke-miterlimit: 10;
+      }
+
+      .cls-4 {
+        letter-spacing: .00002em;
+      }
+
+      .cls-5 {
+        letter-spacing: -.01em;
+      }
+
+      .cls-6 {
+        letter-spacing: -.00201em;
+      }
+    </style>
+  </defs>
+  <rect class="cls-3" x="1201.80005" y="268.10001" width="231.90002" height="109.19998" rx="12" ry="12"/>
+  <g>
+    <rect class="cls-3" x="1263.09998" y="486.29999" width="55.90002" height="145.39996" rx="9.5" ry="9.5"/>
+    <g class="cls-2">
+      <g class="cls-2">
+        <text class="cls-1" transform="translate(1269.4 566.40002) rotate(-.8)"><tspan x="0" y="0">16b</tspan></text>
+      </g>
+    </g>
+  </g>
+  <g>
+    <rect class="cls-3" x="71" y="450.70001" width="193.29999" height="180.79999" rx="12" ry="12"/>
+    <g class="cls-2">
+      <g class="cls-2">
+        <text class="cls-1" transform="translate(162.19999 548.70001) rotate(-.8)"><tspan x="0" y="0">1</tspan></text>
+      </g>
+    </g>
+  </g>
+  <rect class="cls-3" x="719.90002" y="486.20001" width="55.29999" height="145.39996" rx="9.5" ry="9.5"/>
+  <g class="cls-2">
+    <g class="cls-2">
+      <g class="cls-2">
+        <text class="cls-1" transform="translate(739.49998 566.29998) rotate(-.8)"><tspan x="0" y="0">8</tspan></text>
+      </g>
+    </g>
+  </g>
+  <g>
+    <rect class="cls-3" x="660" y="486.20001" width="55.29999" height="145.39996" rx="9.5" ry="9.5"/>
+    <g class="cls-2">
+      <g class="cls-2">
+        <text class="cls-1" transform="translate(680.09995 566.29998) rotate(-.8)"><tspan x="0" y="0">7</tspan></text>
+      </g>
+    </g>
+  </g>
+  <g>
+    <rect class="cls-3" x="600.09998" y="486.10001" width="55.29999" height="145.39999" rx="9.5" ry="9.5"/>
+    <g class="cls-2">
+      <g class="cls-2">
+        <text class="cls-1" transform="translate(619.40003 565.99999) rotate(-.8)"><tspan x="0" y="0">6</tspan></text>
+      </g>
+    </g>
+  </g>
+  <g>
+    <rect class="cls-3" x="540.20001" y="486.10001" width="55.29999" height="145.39999" rx="9.5" ry="9.5"/>
+    <g class="cls-2">
+      <g class="cls-2">
+        <text class="cls-1" transform="translate(560.70002 566.09997) rotate(-.8)"><tspan x="0" y="0">5</tspan></text>
+      </g>
+    </g>
+  </g>
+  <g>
+    <rect class="cls-3" x="480.20001" y="486.20001" width="55.29999" height="145.39996" rx="9.5" ry="9.5"/>
+    <g class="cls-2">
+      <g class="cls-2">
+        <text class="cls-1" transform="translate(499.79999 566.09997) rotate(-.8)"><tspan x="0" y="0">4</tspan></text>
+      </g>
+    </g>
+  </g>
+  <g>
+    <rect class="cls-3" x="420.29999" y="486.20001" width="55.29999" height="145.39996" rx="9.5" ry="9.5"/>
+    <g class="cls-2">
+      <g class="cls-2">
+        <text class="cls-1" transform="translate(440.50001 566.09997) rotate(-.8)"><tspan x="0" y="0">3</tspan></text>
+      </g>
+    </g>
+  </g>
+  <g>
+    <rect class="cls-3" x="779.79999" y="486.10001" width="55.29999" height="145.39999" rx="9.5" ry="9.5"/>
+    <g class="cls-2">
+      <g class="cls-2">
+        <text class="cls-1" transform="translate(799.19999 566.09997) rotate(-.8)"><tspan x="0" y="0">9</tspan></text>
+      </g>
+    </g>
+  </g>
+  <g>
+    <rect class="cls-3" x="839.79999" y="486.10001" width="55.29999" height="145.39999" rx="9.5" ry="9.5"/>
+    <g class="cls-2">
+      <g class="cls-2">
+        <g class="cls-2">
+          <text class="cls-1" transform="translate(854.49998 566.20001) rotate(-.8)"><tspan x="0" y="0">10</tspan></text>
+        </g>
+      </g>
+    </g>
+  </g>
+  <g>
+    <rect class="cls-3" x="899.70001" y="486.20001" width="55.29999" height="145.39996" rx="9.5" ry="9.5"/>
+    <g class="cls-2">
+      <g class="cls-2">
+        <text class="cls-1" transform="translate(917.49998 565.99999) rotate(-.8)"><tspan x="0" y="0">11</tspan></text>
+      </g>
+    </g>
+  </g>
+  <g>
+    <rect class="cls-3" x="959.90002" y="412.20001" width="115.40002" height="219.29999" rx="12" ry="12"/>
+    <g class="cls-2">
+      <g class="cls-2">
+        <text class="cls-1" transform="translate(1005.29996 529.40002) rotate(-.8)"><tspan x="0" y="0">21</tspan></text>
+      </g>
+    </g>
+  </g>
+  <g>
+    <rect class="cls-3" x="1081.19995" y="486.29999" width="55.90002" height="145.39996" rx="9.5" ry="9.5"/>
+    <g class="cls-2">
+      <g class="cls-2">
+        <text class="cls-1" transform="translate(1085.4 566.20001) rotate(-.8)"><tspan class="cls-6" x="0" y="0">2</tspan><tspan class="cls-4" x="14.69971" y="0">0a</tspan></text>
+      </g>
+    </g>
+  </g>
+  <g>
+    <rect class="cls-3" x="269.39999" y="450.79999" width="145.69998" height="180.79999" rx="12" ry="12"/>
+    <g class="cls-2">
+      <g class="cls-2">
+        <text class="cls-1" transform="translate(335.50001 547.90002) rotate(-.8)"><tspan x="0" y="0">2</tspan></text>
+      </g>
+    </g>
+  </g>
+  <g>
+    <rect class="cls-3" x="1141.80005" y="486.29999" width="55.90002" height="145.39996" rx="9.5" ry="9.5"/>
+    <g class="cls-2">
+      <g class="cls-2">
+        <text class="cls-1" transform="translate(1145.49998 566.29998) rotate(-.8)"><tspan class="cls-6" x="0" y="0">2</tspan><tspan class="cls-4" x="14.69971" y="0">0b</tspan></text>
+      </g>
+    </g>
+  </g>
+  <g>
+    <rect class="cls-3" x="1202.5" y="486.20001" width="55.90002" height="145.39996" rx="9.5" ry="9.5"/>
+    <g class="cls-2">
+      <g class="cls-2">
+        <text class="cls-1" transform="translate(1210.09995 566.40002) rotate(-.8)"><tspan x="0" y="0">16a</tspan></text>
+      </g>
+    </g>
+  </g>
+  <g>
+    <rect class="cls-3" x="1323.80005" y="486.20001" width="109.90002" height="145.39996" rx="12" ry="12"/>
+    <g class="cls-2">
+      <g class="cls-2">
+        <text class="cls-1" transform="translate(1365.80002 566.20001) rotate(-.8)"><tspan x="0" y="0">17</tspan></text>
+      </g>
+    </g>
+  </g>
+  <g>
+    <path class="cls-3" d="M1433.69995,394.10001v75.5c0,6.60001-5.40002,12-12,12h-329.69995c-6.59998,0-12-5.39999-12-12v-45.29999c0-6.60001,5.40002-12,12-12h109.80005v-18.20001c0-6.60001,5.40002-12,12-12h207.90002c6.59998,0,12,5.39999,12,12h-.00012Z"/>
+    <g class="cls-2">
+      <g class="cls-2">
+        <text class="cls-1" transform="translate(1278.30002 440.70002) rotate(-.8)"><tspan x="0" y="0">18</tspan></text>
+      </g>
+    </g>
+  </g>
+  <g class="cls-2">
+    <g class="cls-2">
+      <text class="cls-1" transform="translate(1304.9 330.10002) rotate(-.8)"><tspan x="0" y="0">19</tspan></text>
+    </g>
+  </g>
+  <g>
+    <rect class="cls-3" x="959.79999" y="268.10001" width="55.90002" height="139.30002" rx="9.5" ry="9.5"/>
+    <g class="cls-2">
+      <g class="cls-2">
+        <text class="cls-1" transform="translate(975.99998 345.3) rotate(-.8)"><tspan x="0" y="0">12</tspan></text>
+      </g>
+    </g>
+  </g>
+  <g>
+    <rect class="cls-3" x="1020.5" y="268.10001" width="55.90002" height="139.30002" rx="9.5" ry="9.5"/>
+    <g class="cls-2">
+      <g class="cls-2">
+        <text class="cls-1" transform="translate(1036.30002 345.00001) rotate(-.8)"><tspan x="0" y="0">13</tspan></text>
+      </g>
+    </g>
+  </g>
+  <g>
+    <rect class="cls-3" x="1081.19995" y="268" width="55.90002" height="139.29999" rx="9.5" ry="9.5"/>
+    <g class="cls-2">
+      <g class="cls-2">
+        <text class="cls-1" transform="translate(1095.69993 345.60002) rotate(-.8)"><tspan x="0" y="0">14</tspan></text>
+      </g>
+    </g>
+  </g>
+  <g>
+    <rect class="cls-3" x="1141.80005" y="268.20001" width="55.90002" height="139.29999" rx="9.5" ry="9.5"/>
+    <g class="cls-2">
+      <g class="cls-2">
+        <text class="cls-1" transform="translate(1157.59995 345.4) rotate(-.8)"><tspan x="0" y="0">15</tspan></text>
+      </g>
+    </g>
+  </g>
+  <g>
+    <rect class="cls-3" x="71" y="268.20001" width="344.39999" height="177.79999" rx="12" ry="12"/>
+    <g class="cls-2">
+      <g class="cls-2">
+        <text class="cls-1" transform="translate(227.69999 364.3) rotate(-.8)"><tspan class="cls-6" x="0" y="0">2</tspan><tspan class="cls-4" x="14.69971" y="0">6</tspan></text>
+      </g>
+    </g>
+  </g>
+  <g>
+    <rect class="cls-3" x="420.29999" y="268.20001" width="180.70001" height="213.29999" rx="12" ry="12"/>
+    <g class="cls-2">
+      <g class="cls-2">
+        <text class="cls-1" transform="translate(496.10001 382.60002) rotate(-.8)"><tspan x="0" y="0">25</tspan></text>
+      </g>
+    </g>
+  </g>
+  <g>
+    <rect class="cls-3" x="605.79999" y="268.20001" width="113.20001" height="213.29999" rx="12" ry="12"/>
+    <g class="cls-2">
+      <g class="cls-2">
+        <text class="cls-1" transform="translate(646.99998 382.60002) rotate(-.8)"><tspan class="cls-5" x="0" y="0">2</tspan><tspan x="14.5" y="0">4</tspan></text>
+      </g>
+    </g>
+  </g>
+  <g>
+    <rect class="cls-3" x="723.79999" y="268.20001" width="113.20001" height="213.29999" rx="12" ry="12"/>
+    <g class="cls-2">
+      <g class="cls-2">
+        <text class="cls-1" transform="translate(765.59995 382.60002) rotate(-.8)"><tspan x="0" y="0">23</tspan></text>
+      </g>
+    </g>
+  </g>
+  <g>
+    <rect class="cls-3" x="841.79999" y="268.20001" width="113.20001" height="213.29999" rx="12" ry="12"/>
+    <g class="cls-2">
+      <g class="cls-2">
+        <text class="cls-1" transform="translate(883.49998 382.3) rotate(-.8)"><tspan x="0" y="0">22</tspan></text>
+      </g>
+    </g>
+  </g>
+</svg>

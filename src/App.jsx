@@ -1185,11 +1185,14 @@ function Demo() {
         // currentQuestion blijft 'nauticGate' zodat de chip-bar terugkomt
         // (zonder uitleg-chip, die filter zit in chipQuestion-setup hieronder
         // en zwapt ook de chip-labels naar "Ik ben (geen) nautische ondernemer").
-        // Split de uitleg op \n\n zodat lange explanations als losse bubbles
-        // ademen ipv één muur tekst. Chat-conventie: 1-2 zinnen per bubble.
-        const explanationBubbles = explanation
-          .split(/\n{2,}/)
-          .map((s) => s.trim())
+        // Twee vormen van explanation worden ondersteund:
+        //   - Array van strings: elke string = 1 bubble. \n\n binnen een string
+        //     wordt als paragraaf-break in dezelfde bubble gerenderd (via
+        //     whitespace-pre-line in BotMessage). Geeft project controle over
+        //     hoe het aantal bubbles en de indeling eruit ziet.
+        //   - String: gesplitst op \n\n in losse bubbles (backward-compat).
+        const explanationBubbles = (Array.isArray(explanation) ? explanation : explanation.split(/\n{2,}/))
+          .map((s) => (typeof s === 'string' ? s.trim() : ''))
           .filter(Boolean)
           .map((text) => ({ kind: 'bot-text', text }))
         sendSequence(userTextFromOpt(opt), [

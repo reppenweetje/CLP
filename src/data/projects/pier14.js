@@ -24,6 +24,10 @@ export const project = {
   shortDescription: '26 bedrijfsunits aan de Oude Maas, nautisch-maritiem bedrijventerrein.',
   hero: '/projects/pier14/beschikbaarheid.png',
   logo: '/projects/pier14/logo.svg',
+  // Wordmark (PIER14 letterlogo SVG) voor de IntroScreen hero-overlay. Als
+  // dit veld gezet is rendert IntroScreen.jsx een <img> ipv plain displayName-
+  // tekst. Andere projecten zonder wordmark vallen terug op tekst.
+  wordmark: '/projects/pier14/wordmark.svg',
   exterior: '/projects/pier14/beschikbaarheid.png',
 
   // CRM-project key. Moet EXACT matchen met Tharwats Supabase projects-tabel.
@@ -188,63 +192,57 @@ export const project = {
   //   Sub-cluster: 19 (Harbor), 17 (Tidal), 20a-b, 16a-b (Nautic)
   //   Onderaan:    23-24 (Anchor), 22, 21 (Anchor), 18 (Harbor)
   sitePlan: {
-    // 'sections' schema (Paveri-stijl simpel): meerdere grids gestapeld
-    // zonder sidebar-aligning. Per sectie eigen cols + uniforme aspect.
-    // 'layoutRows' (nested left/right) en 'svg' zijn alternatieven die
-    // SitePlanBubble óók ondersteunt, maar voor PIER14 past 'sections'
-    // het beste bij de rij-gewijze opbouw met variërende kolombreedte.
-    sections: [
-      // Top-rij (achterzijde gebouw): 11 cellen. 26→22 grote sold units,
-      // dan 12-15 (Nautics sold), 19 (Harbor+ beschikbaar), 18 (Harbor- sold).
-      {
-        cols: 11,
-        aspect: 'portrait',
-        units: [
-          { number: 26, type: 'Bow',    state: 'sold' },
-          { number: 25, type: 'Anchor', state: 'sold' },
-          { number: 24, type: 'Anchor', state: 'sold' },
-          { number: 23, type: 'Anchor', state: 'sold' },
-          { number: 22, type: 'Anchor', state: 'sold' },
-          { number: 12, type: 'Nautic', state: 'sold' },
-          { number: 13, type: 'Nautic', state: 'sold' },
-          { number: 14, type: 'Nautic', state: 'sold' },
-          { number: 15, type: 'Nautic', state: 'sold' },
-          { number: 19, type: 'Harbor', state: 'available' },  // Harbor+ 289 m²
-          { number: 18, type: 'Harbor', state: 'sold' },        // Harbor- 340 m²
-        ],
-      },
-      // Front-rij (voorzijde gebouw): 11 cellen. 1+2 grote sold, 3-5 Nautics
-      // beschikbaar (de drie groene per koopsommen-tabel), 6-11 sold Nautics.
-      {
-        cols: 11,
-        aspect: 'portrait',
-        units: [
-          { number: 1,  type: 'Stern',  state: 'sold' },
-          { number: 2,  type: 'Marina', state: 'sold' },
-          { number: 3,  type: 'Nautic', state: 'available' },
-          { number: 4,  type: 'Nautic', state: 'available' },
-          { number: 5,  type: 'Nautic', state: 'available' },
-          { number: 6,  type: 'Nautic', state: 'sold' },
-          { number: 7,  type: 'Nautic', state: 'sold' },
-          { number: 8,  type: 'Nautic', state: 'sold' },
-          { number: 9,  type: 'Nautic', state: 'sold' },
-          { number: 10, type: 'Nautic', state: 'sold' },
-          { number: 11, type: 'Nautic', state: 'sold' },
-        ],
-      },
-      // Side-cluster: 4 cellen. 21 (Anchor beschikbaar), 20 + 16 (Nautic 2x
-      // gesplitst in a/b, sold), 17 (Tidal sold).
-      {
-        cols: 4,
-        aspect: 'landscape',
-        units: [
-          { number: 21, type: 'Anchor', state: 'available' },
-          { number: 20, type: 'Nautic', state: 'sold' },  // 20a + 20b samen
-          { number: 16, type: 'Nautic', state: 'sold' },  // 16a + 16b samen
-          { number: 17, type: 'Tidal',  state: 'sold' },
-        ],
-      },
-    ],
+    // 'svg' schema: exacte unit-coordinaten uit officiele SVG PIER14
+    // (viewBox 0 0 1497.8 897.9). SitePlanPolygonBubble.jsx rendert per
+    // unit een <rect> of <polygon> op deze coordinaten zodat de vorm
+    // 1-op-1 klopt met de brochure-situatietekening. Door state-attribuut
+    // per unit krijgt 'ie de juiste kleur (available groen, sold grijs).
+    //
+    // Telling: 26 units, met 16 (16a+16b) en 20 (20a+20b) elk als 1 unit
+    // (sub-splits worden gecombineerd in 1 rect zodat countSitePlanUnits
+    // op 26 uitkomt zoals de brochure-administratie aangeeft).
+    svg: {
+      viewBox: '0 0 1497.8 897.9',
+      // Terrein-omtrek als achtergrondvlak (volledige viewBox).
+      background: '0,0 1497.8,0 1497.8,897.9 0,897.9',
+      units: [
+        // Top-rij links: grote sold units (26, 25, 24, 23, 22).
+        { number: 26, type: 'Bow',    state: 'sold',      rect: { x: 71,     y: 268.2, w: 344.4, h: 177.8 } },
+        { number: 25, type: 'Anchor', state: 'sold',      rect: { x: 420.3,  y: 268.2, w: 180.7, h: 213.3 } },
+        { number: 24, type: 'Anchor', state: 'sold',      rect: { x: 605.8,  y: 268.2, w: 113.2, h: 213.3 } },
+        { number: 23, type: 'Anchor', state: 'sold',      rect: { x: 723.8,  y: 268.2, w: 113.2, h: 213.3 } },
+        { number: 22, type: 'Anchor', state: 'sold',      rect: { x: 841.8,  y: 268.2, w: 113.2, h: 213.3 } },
+        // Top-rij midden: small sold Nautics (12-15).
+        { number: 12, type: 'Nautic', state: 'sold',      rect: { x: 959.8,  y: 268.1, w: 55.9,  h: 139.3 } },
+        { number: 13, type: 'Nautic', state: 'sold',      rect: { x: 1020.5, y: 268.1, w: 55.9,  h: 139.3 } },
+        { number: 14, type: 'Nautic', state: 'sold',      rect: { x: 1081.2, y: 268,   w: 55.9,  h: 139.3 } },
+        { number: 15, type: 'Nautic', state: 'sold',      rect: { x: 1141.8, y: 268.2, w: 55.9,  h: 139.3 } },
+        // Top-rechts: 19 (Harbor+ beschikbaar) wide rect.
+        { number: 19, type: 'Harbor', state: 'available', rect: { x: 1201.8, y: 268.1, w: 231.9, h: 109.2 }, price: 699000 },
+        // 18 (Harbor- sold) L-shape midden-rechts; benadering met rect onder 19.
+        { number: 18, type: 'Harbor', state: 'sold',      rect: { x: 1080,   y: 412.2, w: 353.7, h: 69.5 } },
+        // Front-rij links: grote sold units (1, 2).
+        { number: 1,  type: 'Stern',  state: 'sold',      rect: { x: 71,     y: 450.7, w: 193.3, h: 180.8 } },
+        { number: 2,  type: 'Marina', state: 'sold',      rect: { x: 269.4,  y: 450.8, w: 145.7, h: 180.8 } },
+        // Front-rij midden: 3-11 (Nautic; 3-5 beschikbaar, 6-11 sold).
+        { number: 3,  type: 'Nautic', state: 'available', rect: { x: 420.3,  y: 486.2, w: 55.3,  h: 145.4 }, price: 242500 },
+        { number: 4,  type: 'Nautic', state: 'available', rect: { x: 480.2,  y: 486.2, w: 55.3,  h: 145.4 }, price: 242500 },
+        { number: 5,  type: 'Nautic', state: 'available', rect: { x: 540.2,  y: 486.1, w: 55.3,  h: 145.4 }, price: 242500 },
+        { number: 6,  type: 'Nautic', state: 'sold',      rect: { x: 600.1,  y: 486.1, w: 55.3,  h: 145.4 } },
+        { number: 7,  type: 'Nautic', state: 'sold',      rect: { x: 660,    y: 486.2, w: 55.3,  h: 145.4 } },
+        { number: 8,  type: 'Nautic', state: 'sold',      rect: { x: 719.9,  y: 486.2, w: 55.3,  h: 145.4 } },
+        { number: 9,  type: 'Nautic', state: 'sold',      rect: { x: 779.8,  y: 486.1, w: 55.3,  h: 145.4 } },
+        { number: 10, type: 'Nautic', state: 'sold',      rect: { x: 839.8,  y: 486.1, w: 55.3,  h: 145.4 } },
+        { number: 11, type: 'Nautic', state: 'sold',      rect: { x: 899.7,  y: 486.2, w: 55.3,  h: 145.4 } },
+        // 21 (Anchor beschikbaar) midden, breder dan Nautics.
+        { number: 21, type: 'Anchor', state: 'available', rect: { x: 959.9,  y: 412.2, w: 115.4, h: 219.3 }, price: 635500 },
+        // 20 (a+b samen) en 16 (a+b samen): elk gecombineerd uit 2 sub-rects.
+        { number: 20, type: 'Nautic', state: 'sold',      rect: { x: 1081.2, y: 486.3, w: 116.5, h: 145.4 } },
+        { number: 16, type: 'Nautic', state: 'sold',      rect: { x: 1202.5, y: 486.2, w: 116.5, h: 145.4 } },
+        // 17 (Tidal sold) rechts.
+        { number: 17, type: 'Tidal',  state: 'sold',      rect: { x: 1323.8, y: 486.2, w: 109.9, h: 145.4 } },
+      ],
+    },
     legend: [
       { state: 'available', label: 'Beschikbaar' },
       { state: 'sold',      label: 'Verkocht' },
@@ -609,7 +607,14 @@ export const project = {
     // alleen nautisch gerelateerde bedrijven).
     nauticGate: {
       enabled: true,
-      explanation: 'Een nautisch ondernemer is iemand met een bedrijf in de scheepvaart, watersport, jachtbouw, scheepsreparatie, maritieme dienstverlening of een aanverwante sector.\n\nDenk aan rederijen, jachthavens, scheepstoelevering, watersportwinkels, bootverhuur of bedrijven die direct met de maritieme keten samenwerken.\n\nLevert je bedrijf vooral aan nautische klanten, of bestaat het merendeel van je klanten uit de nautische sector? Dan tel je ook mee als nautisch ondernemer.',
+      // Array-vorm: elke string = één bot-bubble. \n binnen een string geeft
+      // paragraaf-break ín de bubble (rendert dankzij whitespace-pre-line in
+      // BotMessage). Op verzoek 2 bubbles met ruimte tussen de zinnen ipv
+      // 3 losse bubbles.
+      explanation: [
+        'Een nautisch ondernemer is iemand met een bedrijf in de scheepvaart, watersport, jachtbouw, scheepsreparatie, maritieme dienstverlening of een aanverwante sector.\n\nDenk aan rederijen, jachthavens, scheepstoelevering, watersportwinkels, bootverhuur of bedrijven die direct met de maritieme keten samenwerken.',
+        'Levert je bedrijf vooral aan nautische klanten, of bestaat het merendeel van je klanten uit de nautische sector?\n\nDan tel je ook mee als nautisch ondernemer.',
+      ],
       exitMessage: 'Helaas past PIER14 dan niet bij jou, dit project is door de gemeente specifiek aangewezen voor nautisch gerelateerde bedrijven.',
       exitReferral: 'We kunnen je doorverwijzen naar andere REPP-bedrijfsunit-projecten in Nederland waar je wél terecht kunt. Laat hieronder je gegevens achter, dan nemen we contact op.',
     },
