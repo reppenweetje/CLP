@@ -627,6 +627,16 @@ export const project = {
       exitReferral: 'We kunnen je doorverwijzen naar andere REPP-bedrijfsunit-projecten in Nederland waar je wél terecht kunt. Laat hieronder je gegevens achter, dan nemen we contact op.',
     },
 
+    // Belegger-route: bezoeker hoeft niet zelf nautisch te zijn, maar moet
+    // er wel een nautische huurder in plaatsen. App.jsx detecteert dit
+    // explainer-veld en slaat de nauticGate voor belegger/beide-intent
+    // over: ipv de gate-vraag krijgt 'ie de regel uitgelegd + door naar
+    // USP-cards + availabilityCheck.
+    beleggerExplainer: [
+      'Let op: huurders en kopers voor PIER14 moeten nautisch zijn. Als belegger mag je een unit kopen, mits je er een nautische huurder in plaatst. Hier kunnen we je eventueel bij helpen.',
+      'Hier wat meer over het project.',
+    ],
+
     sizeQuestion: {
       label: 'Hoe groot wil je dat de unit ongeveer is?',
       // Labels expliciet op type-naam zodat de bezoeker meteen weet welk
@@ -643,6 +653,11 @@ export const project = {
       ],
     },
   },
+
+  // Onderwerpen die voor PIER14 niet in de moreInfo-chips komen.
+  // priceComparison heeft lege rows (nautische units zijn te uniek voor
+  // benchmark) — de chip zou een leeg scherm geven, dus uitschakelen.
+  disabledTopics: ['priceCompare'],
 
   recommendIntroByChoice: {
     nautic:   'Op basis van je antwoorden past een Nautic-unit (108 m²) goed bij wat je zoekt.',
