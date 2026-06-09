@@ -204,6 +204,6 @@ export function customerAfhaakSummary(reasonId) {
 // Klant-stem samenvatting voor het rent-match pad. Range-label wordt
 // rechtstreeks overgenomen — die is al klant-leesbaar.
 export function customerRentSummary(rangeLabel) {
-  if (!rangeLabel) return 'Ik ben op zoek naar huur in plaats van koop.'
-  return `Ik ben op zoek naar huur, rond ${rangeLabel.toLowerCase()} per m² per jaar.`
+  if (!rangeLabel) return 'Ik ben op zoek naar een huur unit in plaats van koop.'
+  return `Ik ben op zoek naar een huur unit, rond ${rangeLabel.toLowerCase()} per m² per jaar.`
 }
