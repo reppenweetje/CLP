@@ -29,7 +29,14 @@ export default function LocationBubble({ location, projectName }) {
       <div className="flex-1 min-w-0">
         <div className="rounded-3xl rounded-tl-md bg-paper border border-mist-light overflow-hidden">
           <div className="relative aspect-[16/9] bg-canvas-2 overflow-hidden">
-            <img src={location.aerialImage} alt="" className="w-full h-full object-cover" />
+            {/* aerialFit: 'contain' toont een vierkante/stylized kaart volledig
+                binnen het 16:9-kader zodat randlabels niet wegvallen; default
+                'cover' vult het kader (voor echte luchtfoto's). */}
+            <img
+              src={location.aerialImage}
+              alt=""
+              className={`w-full h-full ${location.aerialFit === 'contain' ? 'object-contain' : 'object-cover'}`}
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-paper/40 via-transparent to-transparent" />
             <PinMarker position={location.pinPosition} />
           </div>
@@ -37,7 +44,13 @@ export default function LocationBubble({ location, projectName }) {
             <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium">Locatie</div>
             <div className="text-[16px] font-semibold text-ink mt-1.5">{location.address}</div>
             <div className="text-[13.5px] text-ink-soft leading-relaxed mt-1">
-              {projectName ? `${projectName} ligt op een gevestigde bedrijvenlocatie in Haarlem, in de Metropoolregio Amsterdam.` : 'Gevestigde bedrijvenlocatie in Haarlem, in de Metropoolregio Amsterdam.'}
+              {/* Project kan via location.blurb een eigen omschrijving zetten;
+                  zonder blurb valt het terug op een generieke (Haarlem-)tekst. */}
+              {location.blurb
+                ? location.blurb
+                : projectName
+                ? `${projectName} ligt op een gevestigde bedrijvenlocatie in Haarlem, in de Metropoolregio Amsterdam.`
+                : 'Gevestigde bedrijvenlocatie in Haarlem, in de Metropoolregio Amsterdam.'}
             </div>
             <ImpressionNote variant="aerial" className="mt-2" />
           </div>
