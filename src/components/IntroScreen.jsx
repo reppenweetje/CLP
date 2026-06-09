@@ -20,7 +20,15 @@ export default function IntroScreen({ onStart }) {
         <div className="absolute inset-0 bg-gradient-to-t from-paper/95 via-paper/20 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 pb-5 lg:pb-8">
           <div className="mx-auto w-full max-w-md lg:max-w-2xl px-4 lg:px-6">
-            <div className="text-[28px] lg:text-[44px] font-semibold text-ink leading-tight">{project.displayName}</div>
+            {project.wordmark ? (
+              <img
+                src={project.wordmark}
+                alt={project.displayName}
+                className="h-8 lg:h-12 w-auto"
+              />
+            ) : (
+              <div className="text-[28px] lg:text-[44px] font-semibold text-ink leading-tight">{project.displayName}</div>
+            )}
             <div className="text-[14px] lg:text-[16px] text-ink-soft mt-0.5 lg:mt-1">{project.tagline}</div>
             <div className="text-[11px] lg:text-[13px] tracking-[0.16em] text-ink-mute uppercase mt-1.5 lg:mt-2">exclusief in verkoop bij REPP</div>
           </div>
