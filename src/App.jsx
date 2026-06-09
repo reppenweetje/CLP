@@ -1574,17 +1574,22 @@ function Demo() {
           signals: buying.signals,
           name: lead.firstName || '',
         })
-        // Expliciete bevestiging-bubble na de chip-klik. Slack krijgt al een
-        // notificatie (notifyCallbackRequest hierboven) maar de bezoeker zag
-        // tot nu toe alleen een soft observatie + actie-bubble — geen "we
-        // hebben je aanvraag ontvangen"-bericht. Lost het rapport op dat
-        // gebruikers dachten dat hun klik niet doorkwam.
+        // Expliciete bevestiging-flow na chip-klik. De chip is al een commit
+        // (Slack krijgt notificatie via notifyCallbackRequest hierboven), dus:
+        //   1) bridge: soft observatie
+        //   2) warm-handoff bubble met initial outcome='callback' → groene
+        //      "Genoteerd. Ik bel je vandaag terug." strip is meteen zichtbaar.
+        //      Actie-knoppen verbergen automatisch (primaryDone logic) want de
+        //      bezoeker heeft al gekozen. Wie alsnog WhatsApp wil, gebruikt
+        //      het WA-icoon in de header.
+        //   3) confirmation bot-text als laatste bubble — onmogelijk te missen
+        //      want het is de meest recente boodschap onderaan de scroll.
         const confirmationName = lead.firstName ? lead.firstName + ', dank' : 'Dank'
         const handoffConfirmation = `${confirmationName} voor je aanvraag. Een makelaar neemt zo snel mogelijk contact met je op.`
         dispatch({ type: 'WARM_HANDOFF_SHOWN' })
+        dispatch({ type: 'WARM_HANDOFF_OUTCOME', outcome: 'callback' })
         sendSequence(userTextFromOpt(opt), [
           { kind: 'bot-text', text: bridge },
-          { kind: 'bot-text', text: handoffConfirmation },
           {
             kind: 'warm-handoff',
             payload: {
@@ -1600,9 +1605,10 @@ function Demo() {
               waSummary: summary,
               phoneLink,
               phoneDisplay: project.phoneNumber,
-              outcome: null,
+              outcome: 'callback',
             },
           },
+          { kind: 'bot-text', text: handoffConfirmation },
         ])
         return
       }

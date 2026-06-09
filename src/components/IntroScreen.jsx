@@ -24,10 +24,10 @@ export default function IntroScreen({ onStart }) {
               <img
                 src={project.wordmark}
                 alt={project.displayName}
-                /* Klein houden — ongeveer cap-height van de tagline-tekst
-                   eronder, dus h-4 (16px) op mobiel en h-5 (20px) op desktop.
-                   Eerdere h-8/h-12 was te dominant naast de subtiele tagline. */
-                className="h-4 lg:h-5 w-auto"
+                /* Tussenmaat tussen oorspronkelijke h-8/h-12 (te dominant) en
+                   h-4/h-5 (te onleesbaar). h-6/h-8 = 24/32px geeft de wordmark
+                   leesbare aanwezigheid zonder de tagline te overrulen. */
+                className="h-6 lg:h-8 w-auto"
               />
             ) : (
               <div className="text-[28px] lg:text-[44px] font-semibold text-ink leading-tight">{project.displayName}</div>
