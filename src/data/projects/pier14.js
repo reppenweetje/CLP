@@ -58,6 +58,8 @@ export const project = {
   sfeerbeelden: [
     { src: '/projects/pier14/intro-rendering.jpg', alt: 'PIER14 rooftop-view rendering' },
     { src: '/projects/pier14/intro-drone.png',     alt: 'PIER14 kavel aan de Oude Maas (drone)' },
+    { src: '/projects/pier14/sfeer-straat.jpg',    alt: 'PIER14 straatzijde rendering overdag' },
+    { src: '/projects/pier14/sfeer-facade.jpg',    alt: 'PIER14 façade close-up bij schemering' },
     { src: '/projects/pier14/project.png',         alt: 'PIER14 luchtaanzicht units (rendering)' },
     { src: '/projects/pier14/pier-overview.png',   alt: 'PIER14 overview met pier en haven' },
     { src: '/projects/pier14/praktisch.png',       alt: 'PIER14 interieur Schokbeton-loods' },
