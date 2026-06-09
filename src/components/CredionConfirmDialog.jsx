@@ -7,8 +7,9 @@ import { project } from '../data/project.js'
 // disruptief (start een lead-capture flow met derde-partij-toestemming).
 //
 // Partner-naam komt uit project.financing.partner (De Hofman = Credion,
-// De Paveri = Company & Living Finance). Component-naam blijft
-// CredionConfirmDialog voor backwards-compat met imports.
+// De Paveri = generieke vastgoedfinancieringspartner, geen bedrijfsnaam in
+// de copy). Component-naam blijft CredionConfirmDialog voor backwards-compat
+// met imports.
 //
 // State-of-the-art mobile pattern: bottom-sheet met blur-backdrop, één
 // duidelijke primary-bevestiging + neutrale annulering. ESC-key sluit.
@@ -44,7 +45,7 @@ export default function CredionConfirmDialog({ open, onConfirm, onCancel }) {
           <div className="w-10 h-1 rounded-full bg-mist" aria-hidden />
         </div>
         <div className="px-5 pt-1 pb-6">
-          <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium">Partner {partner}</div>
+          <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium">{project.financing?.partnerLabel || `Partner ${partner}`}</div>
           <div className="text-[18px] font-semibold text-ink mt-1.5 leading-snug">
             Vrijblijvende financieringsscan aanvragen?
           </div>

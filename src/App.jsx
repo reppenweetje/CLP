@@ -31,7 +31,7 @@ import {
 } from './lib/consent.js'
 import { sendCredionLead } from './lib/credion.js'
 import { computeBuyingSignals, EMPTY_BEHAVIORS, getCallbackPromise, getTimeContext } from './lib/buyingSignals.js'
-import { buildHandoffCopy, buildHandoffBridge, resolveMicroIntro, resolveRecommendCopy } from './lib/handoffCopy.js'
+import { buildHandoffCopy, resolveMicroIntro, resolveRecommendCopy } from './lib/handoffCopy.js'
 import AppShell from './components/AppShell.jsx'
 import IntroScreen from './components/IntroScreen.jsx'
 import ChatThread from './components/ChatThread.jsx'
@@ -857,7 +857,8 @@ function Demo() {
   // beide A/B-experimenten orthogonaal kunnen analyseren in Plausible.
   const copyVariant = getOrAssignVariant()
   // Naam van de financieringspartner per project. De Hofman = Credion, De
-  // Paveri = Company & Living Finance. Alle bot-text en CTA-labels die
+  // Paveri toont een generieke vastgoedfinancieringspartner (geen
+  // bedrijfsnaam in de bezoeker-copy). Alle bot-text en CTA-labels die
   // verwijzen naar de partner gebruiken deze constante zodat we niet meer
   // hardcoded "Credion" door de codebase hoeven door te zetten. Interne
   // analytics-event-keys en variabelen heten nog steeds 'credion*' voor
@@ -1644,9 +1645,10 @@ function Demo() {
         }).catch(() => {})
         // Korte directe bevestiging na chip-klik. Eerdere lange-tekst varianten
         // (met bridge-observatie of warm-handoff bubble met outcome=callback)
-        // werden door bezoekers gemist of als nieuwe vraag gelezen. Nu één
-        // korte bevestiging met checkmark, direct als nieuwste bubble onderaan
-        // de chat — onmogelijk te missen want het is wat ze als laatste zien.
+        // werden door bezoekers gemist of als nieuwe vraag gelezen. Nu twee
+        // korte bot-bubbles met dank + telefoonnummer als laatste boodschap —
+        // onmogelijk te missen want het is wat ze als laatste zien onderaan
+        // de scroll.
         const handoffName = lead.firstName || ''
         const handoffPhone = lead.phone || ''
         const confirmation1 = handoffName

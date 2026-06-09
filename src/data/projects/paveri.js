@@ -67,22 +67,22 @@ export const project = {
       id: 'availability',
       tag: 'Beschikbaarheid',
       title: 'Nog 4 units beschikbaar',
-      body: 'Type A en B uitverkocht. Type D bijna volledig vergeven. Vier Type C-units van 178 m² nog vrij.',
+      body: 'Type A, B en D uitverkocht. Vier Type C-units van 178 m² nog beschikbaar.',
       image: '/projects/depaveri/avond.jpg',
     },
     {
       id: 'price',
       tag: 'Prijs',
-      title: 'Vanaf €199.950 v.o.n. excl. btw',
-      body: 'Type D van 112 m² vanaf €199.950, Type C van 178 m² voor €305.000. Vrij op naam, exclusief 21% btw.',
+      title: 'Type C: €305.000 v.o.n. excl. btw',
+      body: 'Royale Type C-unit van 178 m² over twee lagen voor €305.000. Vrij op naam, exclusief 21% btw.',
       image: '/projects/depaveri/doorsnede.jpg',
     },
     {
-      id: 'unit-d',
-      tag: 'Unit D',
-      title: '112 m² over twee lagen',
-      body: 'Compacte instapunit met overheaddeur 3 m breed en 2 eigen parkeerplaatsen direct voor de deur.',
-      image: '/projects/depaveri/interieur.jpg',
+      id: 'unit-c',
+      tag: 'Unit C',
+      title: '178 m² over twee lagen',
+      body: 'Royale unit met overheaddeur 4 m breed en 2 eigen parkeerplaatsen direct voor de deur. Ruimte voor werkplaats en een volwaardig kantoor op de verdieping.',
+      image: '/projects/depaveri/doorsnede.jpg',
     },
     {
       id: 'practical',
@@ -112,6 +112,13 @@ export const project = {
     city: 'Assendelft',
     district: 'Bedrijventerrein Assendelft Noord',
     aerialImage: '/projects/depaveri/locatie.jpg',
+    // Project-specifieke locatie-omschrijving. Zonder deze valt LocationBubble
+    // terug op een generieke (Haarlem-)tekst die voor De Paveri niet klopt.
+    blurb: 'De Paveri ligt op een gevestigd bedrijventerrein in Assendelft, in het hart van de Zaanstreek en op korte afstand van de Metropoolregio Amsterdam.',
+    // De aerial is een vierkante stylized kaart. In het 16:9-kader snijdt
+    // object-cover de onderrand af (waar "Assendelft" staat). 'contain' toont
+    // de hele kaart binnen het kader zodat niets wegvalt.
+    aerialFit: 'contain',
     // Stylized map heeft al een ingetekende bruine DE PAVERI drop-pin —
     // pulse-marker bewust uit (null) zodat we geen dubbele pin tonen.
     pinPosition: null,
@@ -142,14 +149,15 @@ export const project = {
   },
 
   status: {
-    // 4 van 16 nog beschikbaar = 75% verkocht (10 sold + 2 sold_ov telt voor "weg").
+    // 4 van 16 nog beschikbaar = 75% verkocht. Type A, B en D zijn volledig
+    // vergeven; alleen Type C heeft nog concreet beschikbare units.
     soldPercent: 75,
-    headline: 'Circa 75% verkocht. Type A en B uitverkocht. Nog enkele Type C-units, Type D bijna vergeven.',
+    headline: 'Circa 75% verkocht. Type A, B en D uitverkocht. Nog enkele Type C-units beschikbaar.',
     units: {
       A: { label: 'Uitverkocht', state: 'sold_out' },
       B: { label: 'Uitverkocht', state: 'sold_out' },
       C: { label: 'Nog enkele beschikbaar', state: 'available' },
-      D: { label: 'Bijna vergeven', state: 'available' },
+      D: { label: 'Uitverkocht', state: 'sold_out' },
     },
   },
 
@@ -229,8 +237,13 @@ export const project = {
       levelDetail: '56 m² begane grond plus 56 m² eerste verdieping',
       priceFrom: 199950,
       pricePerM2: 1785,
-      state: 'available',
-      stateLabel: 'Bijna vergeven',
+      // Type D is volledig vergeven — de plattegrond (sitePlan) toont alle
+      // D-units (9-16) al als verkocht/onder voorbehoud. Daarmee is Type C de
+      // enige nog concreet beschikbare unit. priceFrom blijft voor de
+      // referentie-weergave in de prijslijst, maar de state stuurt overal
+      // (prijslijst-tint, recommendation-fallback) dat D niet meer vrij is.
+      state: 'sold_out',
+      stateLabel: 'Uitverkocht',
       uses: ['Opslag', 'Werkplaats', 'Kantoor', 'Showroom'],
       image: '/projects/depaveri/interieur.jpg',
       pitch: 'Compacte instapunit van 112 m² over twee lagen. Geschikt voor opslag, werkplaats, showroom of kantoor.',
@@ -405,8 +418,15 @@ export const project = {
   ],
 
   financing: {
-    partner: 'Company & Living Finance',
-    description: 'Vrijblijvende financieringsscan via Company & Living Finance, financieringspartner van REPP.',
+    // Geen bedrijfsnaam in bezoeker-copy. `partner` vult de {financePartner}-
+    // templates in App.jsx ("Onze partner vastgoedfinancier kan...", "We delen
+    // je gegevens met vastgoedfinancier"). `partnerLabel` overschrijft het
+    // kleine eyebrow-label in de calc-bubbles (anders zou daar "Partner
+    // vastgoedfinancier" staan). De daadwerkelijke routing naar de externe
+    // financieringspartner blijft via credionWebhookUrl/Zapier lopen.
+    partner: 'vastgoedfinancier',
+    partnerLabel: 'Financieringspartner',
+    description: 'Vrijblijvende financieringsscan via onze vastgoedfinancieringspartner.',
     bullets: [
       'Mkb-financiering en zakelijke hypotheek',
       'Standaard tot 75% financiering',
@@ -433,13 +453,13 @@ export const project = {
     {
       id: 'price',
       title: 'Prijs',
-      body: 'Vanaf €199.950 v.o.n. excl. btw voor Type D (112 m²). Type C (178 m²) voor €305.000.',
+      body: 'Type C-units van 178 m² over twee lagen voor €305.000 v.o.n. excl. btw.',
       tag: 'Prijs',
     },
     {
       id: 'scarcity',
       title: 'Beschikbaarheid',
-      body: 'Circa 75% verkocht. Type A en B uitverkocht. Nog enkele Type C-units beschikbaar.',
+      body: 'Circa 75% verkocht. Type A, B en D uitverkocht. Nog enkele Type C-units beschikbaar.',
       tag: 'Schaarste',
     },
     {
@@ -451,7 +471,7 @@ export const project = {
     {
       id: 'financing',
       title: 'Financiering',
-      body: 'Vrijblijvende financieringsscan via Company & Living Finance. Standaard tot 75%, maatwerk soms tot 100%.',
+      body: 'Vrijblijvende financieringsscan via onze vastgoedfinancieringspartner. Standaard tot 75%, maatwerk soms tot 100%.',
       tag: 'Financiering',
     },
     {
@@ -478,11 +498,11 @@ export const project = {
   // het generieke REPP-portaal zonder portal-code of magic-link.
   portalUrl: 'https://kopen.repp.nl/depaveri',
   portalLabel: 'Bekijk De Paveri website',
-  // Webhook voor financiering-doorgeven aan Company & Living Finance.
+  // Webhook voor financiering-doorgeven aan de externe financieringspartner.
   // Variabele-naam blijft credionWebhookUrl voor backwards-compat met
   // sendCredionLead() in lib/credion.js — alleen de waarde verschilt
-  // per project. Zapier-trigger pikt de payload op en routeert door
-  // naar Company & Living Finance.
+  // per project. Zapier-trigger pikt de payload op en routeert door naar
+  // de financieringspartner (naam bewust niet in bezoeker-copy).
   credionWebhookUrl: 'https://hooks.zapier.com/hooks/catch/2082653/uxf993u/',
 
   // Sales team — identiek aan De Hofman per instructie van Flip.
@@ -623,9 +643,9 @@ export const project = {
   recommendIntroByChoice: {
     // 208 m² → Type A is uitverkocht. Korte, eerlijke verwijzing naar C.
     around_208: 'Op basis van de beschikbaarheid is Unit C de meest passende optie voor je.',
-    // 112 m² → Type D is bijna vergeven (2 sold-ov). We houden de deur open
-    // voor terugkomers maar wijzen op de concreet beschikbare Unit C.
-    around_112: 'Voor Type D zijn alleen nog enkele units verkocht onder voorbehoud. Komen die alsnog vrij, dan nemen we contact met je op. Voor nu zijn de Type C-units concreet beschikbaar.',
+    // 112 m² → Type D is uitverkocht. Eerlijke verwijzing naar de wel
+    // beschikbare Type C; we bieden aan om te bellen bij eventuele uitval.
+    around_112: 'De compacte Type D-units zijn inmiddels uitverkocht. Mocht er onverhoopt eentje vrijkomen, dan nemen we contact met je op. Voor nu is Unit C de concreet beschikbare optie.',
     // 178 m² → exact wat Unit C biedt. Natuurlijke fit, geen disclaimer.
     around_178: 'Op basis van je antwoorden past Unit C goed bij wat je zoekt.',
     // Geen voorkeur → toon Unit C als concrete vertrekpunt.
