@@ -24,10 +24,11 @@ export default function IntroScreen({ onStart }) {
               <img
                 src={project.wordmark}
                 alt={project.displayName}
-                /* Tussenmaat tussen oorspronkelijke h-8/h-12 (te dominant) en
-                   h-4/h-5 (te onleesbaar). h-6/h-8 = 24/32px geeft de wordmark
-                   leesbare aanwezigheid zonder de tagline te overrulen. */
-                className="h-6 lg:h-8 w-auto"
+                /* Iteratief bijgesteld op feedback: h-12/h-4/h-6 waren respectievelijk
+                   te dominant, te klein en nog steeds te klein. h-10/h-14 (40/56px)
+                   geeft de wordmark vergelijkbare visuele aanwezigheid als de
+                   "thuishaven"-tagline eronder, conform de oorspronkelijke wens. */
+                className="h-10 lg:h-14 w-auto"
               />
             ) : (
               <div className="text-[28px] lg:text-[44px] font-semibold text-ink leading-tight">{project.displayName}</div>

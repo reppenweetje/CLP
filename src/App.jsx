@@ -1575,39 +1575,22 @@ function Demo() {
           name: lead.firstName || '',
         })
         // Expliciete bevestiging-flow na chip-klik. De chip is al een commit
-        // (Slack krijgt notificatie via notifyCallbackRequest hierboven), dus:
-        //   1) bridge: soft observatie
-        //   2) warm-handoff bubble met initial outcome='callback' → groene
-        //      "Genoteerd. Ik bel je vandaag terug." strip is meteen zichtbaar.
-        //      Actie-knoppen verbergen automatisch (primaryDone logic) want de
-        //      bezoeker heeft al gekozen. Wie alsnog WhatsApp wil, gebruikt
-        //      het WA-icoon in de header.
-        //   3) confirmation bot-text als laatste bubble — onmogelijk te missen
-        //      want het is de meest recente boodschap onderaan de scroll.
+        // (Slack krijgt notificatie via notifyCallbackRequest hierboven). Eerder
+        // gebruikten we hier de warm-handoff bubble met action-buttons of een
+        // initial outcome='callback' green-strip, maar dat verwarde bezoekers
+        // (bubble met observation-headline las als nieuwe vraag, scrollden niet
+        // ver genoeg). Nu pure chat-confirmation: 2 bot-text bubbles waarvan
+        // de laatste expliciet zegt dat de aanvraag binnen is + welk nummer
+        // gebeld wordt + waar je alternatieven vindt. Geen bubble meer.
         const confirmationName = lead.firstName ? lead.firstName + ', dank' : 'Dank'
-        const handoffConfirmation = `${confirmationName} voor je aanvraag. Een makelaar neemt zo snel mogelijk contact met je op.`
+        const phoneLine = lead.phone
+          ? `Een makelaar belt je zo snel mogelijk terug op ${lead.phone}.`
+          : 'Een makelaar neemt zo snel mogelijk contact met je op.'
+        const handoffConfirmation = `${confirmationName} voor je aanvraag.\n\n${phoneLine}\n\nWil je liever zelf direct contact? Gebruik dan het WhatsApp- of telefoon-icoon rechtsboven.`
         dispatch({ type: 'WARM_HANDOFF_SHOWN' })
         dispatch({ type: 'WARM_HANDOFF_OUTCOME', outcome: 'callback' })
         sendSequence(userTextFromOpt(opt), [
           { kind: 'bot-text', text: bridge },
-          {
-            kind: 'warm-handoff',
-            payload: {
-              copy: buildHandoffCopy(personaForCard, project, {
-                signals: buying.signals,
-                name: lead.firstName || '',
-                hasPhone: !!lead.phone,
-                phoneDeclined,
-              }),
-              salesTeam: project.salesTeam,
-              hasPhone: !!lead.phone,
-              waLink: wa,
-              waSummary: summary,
-              phoneLink,
-              phoneDisplay: project.phoneNumber,
-              outcome: 'callback',
-            },
-          },
           { kind: 'bot-text', text: handoffConfirmation },
         ])
         return
