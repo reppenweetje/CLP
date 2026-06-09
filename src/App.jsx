@@ -31,7 +31,7 @@ import {
 } from './lib/consent.js'
 import { sendCredionLead } from './lib/credion.js'
 import { computeBuyingSignals, EMPTY_BEHAVIORS, getCallbackPromise, getTimeContext } from './lib/buyingSignals.js'
-import { buildHandoffCopy, buildHandoffBridge, resolveMicroIntro, resolveRecommendCopy } from './lib/handoffCopy.js'
+import { buildHandoffCopy, resolveMicroIntro, resolveRecommendCopy } from './lib/handoffCopy.js'
 import AppShell from './components/AppShell.jsx'
 import IntroScreen from './components/IntroScreen.jsx'
 import ChatThread from './components/ChatThread.jsx'
@@ -857,7 +857,8 @@ function Demo() {
   // beide A/B-experimenten orthogonaal kunnen analyseren in Plausible.
   const copyVariant = getOrAssignVariant()
   // Naam van de financieringspartner per project. De Hofman = Credion, De
-  // Paveri = Company & Living Finance. Alle bot-text en CTA-labels die
+  // Paveri toont een generieke vastgoedfinancieringspartner (geen
+  // bedrijfsnaam in de bezoeker-copy). Alle bot-text en CTA-labels die
   // verwijzen naar de partner gebruiken deze constante zodat we niet meer
   // hardcoded "Credion" door de codebase hoeven door te zetten. Interne
   // analytics-event-keys en variabelen heten nog steeds 'credion*' voor
@@ -1620,18 +1621,17 @@ function Demo() {
             signals: buying.signals.map((s) => s.id).join(', '),
           },
         }).catch(() => {})
-        const bridge = buildHandoffBridge(personaForCard, project, {
-          signals: buying.signals,
-          name: lead.firstName || '',
-        })
         // Expliciete bevestiging-flow na chip-klik. De chip is al een commit
         // (Slack krijgt notificatie via notifyCallbackRequest hierboven). Eerder
         // gebruikten we hier de warm-handoff bubble met action-buttons of een
         // initial outcome='callback' green-strip, maar dat verwarde bezoekers
         // (bubble met observation-headline las als nieuwe vraag, scrollden niet
-        // ver genoeg). Nu pure chat-confirmation: 2 bot-text bubbles waarvan
-        // de laatste expliciet zegt dat de aanvraag binnen is + welk nummer
-        // gebeld wordt + waar je alternatieven vindt. Geen bubble meer.
+        // ver genoeg). Daarna stond hier nog een observatie-brug ("we zien dat
+        // je de maandlasten aan het uitrekenen bent..."), maar die voelt
+        // onlogisch nadat de bezoeker zélf om een belletje vraagt — je hoeft
+        // niemand meer te overtuigen om te schakelen als hij dat net koos. Nu
+        // één directe bevestiging: aanvraag binnen + welk nummer gebeld wordt +
+        // waar je alternatieven vindt.
         const confirmationName = lead.firstName ? lead.firstName + ', dank' : 'Dank'
         const phoneLine = lead.phone
           ? `Een makelaar belt je zo snel mogelijk terug op ${lead.phone}.`
@@ -1640,7 +1640,6 @@ function Demo() {
         dispatch({ type: 'WARM_HANDOFF_SHOWN' })
         dispatch({ type: 'WARM_HANDOFF_OUTCOME', outcome: 'callback' })
         sendSequence(userTextFromOpt(opt), [
-          { kind: 'bot-text', text: bridge },
           { kind: 'bot-text', text: handoffConfirmation },
         ])
         return
