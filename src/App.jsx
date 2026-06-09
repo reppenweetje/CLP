@@ -1114,6 +1114,20 @@ function Demo() {
       // zodat we beleggers in De Hofman die hun unit willen verhuren later
       // kunnen koppelen aan deze bezoeker.
       if (opt.id === 'huur' || personaNext === 'huurder') {
+        // Projecten met nauticGate (PIER14): huur-leads moeten ook eerst de
+        // branche-check door. Alleen nautische huurders kunnen ooit gematched
+        // worden aan een belegger; niet-nautische huurders krijgen exit-flow.
+        // Sturen via nauticGate; de nauticGate-handler detecteert intent='huur'
+        // en routet daarna naar rentRange (ja) of exit-flow (nee).
+        if (project.flowOverrides?.nauticGate?.enabled) {
+          dispatch({ type: 'ANSWER', key: 'intent', value: answerValue(opt), next: 'nauticGate' })
+          sendSequence(userTextFromOpt(opt), [
+            { kind: 'bot-text', text: `Helder. ${project.displayName} is een koop-project; voordat we kijken wat we voor je kunnen doen, eerst nog dit:` },
+            { kind: 'bot-text', text: flow.questions.nauticGate.label },
+          ])
+          return
+        }
+        // Default (Hofman/Paveri): direct naar rentRange, rent-match queue.
         dispatch({ type: 'ANSWER', key: 'intent', value: answerValue(opt), next: 'rentRange' })
         sendSequence(userTextFromOpt(opt), [
           { kind: 'bot-text', text: `Helder. ${project.displayName} is een koop-project, maar er zijn beleggers die hun unit verhuren. Met je voorkeur kunnen we je in de toekomst koppelen aan een belegger als er een match is.` },
@@ -1162,7 +1176,24 @@ function Demo() {
     //              pass via behaviors.nauticExplanationShown.
     if (q === 'nauticGate') {
       trackEvent('nautic-gate:answered', { id: opt.id, label: opt.label })
+      // Huur-context detectie: als intent='huur' kwam de bezoeker via de
+      // huur-tak naar nauticGate (zie intent-handler). Branche-check splitst
+      // dan in nautische-huurder (lijst 303, rent-match capture) en niet-
+      // nautische-huurder (exit-flow met aparte variant tag).
+      const isRentIntent = state.answers.intent?.id === 'huur'
       if (opt.id === 'ja') {
+        if (isRentIntent) {
+          // Nautische huurder: PIER14 verhuurt niet maar we capturen toch
+          // voor de rent-match queue. leadVariant 'rent_nautical' → Brevo
+          // lijst 303 via BREVO_LIST_ID_PIER14_BUNIT_RENT_NAUTICAL.
+          dispatch({ type: 'BEHAVIOR_SET_LEAD_VARIANT', variant: 'rent_nautical' })
+          dispatch({ type: 'ANSWER', key: 'nauticGate', value: answerValue(opt), next: 'rentRange' })
+          sendSequence(userTextFromOpt(opt), [
+            { kind: 'bot-text', text: `Helder. ${project.displayName} is een koop-project en beleggers kunnen geen unit kopen voor verhuur. We bewaren je voorkeur wel — mocht er een keer een match komen dan nemen we contact op.` },
+            { kind: 'bot-text', text: flow.questions.rentRange.label },
+          ])
+          return
+        }
         const personaNow = state.answers.intent?.persona || persona || 'onbekend'
         const microIntro = pickMicroIntro(personaNow)
         const cards = uspCardOrder(personaNow)
@@ -1212,7 +1243,12 @@ function Demo() {
         || `Helaas past ${project.displayName} dan niet bij jou, dit project is specifiek voor maritieme/nautische ondernemers.`
       const exitReferral = project.flowOverrides?.nauticGate?.exitReferral
         || 'We kunnen je doorverwijzen naar andere REPP-bedrijfsunit-projecten in de regio. Laat hieronder je gegevens achter en we nemen contact op.'
-      dispatch({ type: 'BEHAVIOR_SET_LEAD_VARIANT', variant: 'not_nautical' })
+      // Variant-tag bepaalt Brevo-lijst:
+      //   not_nautical      → lijst 300 (koop-intent maar geen doelgroep)
+      //   rent_not_nautical → lijst 303 (huur-intent + geen doelgroep)
+      // Beide eindigen in dezelfde exit-flow met lead-capture + chat stopt.
+      const exitVariant = isRentIntent ? 'rent_not_nautical' : 'not_nautical'
+      dispatch({ type: 'BEHAVIOR_SET_LEAD_VARIANT', variant: exitVariant })
       dispatch({ type: 'ANSWER', key: 'afhaakReason', value: answerValue({ id: 'not_branche', label: 'Niet nautisch ondernemer', score: 0 }), next: 'lead-form' })
       sendSequence(userTextFromOpt(opt), [
         { kind: 'bot-text', text: exitMessage },
@@ -2115,13 +2151,15 @@ function Demo() {
     if (userMsgs.length > 0) {
       dispatch({ type: 'APPEND', messages: userMsgs })
     }
-    // Not-nautical exit: bezoeker zat in de nauticGate=nee tak en heeft net
-    // contactgegevens achtergelaten. We sluiten de chat hier af met een
-    // dank-bericht, geen brochure-belofte want bezoeker krijgt PIER14 niet.
-    // currentQuestion expliciet null zodat geen vervolgvragen meer komen.
-    if (state.behaviors?.leadVariant === 'not_nautical') {
+    // Exit-flows voor bezoekers die niet in de doelgroep vallen. Twee varianten
+    // landen hier: koop-intent + niet nautisch (not_nautical → lijst 300) en
+    // huur-intent + niet nautisch (rent_not_nautical → lijst 303). Beide krijgen
+    // hetzelfde "we nemen contact op"-bericht en de chat stopt — geen brochure,
+    // size of timeline vragen meer.
+    const exitVariants = ['not_nautical', 'rent_not_nautical']
+    if (exitVariants.includes(state.behaviors?.leadVariant)) {
       dispatch({ type: 'SET_QUESTION', next: null })
-      trackEvent('flow:complete', { stage: 'not-nautical', persona })
+      trackEvent('flow:complete', { stage: state.behaviors.leadVariant, persona })
       const firstName = lead.firstName || ''
       const tail = [
         { kind: 'bot-text', text: `Bedankt${firstName ? ', ' + firstName : ''}. We hebben je gegevens. We nemen binnenkort contact met je op om te kijken welke andere REPP-projecten wél bij je passen.` },
