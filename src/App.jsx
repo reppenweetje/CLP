@@ -1574,9 +1574,17 @@ function Demo() {
           signals: buying.signals,
           name: lead.firstName || '',
         })
+        // Expliciete bevestiging-bubble na de chip-klik. Slack krijgt al een
+        // notificatie (notifyCallbackRequest hierboven) maar de bezoeker zag
+        // tot nu toe alleen een soft observatie + actie-bubble — geen "we
+        // hebben je aanvraag ontvangen"-bericht. Lost het rapport op dat
+        // gebruikers dachten dat hun klik niet doorkwam.
+        const confirmationName = lead.firstName ? lead.firstName + ', dank' : 'Dank'
+        const handoffConfirmation = `${confirmationName} voor je aanvraag. Een makelaar neemt zo snel mogelijk contact met je op.`
         dispatch({ type: 'WARM_HANDOFF_SHOWN' })
         sendSequence(userTextFromOpt(opt), [
           { kind: 'bot-text', text: bridge },
+          { kind: 'bot-text', text: handoffConfirmation },
           {
             kind: 'warm-handoff',
             payload: {
