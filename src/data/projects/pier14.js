@@ -35,12 +35,14 @@ export const project = {
   // linkt direct door.
   portalStrategy: 'kopen-repp-redirect',
 
-  // Gallery = HeroCarousel op IntroScreen (eerste pagina). Bewust beperkt
-  // tot de 2 scherpste beelden op verzoek: rendering top-down + drone-foto.
-  // Andere visuals zijn renders die op groot formaat te onscherp zijn.
+  // Gallery = HeroCarousel op IntroScreen (eerste pagina). Strikt twee
+  // hi-res beelden uit de officiële render-set: intro-rendering (rooftop-
+  // view rendering) + intro-drone (top-down luchtfoto kavel). Earlier
+  // gebruikte project.png / luchtfoto-haven.png waren te onscherp op groot
+  // formaat — dit zijn de scherpste varianten die we hebben.
   gallery: [
-    { src: '/projects/pier14/project.png',         alt: 'PIER14 luchtaanzicht units (rendering)' },
-    { src: '/projects/pier14/luchtfoto-haven.png', alt: 'PIER14 kavel aan de Oude Maas (drone)' },
+    { src: '/projects/pier14/intro-rendering.jpg', alt: 'PIER14 rooftop-view rendering' },
+    { src: '/projects/pier14/intro-drone.png',     alt: 'PIER14 kavel aan de Oude Maas (drone)' },
   ],
 
   // Sfeerbeelden-bubble in de chat krijgt een uitgebreidere set. Begint
@@ -50,10 +52,10 @@ export const project = {
   // App.jsx GalleryBubble valt terug op project.gallery als project.sfeerbeelden
   // niet bestaat — andere projecten hoeven dus niet aangepast.
   sfeerbeelden: [
+    { src: '/projects/pier14/intro-rendering.jpg', alt: 'PIER14 rooftop-view rendering' },
+    { src: '/projects/pier14/intro-drone.png',     alt: 'PIER14 kavel aan de Oude Maas (drone)' },
     { src: '/projects/pier14/project.png',         alt: 'PIER14 luchtaanzicht units (rendering)' },
-    { src: '/projects/pier14/luchtfoto-haven.png', alt: 'PIER14 kavel aan de Oude Maas (drone)' },
     { src: '/projects/pier14/pier-overview.png',   alt: 'PIER14 overview met pier en haven' },
-    { src: '/projects/pier14/beschikbaarheid.png', alt: 'PIER14 exterieur overdag' },
     { src: '/projects/pier14/praktisch.png',       alt: 'PIER14 interieur Schokbeton-loods' },
   ],
 
