@@ -205,6 +205,9 @@ export const project = {
       viewBox: '0 0 1497.8 897.9',
       // Terrein-omtrek als achtergrondvlak (volledige viewBox).
       background: '0,0 1497.8,0 1497.8,897.9 0,897.9',
+      // Type-label onder elk nummer aan-uit: voor PIER14 uit want alle
+      // 26 units delen 5 types, dat geeft visueel te druk in zo'n klein grid.
+      showUnitType: false,
       units: [
         // Top-rij links: grote sold units (26, 25, 24, 23, 22).
         { number: 26, type: 'Bow',    state: 'sold',      rect: { x: 71,     y: 268.2, w: 344.4, h: 177.8 } },
@@ -219,8 +222,11 @@ export const project = {
         { number: 15, type: 'Nautic', state: 'sold',      rect: { x: 1141.8, y: 268.2, w: 55.9,  h: 139.3 } },
         // Top-rechts: 19 (Harbor+ beschikbaar) wide rect.
         { number: 19, type: 'Harbor', state: 'available', rect: { x: 1201.8, y: 268.1, w: 231.9, h: 109.2 }, price: 699000 },
-        // 18 (Harbor- sold) L-shape midden-rechts; benadering met rect onder 19.
-        { number: 18, type: 'Harbor', state: 'sold',      rect: { x: 1080,   y: 412.2, w: 353.7, h: 69.5 } },
+        // 18 (Harbor- sold) is een L-shape: smal voet-stuk onder 20+16 dat
+        // doorloopt in een breder dak boven 16+17 (onder unit 19). Polygon-
+        // hoekpunten uit het originele SVG-pad (afgeronde hoeken weggelaten,
+        // levert visueel verschil < 1px op deze schaal).
+        { number: 18, type: 'Harbor', state: 'sold', polygon: '1080,412.3 1080,481.6 1433.7,481.6 1433.7,382.1 1201.8,382.1 1201.8,412.3' },
         // Front-rij links: grote sold units (1, 2).
         { number: 1,  type: 'Stern',  state: 'sold',      rect: { x: 71,     y: 450.7, w: 193.3, h: 180.8 } },
         { number: 2,  type: 'Marina', state: 'sold',      rect: { x: 269.4,  y: 450.8, w: 145.7, h: 180.8 } },

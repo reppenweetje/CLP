@@ -23,6 +23,11 @@ export default function SitePlanPolygonBubble({ sitePlan, units, persona, onUnit
   const [selectedNumber, setSelectedNumber] = useState(null)
   const svg = sitePlan.svg || {}
   const svgUnits = svg.units || []
+  // Type-label onder het unit-nummer is default aan. Project kan 'm uit-
+  // zetten via sitePlan.svg.showUnitType = false als alle units van een paar
+  // types zijn en de extra labels visueel te druk worden (bv. PIER14 waar
+  // 26 units zelfde 5 types delen).
+  const showUnitType = svg.showUnitType !== false
   const selected = svgUnits.find((u) => u.number === selectedNumber)
   const selectedTypeData = selected ? units?.find((u) => u.type === selected.type) : null
 
@@ -107,18 +112,20 @@ export default function SitePlanPolygonBubble({ sitePlan, units, persona, onUnit
                         >
                           {u.number}
                         </text>
-                        <text
-                          x={center.x}
-                          y={center.y + 30}
-                          textAnchor="middle"
-                          dominantBaseline="central"
-                          fontSize="18"
-                          fill={c.text}
-                          opacity="0.7"
-                          style={{ pointerEvents: 'none' }}
-                        >
-                          {u.type.toLowerCase()}
-                        </text>
+                        {showUnitType && (
+                          <text
+                            x={center.x}
+                            y={center.y + 30}
+                            textAnchor="middle"
+                            dominantBaseline="central"
+                            fontSize="18"
+                            fill={c.text}
+                            opacity="0.7"
+                            style={{ pointerEvents: 'none' }}
+                          >
+                            {u.type.toLowerCase()}
+                          </text>
+                        )}
                       </g>
                     )
                   })}
