@@ -589,6 +589,12 @@ export const project = {
   // Voor Paveri: andere m²-categorieën (112/178/208 ipv tot_50/rond_100/etc)
   // en andere vraag-formulering omdat units 2-laags zijn met BG = totaal/2.
   flowOverrides: {
+    // Huur-leads (intent 'Te huur' of afhaak 'Huur in plaats van koop')
+    // krijgen deze leadVariant-tag. brevo.ts routeert daarmee naar
+    // BREVO_LIST_ID_PAVERI_BUNIT_HUURDER (Brevo-lijst 305 "De Paveri (F2)
+    // CLP Huurder") ipv de default Paveri-lijst. Zonder de env-var valt het
+    // veilig terug op de project-default-lijst.
+    rentLeadVariant: 'huurder',
     sizeQuestion: {
       label: 'Hoeveel m² zoek je?',
       // Alle opties wijzen naar Unit C als `unit`: bij De Paveri zijn dat
