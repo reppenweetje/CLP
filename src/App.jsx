@@ -1141,6 +1141,28 @@ function Demo() {
         ])
         return
       }
+      // Belegger-route (PIER14): bezoeker hoeft niet zelf nautisch te zijn,
+      // mits 'ie een nautische huurder in de unit plaatst. Slaat de nautisch-
+      // gate over en geeft direct de regel-uitleg + USP-cards. Project zet
+      // flowOverrides.beleggerExplainer om dit aan te zetten (array van
+      // bot-text strings); andere projecten zonder dit veld blijven via de
+      // standaard gate-flow lopen.
+      if ((personaNext === 'belegger' || personaNext === 'beide') && project.flowOverrides?.beleggerExplainer) {
+        const explainerBubbles = (Array.isArray(project.flowOverrides.beleggerExplainer)
+          ? project.flowOverrides.beleggerExplainer
+          : [project.flowOverrides.beleggerExplainer])
+          .map((text) => ({ kind: 'bot-text', text }))
+        const cards = uspCardOrder(personaNext)
+        dispatch({ type: 'ANSWER', key: 'intent', value: answerValue(opt), next: 'availabilityCheck' })
+        sendSequence(userTextFromOpt(opt), [
+          ...explainerBubbles,
+          { kind: 'usp-cards', payload: { cards } },
+          { kind: 'pause', ms: 8000, silent: true },
+          { kind: 'pause', ms: 3000 },
+          { kind: 'bot-text', text: flow.questions.availabilityCheck.label },
+        ])
+        return
+      }
       // Project-specifieke branche-gate: PIER14 wil alleen maritieme/nautische
       // ondernemers, dus na intent vragen we eerst expliciet of de bezoeker
       // bij de doelgroep hoort. Default-projecten (Hofman/Paveri) hebben deze
@@ -1621,26 +1643,25 @@ function Demo() {
             signals: buying.signals.map((s) => s.id).join(', '),
           },
         }).catch(() => {})
-        // Expliciete bevestiging-flow na chip-klik. De chip is al een commit
-        // (Slack krijgt notificatie via notifyCallbackRequest hierboven). Eerder
-        // gebruikten we hier de warm-handoff bubble met action-buttons of een
-        // initial outcome='callback' green-strip, maar dat verwarde bezoekers
-        // (bubble met observation-headline las als nieuwe vraag, scrollden niet
-        // ver genoeg). Daarna stond hier nog een observatie-brug ("we zien dat
-        // je de maandlasten aan het uitrekenen bent..."), maar die voelt
-        // onlogisch nadat de bezoeker zélf om een belletje vraagt — je hoeft
-        // niemand meer te overtuigen om te schakelen als hij dat net koos. Nu
-        // één directe bevestiging: aanvraag binnen + welk nummer gebeld wordt +
-        // waar je alternatieven vindt.
-        const confirmationName = lead.firstName ? lead.firstName + ', dank' : 'Dank'
-        const phoneLine = lead.phone
-          ? `Een makelaar belt je zo snel mogelijk terug op ${lead.phone}.`
+        // Korte directe bevestiging na chip-klik. Eerdere lange-tekst varianten
+        // (met bridge-observatie of warm-handoff bubble met outcome=callback)
+        // werden door bezoekers gemist of als nieuwe vraag gelezen. Nu twee
+        // korte bot-bubbles met dank + telefoonnummer als laatste boodschap —
+        // onmogelijk te missen want het is wat ze als laatste zien onderaan
+        // de scroll.
+        const handoffName = lead.firstName || ''
+        const handoffPhone = lead.phone || ''
+        const confirmation1 = handoffName
+          ? `Dank, ${handoffName}. Je belverzoek is binnen.`
+          : 'Je belverzoek is binnen.'
+        const confirmation2 = handoffPhone
+          ? `Een makelaar belt je zo snel mogelijk terug op ${handoffPhone}.`
           : 'Een makelaar neemt zo snel mogelijk contact met je op.'
-        const handoffConfirmation = `${confirmationName} voor je aanvraag.\n\n${phoneLine}\n\nWil je liever zelf direct contact? Gebruik dan het WhatsApp- of telefoon-icoon rechtsboven.`
         dispatch({ type: 'WARM_HANDOFF_SHOWN' })
         dispatch({ type: 'WARM_HANDOFF_OUTCOME', outcome: 'callback' })
         sendSequence(userTextFromOpt(opt), [
-          { kind: 'bot-text', text: handoffConfirmation },
+          { kind: 'bot-text', text: confirmation1 },
+          { kind: 'bot-text', text: confirmation2 },
         ])
         return
       }
