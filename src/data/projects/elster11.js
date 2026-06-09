@@ -515,6 +515,13 @@ export const project = {
     // iedere bezoeker dezelfde opening ziet. De intro-A/B (begin-scherm
     // wel/niet) loopt los hiervan gewoon door.
     intentLabel: 'Waarom ben je op zoek naar een bedrijfsunit?',
+    // Huur-leads (intent 'Te huur' of afhaak 'Huur in plaats van koop')
+    // krijgen deze leadVariant-tag. brevo.ts routeert daarmee naar
+    // BREVO_LIST_ID_ELST_BUNIT_HUURDER (Brevo-lijst 304 "Elster11 (F2) CLP
+    // Huurder") ipv de default Elst-lijst. Andere projecten zetten dit niet
+    // en blijven ongemoeid; zonder de env-var valt het veilig terug op de
+    // project-default-lijst.
+    rentLeadVariant: 'huurder',
     sizeQuestion: {
       label: 'Hoe groot wil je dat de begane grond is?',
       options: [

@@ -1114,6 +1114,11 @@ function Demo() {
       // zodat we beleggers in De Hofman die hun unit willen verhuren later
       // kunnen koppelen aan deze bezoeker.
       if (opt.id === 'huur' || personaNext === 'huurder') {
+        // Project kan huur-leads naar een aparte Brevo-lijst routeren via
+        // flowOverrides.rentLeadVariant (ELSTER: 'huurder' → lijst 304).
+        // Andere projecten zetten dit niet en blijven ongemoeid.
+        const rentVariant = project.flowOverrides?.rentLeadVariant
+        if (rentVariant) dispatch({ type: 'BEHAVIOR_SET_LEAD_VARIANT', variant: rentVariant })
         dispatch({ type: 'ANSWER', key: 'intent', value: answerValue(opt), next: 'rentRange' })
         sendSequence(userTextFromOpt(opt), [
           { kind: 'bot-text', text: `Helder. ${project.displayName} is een koop-project, maar er zijn beleggers die hun unit verhuren. Met je voorkeur kunnen we je in de toekomst koppelen aan een belegger als er een match is.` },
@@ -1326,6 +1331,10 @@ function Demo() {
       // huurprijs-range op zodat we later kunnen koppelen aan beleggers
       // in De Hofman die hun unit willen verhuren.
       if (opt.id === 'huur') {
+        // Zelfde rent-lijst-routing als bij de intent-huur-tak (ELSTER:
+        // leadVariant 'huurder' → Brevo-lijst 304). Project-gated.
+        const rentVariant = project.flowOverrides?.rentLeadVariant
+        if (rentVariant) dispatch({ type: 'BEHAVIOR_SET_LEAD_VARIANT', variant: rentVariant })
         dispatch({ type: 'ANSWER', key: 'afhaakReason', value: answerValue(opt), next: 'rentRange' })
         sendSequence(userTextFromOpt(opt), [
           { kind: 'bot-text', text: `Begrijpelijk. Bij ${project.displayName} zijn er ook beleggers die hun unit verhuren.` },
@@ -1368,6 +1377,11 @@ function Demo() {
         const customerSummary = customerRentSummary(opt.label)
         const wa = whatsAppDeeplink(project, lead.firstName, customerSummary)
         dispatch({ type: 'ANSWER', key: 'rentRange', value: answerValue(opt), next: null })
+        // Lead bestond al (afhaak-huur-route): her-push zodat de zojuist
+        // gezette leadVariant (bv. ELSTER 'huurder' → lijst 304) alsnog naar
+        // brevo.ts gaat. Zonder lead loopt het rent-match-pad via finishLead,
+        // dat zelf al pusht.
+        pushSnapshot()
         sendSequence(userTextFromOpt(opt), [
           { kind: 'bot-text', text: `Genoteerd, ${lead.firstName}. We bewaren je voorkeur en nemen contact op zodra er een match is.` },
           { kind: 'bot-text', text: 'Mocht je nog vragen hebben, stuur ons dan gerust een WhatsApp.' },
