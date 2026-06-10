@@ -148,7 +148,9 @@ export const flow = {
       label: 'Hoe groot wil je dat de begane grond is?',
       options: [
         { id: 'tot_50', label: '50 m²', score: 12, unit: 'L' },
-        { id: 'rond_100', label: '100 m²', score: 15, unit: 'L' },
+        // 100 m² begane grond → XXL: de L heeft maar ~52,5 m² BG (105 m² over
+        // twee lagen), dus voor een begane grond rond 100 m² past de XXL beter.
+        { id: 'rond_100', label: '100 m²', score: 15, unit: 'XXL' },
         { id: 'meer_dan_100', label: 'Groter dan 100 m²', score: 15, unit: 'XXL' },
         { id: 'weet_niet', label: 'Weet ik nog niet', score: 5 },
       ],
