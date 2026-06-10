@@ -21,12 +21,12 @@ export const project = {
   // Gallery wisselt visueel tussen exterieur en interieur shots zodat de
   // hero-carousel duidelijk transformeert, niet twee bijna-identieke avond-shots.
   gallery: [
-    { src: '/images/hero.jpg', alt: 'De Hofman exterieur in de avond' },
-    { src: '/images/showroom.jpg', alt: 'Unit ingericht als showroom' },
-    { src: '/images/exterieur.jpg', alt: 'De Hofman vanuit de straat' },
-    { src: '/images/unit-l.jpg', alt: 'Unit ingericht als kantoor' },
-    { src: '/images/werkplaats.jpg', alt: 'Unit ingericht als werkplaats' },
-    { src: '/images/unit-studio.jpg', alt: 'Unit ingericht als fotostudio' },
+    { src: '/images/sfeer-1.jpg', alt: 'De Hofman vanaf de straat overdag' },
+    { src: '/images/sfeer-2.jpg', alt: 'De Hofman in de avond met verlichte units' },
+    { src: '/images/sfeer-3.jpg', alt: 'Unit ingericht als kantoor en showroom' },
+    { src: '/images/sfeer-4.jpg', alt: 'Unit ingericht als directiekantoor' },
+    { src: '/images/sfeer-5.jpg', alt: 'Unit ingericht als werkplaats' },
+    { src: '/images/sfeer-6.jpg', alt: 'Unit ingericht voor opslag en techniek' },
   ],
 
   // USP-cards voor de eerste micro-value moment.
@@ -38,7 +38,7 @@ export const project = {
       tag: 'Project',
       title: '14 bedrijfsunits in Haarlem',
       body: 'Hoogwaardige nieuwbouwunits in de Waarderpolder, geschikt voor ondernemers en beleggers.',
-      image: '/images/exterieur.jpg',
+      image: '/images/project-2026.jpg',
     },
     {
       id: 'location',
@@ -55,8 +55,8 @@ export const project = {
       id: 'availability',
       tag: 'Beschikbaarheid',
       title: '70% verkocht',
-      body: 'XL is uitverkocht. Nog enkele L-units beschikbaar. XXL volgt later.',
-      image: '/images/unit-l.jpg',
+      body: 'XL is uitverkocht. Nog enkele L-units beschikbaar. De ruime XXL-units zijn nu ook in de verkoop.',
+      image: '/images/availability-2026.jpg',
     },
     {
       id: 'price',
@@ -142,11 +142,11 @@ export const project = {
 
   status: {
     soldPercent: 70,
-    headline: 'Circa 70% verkocht. XL uitverkocht. Nog enkele L-units. XXL volgt.',
+    headline: 'Circa 70% verkocht. XL uitverkocht. Nog enkele L-units. XXL nu in de verkoop.',
     units: {
       L: { label: 'Nog enkele beschikbaar', state: 'available' },
       XL: { label: 'Uitverkocht', state: 'sold_out' },
-      XXL: { label: 'Volgt later in verkoop', state: 'coming_soon' },
+      XXL: { label: 'Nu in de verkoop', state: 'available' },
     },
   },
 
@@ -161,7 +161,7 @@ export const project = {
         { number: 4, type: 'L', state: 'available' },
         { number: 5, type: 'L', state: 'available' },
         { number: 6, type: 'L', state: 'sold_ov' },
-        { number: 7, type: 'XXL', state: 'coming_soon' },
+        { number: 7, type: 'XXL', state: 'available' },
       ]},
       { units: [
         { number: 8, type: 'XL', state: 'sold' },
@@ -170,14 +170,13 @@ export const project = {
         { number: 11, type: 'L', state: 'sold' },
         { number: 12, type: 'L', state: 'sold_ov' },
         { number: 13, type: 'L', state: 'sold_ov' },
-        { number: 14, type: 'XXL', state: 'coming_soon' },
+        { number: 14, type: 'XXL', state: 'available' },
       ]},
     ],
     legend: [
       { state: 'available', label: 'Beschikbaar' },
       { state: 'sold_ov', label: 'Verkocht ov' },
       { state: 'sold', label: 'Verkocht' },
-      { state: 'coming_soon', label: 'Later in verkoop' },
     ],
     // Orientatie-labels die SitePlanBubble rondom de tegelgrid toont.
     cardinalLabels: {
@@ -233,11 +232,11 @@ export const project = {
       parking: 2,
       priceFrom: 515500,
       pricePerM2: 2698,
-      state: 'coming_soon',
-      stateLabel: 'Volgt later in verkoop',
+      state: 'available',
+      stateLabel: 'Nu in de verkoop',
       uses: ['3-laags bedrijfsunit', 'Variant met bedrijfsgebonden woning'],
-      image: '/images/xxl-woning.jpg',
-      pitch: 'Drie lagen. Mogelijk met bedrijfsgebonden woning en eigen dakterras. Volgt later in verkoop.',
+      image: '/images/xxl-unit.jpg',
+      pitch: 'Drie lagen. Mogelijk met bedrijfsgebonden woning en eigen dakterras. Nu in de verkoop.',
       specs: [
         'Circa 191 m² over drie lagen',
         'Optie bedrijfsgebonden woning',
@@ -335,15 +334,12 @@ export const project = {
     'Hoogwaardige afwerking en nieuwbouwgaranties.',
   ],
 
-  financing: {
-    partner: 'Credion',
-    description: 'Vrijblijvende financieringsscan via Credion, onze financieringspartner.',
-    bullets: [
-      'Mkb-financieringsspecialist',
-      'Onafhankelijk advies over zakelijke financiering',
-      'Snelle scan op haalbaarheid en condities',
-    ],
-  },
+  // Financiering / Credion bewust uitgeschakeld voor De Hofman. Zonder
+  // het `financing`-object verbergt MortgageCalc de financieringsscan-CTA
+  // en valt de financing-contentCard weg uit recommendContentCards().
+  // De moreInfo-chip 'financing' wordt via disabledTopics (onderaan) ook
+  // verborgen, en zonder credionWebhookUrl is sendCredionLead inert.
+  disabledTopics: ['financing'],
 
   contentCards: [
     {
@@ -368,7 +364,7 @@ export const project = {
     {
       id: 'scarcity',
       title: 'Beschikbaarheid',
-      body: 'Circa 70% verkocht. XL uitverkocht. Nog enkele L-units. XXL volgt later.',
+      body: 'Circa 70% verkocht. XL uitverkocht. Nog enkele L-units. De ruime XXL-units zijn nu ook in de verkoop.',
       tag: 'Schaarste',
     },
     {
@@ -376,12 +372,6 @@ export const project = {
       title: 'Praktisch',
       body: 'Overheaddeur, eigen parkeerplaats, koppelbaar, nieuwbouwgaranties en flexibele indeling.',
       tag: 'Specs',
-    },
-    {
-      id: 'financing',
-      title: 'Financiering',
-      body: 'Vrijblijvende financieringsscan via Credion. We brengen je in contact als je wilt.',
-      tag: 'Financiering',
     },
     {
       id: 'investor',
@@ -406,8 +396,6 @@ export const project = {
   // hebben gezien direct kunnen doorklikken naar het officiele kanaal.
   portalUrl: 'https://dehofman.nl',
   portalLabel: 'Bekijk op dehofman.nl',
-  // Webhook voor financiering-doorgeven aan Credion (Zapier-trigger).
-  credionWebhookUrl: 'https://hooks.zapier.com/hooks/catch/2082653/ua9zc1l/',
 
   // Sales team. Bot is de chat-persona (kop van elk bot-bericht); rep is de
   // mens die belt. Bewust DEZELFDE persoon — Jesse begint de chat en Jesse
