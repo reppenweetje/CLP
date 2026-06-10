@@ -140,6 +140,14 @@ function buildAttributes(lead: BrevoLeadInput): Record<string, unknown> {
     if (typeof (extras as Record<string, unknown>).rentRange === 'string') {
       set('RENT_RANGE', (extras as Record<string, string>).rentRange)
     }
+    // UNIT: het unit-type waar de lead zich op richt (door de frontend
+    // afgeleid uit de size-keuze, bv. Hofman "Groter dan 100 m²" → "XXL").
+    // Staat mogelijk nog niet als attribute in Brevo; dan dropt Brevo 'm
+    // stil tot iemand 'm in het dashboard aanmaakt — daarna verschijnt de
+    // data zonder code-wijziging.
+    if (typeof (extras as Record<string, unknown>).unit === 'string') {
+      set('UNIT', (extras as Record<string, string>).unit)
+    }
   }
 
   return attrs
