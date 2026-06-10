@@ -77,7 +77,7 @@ export const project = {
       tag: 'Praktisch',
       title: 'Overheaddeur en eigen parkeerplaats',
       body: 'Ontworpen voor ondernemers die functionele ruimte zoeken met representatieve uitstraling.',
-      image: '/images/werkplaats.jpg',
+      image: '/images/praktisch-2026.jpg',
     },
     {
       id: 'investor',
@@ -229,7 +229,7 @@ export const project = {
       type: 'XXL',
       size: 191,
       levels: 3,
-      parking: 2,
+      parking: 1,
       priceFrom: 515500,
       pricePerM2: 2698,
       state: 'available',
