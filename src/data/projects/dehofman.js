@@ -407,7 +407,8 @@ export const project = {
   portalUrl: 'https://dehofman.nl',
   portalLabel: 'Bekijk op dehofman.nl',
   // Webhook voor financiering-doorgeven aan Credion (Zapier-trigger).
-  credionWebhookUrl: 'https://hooks.zapier.com/hooks/catch/2082653/ua9zc1l/',
+  // Gedeelde REPP-zap voor alle projecten (consolidatie 2026-06-10).
+  credionWebhookUrl: 'https://hooks.zapier.com/hooks/catch/2082653/43uddw1/',
 
   // Sales team. Bot is de chat-persona (kop van elk bot-bericht); rep is de
   // mens die belt. Bewust DEZELFDE persoon — Jesse begint de chat en Jesse

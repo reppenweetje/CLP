@@ -503,7 +503,8 @@ export const project = {
   // sendCredionLead() in lib/credion.js — alleen de waarde verschilt
   // per project. Zapier-trigger pikt de payload op en routeert door naar
   // de financieringspartner (naam bewust niet in bezoeker-copy).
-  credionWebhookUrl: 'https://hooks.zapier.com/hooks/catch/2082653/uxf993u/',
+  // Gedeelde REPP-zap voor alle projecten (consolidatie 2026-06-10).
+  credionWebhookUrl: 'https://hooks.zapier.com/hooks/catch/2082653/43uddw1/',
 
   // Sales team — identiek aan De Hofman per instructie van Flip.
   salesTeam: {

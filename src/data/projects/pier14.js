@@ -570,7 +570,8 @@ export const project = {
   portalUrl: 'https://kopen.repp.nl/pier14',
   portalLabel: 'Bekijk PIER14 website',
   // Zapier-webhook voor Credion financierings-aanvraag (uit intake).
-  credionWebhookUrl: 'https://hooks.zapier.com/hooks/catch/2082653/4b7r5qv/',
+  // Gedeelde REPP-zap voor alle projecten (consolidatie 2026-06-10).
+  credionWebhookUrl: 'https://hooks.zapier.com/hooks/catch/2082653/43uddw1/',
 
   salesTeam: {
     bot: { name: 'Jesse', org: 'REPP' },
