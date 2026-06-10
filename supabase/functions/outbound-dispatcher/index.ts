@@ -156,9 +156,11 @@ async function fetchOutboundTemplate(supa: SupabaseClient, project: string | nul
 async function selectLeadsByFilter(supa: SupabaseClient, limit: number): Promise<{ data: LeadRow[]; error: string | null }> {
   const nowIso = new Date().toISOString()
   const baseSelect = 'id, source, session_id, project, first_name, email, phone, phone_normalized, persona, intent_id, size_id, timeline_id, afhaak_reason, attributes, non_inbound_outbound_status, ai_followup_message, ai_followup_input_hash'
-  // v18: filter accepteert nu zowel CLP- als walk-in-bronnen (dehofman_portal).
-  // PostgREST `.or()` met meerdere LIKE-patterns.
-  const sourceFilter = 'source.like.clp_%,source.like.dehofman_portal%'
+  // v19: filter uitgebreid met CLP-bronnen die capital-naming gebruiken
+  // (Paveri BUnit, Elst BUnit, PIER14 BUnit) — deze begonnen niet met
+  // clp_ en werden daarom door v18 nooit opgehaald voor outbound. Per
+  // nieuwe CLP eraan toevoegen.
+  const sourceFilter = 'source.like.clp_%,source.like.dehofman_portal%,source.eq.PIER14 BUnit,source.eq.Paveri BUnit,source.eq.Elst BUnit'
   const buildQuery = () => supa.from('leads').select(baseSelect).or(sourceFilter).not('phone', 'is', null).not('phone_normalized', 'is', null).not('email', 'is', null).lte('earliest_outbound_at', nowIso).or('inbound_detected.is.null,inbound_detected.eq.false').order('earliest_outbound_at', { ascending: true }).limit(limit)
   const a = await buildQuery().is('non_inbound_outbound_status', null)
   if (a.error) return { data: [], error: a.error.message }
