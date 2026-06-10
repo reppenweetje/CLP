@@ -95,7 +95,7 @@ export const PAVERI_CONFIG: ProjectPromptConfig = {
   city: 'Assendelft',
   area_label: 'Assendelft Noord',
   units_left_phrase: 'enkele Type C-units',
-  price_route_sentence: 'Met circa €1.713 per m² voor Type C en €1.785 per m² voor Type D ligt De Paveri scherp voor casco nieuwbouw in de Zaanstreek, inclusief eigen parkeerterrein. Levering is bovendien vrij op naam, dus geen 10,4% overdrachtsbelasting zoals bij bestaande bouw.',
+  price_route_sentence: 'Met circa €1.713 per m² voor de nog beschikbare Type C-units ligt De Paveri scherp voor casco nieuwbouw in de Zaanstreek, inclusief eigen parkeerterrein. Levering is bovendien vrij op naam, dus geen 10,4% overdrachtsbelasting zoals bij bestaande bouw.',
   location_route_question: 'In welke regio of plaats zou een bedrijfsunit wél beter bij je passen?',
   // Size-vertalingen bewust kort gehouden zodat de 400-char-limiet niet
   // wordt overschreden. Type A en B uitverkocht-context staat impliciet
@@ -124,8 +124,12 @@ export const ELSTER_CONFIG: ProjectPromptConfig = {
   units_left_phrase: '11 units in Type A, B en C',
   price_route_sentence: 'Met circa €1.985 per m² voor Type A en vanaf €300.000 voor de ruime Type C-units ligt ELSTER 11 scherp voor casco nieuwbouw aan de A12, inclusief eigen parkeerplaats. Levering is vrij op naam, exclusief 21% btw.',
   location_route_question: 'In welke regio of plaats zou een bedrijfsunit wél beter bij je passen?',
+  // area_label is een straat/snelweg, geen wijk, dus de default-zin
+  // ("de locatie in {area_label}") leest krom. Vandaar een eigen
+  // location_route_sentence met natuurlijke formulering.
+  location_route_sentence: 'Je hebt gisteren info van ELSTER 11 opgevraagd, maar de locatie aan de A12 in Elst leek voor jou niet helemaal passend.',
   size_translations: {
-    around_70:  'rond 70 m² (Type A)',
+    around_70:  '70 m² (Type A)',
     around_100: '90 tot 115 m² (Type B)',
     around_200: '150 tot 310 m² (Type C)',
     weet_niet:  '',
