@@ -74,12 +74,21 @@ function messageTypeFor(afhaakReason: string | null | undefined): string {
   }
 }
 
-// v18: bepaal of we Gemini moeten aanroepen. CLP-leads = ja (rijke
-// kwalificatie-data: persona, intent, size, timeline, afhaak_reason).
-// Walk-in leads (dehofman_portal*) = nee -> static template only.
-function shouldCallGemini(source: string | null | undefined): boolean {
-  if (!source) return false
-  return source.toLowerCase().startsWith('clp_')
+// v19: Gemini-trigger is nu template-driven ipv source-prefix. Als de
+// outbound-template uit outbound_settings de placeholder {ai_summary} bevat,
+// roepen we Gemini aan om die te vullen. Anders skippen we Gemini en
+// gebruiken we de static template direct.
+//
+// Voorheen filterden we op source.startsWith('clp_'), maar Paveri/Elst/PIER14
+// gebruiken capital-source-namen ("Paveri BUnit", "Elst BUnit", "PIER14 BUnit")
+// en kregen daarom géén Gemini. Voor projecten die {ai_summary} in hun
+// template hebben (zoals PIER14) leverde dat een lege WhatsApp-bericht op.
+//
+// Walk-in portal-bronnen (dehofman_portal*) blijven static-only via hun eigen
+// templates zonder {ai_summary}.
+function shouldCallGemini(template: string | null | undefined): boolean {
+  if (!template) return false
+  return template.includes('{ai_summary}')
 }
 
 function isServiceRole(authHeader: string | null, serviceKey: string): boolean {
@@ -147,9 +156,11 @@ async function fetchOutboundTemplate(supa: SupabaseClient, project: string | nul
 async function selectLeadsByFilter(supa: SupabaseClient, limit: number): Promise<{ data: LeadRow[]; error: string | null }> {
   const nowIso = new Date().toISOString()
   const baseSelect = 'id, source, session_id, project, first_name, email, phone, phone_normalized, persona, intent_id, size_id, timeline_id, afhaak_reason, attributes, non_inbound_outbound_status, ai_followup_message, ai_followup_input_hash'
-  // v18: filter accepteert nu zowel CLP- als walk-in-bronnen (dehofman_portal).
-  // PostgREST `.or()` met meerdere LIKE-patterns.
-  const sourceFilter = 'source.like.clp_%,source.like.dehofman_portal%'
+  // v19: filter uitgebreid met CLP-bronnen die capital-naming gebruiken
+  // (Paveri BUnit, Elst BUnit, PIER14 BUnit) — deze begonnen niet met
+  // clp_ en werden daarom door v18 nooit opgehaald voor outbound. Per
+  // nieuwe CLP eraan toevoegen.
+  const sourceFilter = 'source.like.clp_%,source.like.dehofman_portal%,source.eq.PIER14 BUnit,source.eq.Paveri BUnit,source.eq.Elst BUnit'
   const buildQuery = () => supa.from('leads').select(baseSelect).or(sourceFilter).not('phone', 'is', null).not('phone_normalized', 'is', null).not('email', 'is', null).lte('earliest_outbound_at', nowIso).or('inbound_detected.is.null,inbound_detected.eq.false').order('earliest_outbound_at', { ascending: true }).limit(limit)
   const a = await buildQuery().is('non_inbound_outbound_status', null)
   if (a.error) return { data: [], error: a.error.message }
@@ -260,11 +271,17 @@ async function processLead(lead: LeadRow, supa: SupabaseClient, geminiUrl: strin
   }
   const messageType = messageTypeFor(lead.afhaak_reason)
 
-  // v18: alleen CLP-leads krijgen Gemini-personalisatie. Walk-in leads
-  // (source begint NIET met clp_) gebruiken de static template uit
-  // outbound_settings direct met placeholders zoals {first_name}.
+  // v19: haal template EERST op zodat we kunnen detecteren of {ai_summary}
+  // erin staat. Alleen dan Gemini aanroepen — bespaart 1 Gemini-call per
+  // lead voor projecten met static templates (Paveri/Elst/Hofman-portal),
+  // en zorgt dat PIER14 (template = '{ai_summary}') wél Gemini krijgt
+  // ondanks dat z'n source niet met clp_ begint.
+  const templateLookup = await fetchOutboundTemplate(supa, lead.project, 1)
+  if (templateLookup.error) result.errors.push({ lead_id: lead.id, stage: 'template_lookup', error: templateLookup.error })
+  const template = templateLookup.setting?.message_template ?? null
+
   let aiSummary = ''
-  if (shouldCallGemini(lead.source)) {
+  if (shouldCallGemini(template)) {
     const gem = await callGeminiFollowup(geminiUrl, serviceKey, lead.id, snapshot)
     if (!gem.ok || !gem.message) {
       result.failed++
@@ -274,9 +291,7 @@ async function processLead(lead: LeadRow, supa: SupabaseClient, geminiUrl: strin
     aiSummary = gem.message
   }
 
-  const templateLookup = await fetchOutboundTemplate(supa, lead.project, 1)
-  if (templateLookup.error) result.errors.push({ lead_id: lead.id, stage: 'template_lookup', error: templateLookup.error })
-  const renderedMessage = renderOutboundTemplate(templateLookup.setting?.message_template, lead, aiSummary)
+  const renderedMessage = renderOutboundTemplate(template, lead, aiSummary)
   const { data: existingRow } = await supa.from('whatsapp_outbound_queue').select('id, status, attempts').eq('lead_id', lead.id).eq('message_type', messageType).maybeSingle()
   if (existingRow && (existingRow.status === 'sent_to_n8n' || existingRow.status === 'sent')) { result.skipped++; return }
   const queuePayload = {

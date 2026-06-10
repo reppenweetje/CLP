@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { trackEvent } from '../lib/analytics.js'
+import { project } from '../data/project.js'
 
 // Bottom-sheet style prompt die verschijnt als de bezoeker
 // op het punt staat de pagina te verlaten (mouseleave bovenaan,
@@ -7,11 +8,10 @@ import { trackEvent } from '../lib/analytics.js'
 // begrijpen die anders ongezien wegklikken.
 //
 // Antwoord-chips komen overeen met de bestaande afhaak-redenen
-// zodat we de data in één bucket kunnen analyseren. Visueel
-// uitgelijnd met de overige bottom-sheets in de app: rounded-t-3xl,
-// drag-handle, REPP-tag in plaats van generieke icoon-badge,
-// slide-in-bottom animatie + ESC-sluit.
-const REASONS = [
+// zodat we de data in één bucket kunnen analyseren. Project kan via
+// project.exitIntentReasons een eigen lijst zetten (bv. PIER14 voegt
+// "Niet nautisch" toe omdat dat de hoofd-afhaakreden is).
+const DEFAULT_REASONS = [
   { id: 'prijs',       label: 'Prijs te hoog' },
   { id: 'locatie',     label: 'Locatie past niet' },
   { id: 'oppervlakte', label: 'Oppervlakte past niet' },
@@ -19,6 +19,9 @@ const REASONS = [
   { id: 'tijd',        label: 'Geen tijd nu' },
   { id: 'anders',      label: 'Iets anders' },
 ]
+const REASONS = Array.isArray(project.exitIntentReasons) && project.exitIntentReasons.length > 0
+  ? project.exitIntentReasons
+  : DEFAULT_REASONS
 
 export default function ExitIntentPrompt({ onDismiss }) {
   const [submitted, setSubmitted] = useState(false)

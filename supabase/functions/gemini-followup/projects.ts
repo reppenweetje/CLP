@@ -133,12 +133,47 @@ export const ELSTER_CONFIG: ProjectPromptConfig = {
   // Geen rent_range_translations: ELSTER 11-flow heeft geen huur-pad.
 }
 
+// ── PIER14 ─────────────────────────────────────────────────────────────────
+// 26 bedrijfsunits aan de Oude Maas in Zwijndrecht, voormalig Schokbeton-
+// terrein. 81% verkocht, nog 5 units: 3 Nautic (108 m²), 1 Harbor+ (289 m²)
+// en 1 Anchor (298 m²). Doelgroep: nautische ondernemers (gemeente-eis).
+// Beleggers mogen kopen mits ze er een nautische huurder in plaatsen.
+// Heeft zowel koop- als huur-pad (rent-match queue via lijst 303).
+export const PIER14_CONFIG: ProjectPromptConfig = {
+  project_name: 'PIER14',
+  city: 'Zwijndrecht',
+  area_label: 'PIER14, Oude Maas',
+  units_left_phrase: 'Nautic, Harbor+ en Anchor',
+  price_route_sentence: 'Met instapprijs vanaf €242.500 voor een Nautic-unit (108 m²) en €635.500 voor Anchor (298 m²) ligt PIER14 marktconform voor casco nieuwbouw aan het water in de Drechtsteden, inclusief eigen parkeerplaats.',
+  location_route_question: 'In welke regio of plaats zou een bedrijfsunit wél beter bij je passen?',
+  // Size IDs uit pier14.js flowOverrides.sizeQuestion. "koppelen" wijst op
+  // gekoppelde units: Anchor-basis + Sales-call voor concrete naast-elkaar
+  // beschikbaarheid (geen vaste oppervlakte).
+  size_translations: {
+    nautic:   '108 m² (Nautic)',
+    harbor:   '289 m² (Harbor+)',
+    anchor:   '298 m² (Anchor)',
+    koppelen: 'gekoppelde units (sales-call voor beschikbaarheid)',
+    weet_niet: '',
+  },
+  // Huur-pad zit in PIER14 (rent_nautical + rent_not_nautical varianten naar
+  // lijst 303). rent_range_translations matchen flow.js standaardbuckets.
+  rent_range_translations: {
+    tot_1500:    'tot €1.500 per maand',
+    '1500_2500': 'tussen €1.500 en €2.500 per maand',
+    '2500_4000': 'tussen €2.500 en €4.000 per maand',
+    meer_4000:   'meer dan €4.000 per maand',
+    weet_niet:   '',
+  },
+}
+
 // Source-string (= public.leads.source = project.crmProject) → config.
 // Sleutels moeten exact matchen met wat de frontend stuurt.
 const CONFIGS: Record<string, ProjectPromptConfig> = {
   clp_dehofman:   HOFMAN_CONFIG,
   'Paveri BUnit': PAVERI_CONFIG,
   'Elst BUnit':   ELSTER_CONFIG,
+  'PIER14 BUnit': PIER14_CONFIG,
 }
 
 // Fallback voor onbekende project-keys: De Hofman. Dat is de oudste config
