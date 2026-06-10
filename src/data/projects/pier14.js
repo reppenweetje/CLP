@@ -236,13 +236,13 @@ export const project = {
         // Front-rij links: grote sold units (1, 2).
         { number: 1,  type: 'Stern',  state: 'sold',      rect: { x: 71,     y: 450.7, w: 193.3, h: 180.8 } },
         { number: 2,  type: 'Marina', state: 'sold',      rect: { x: 269.4,  y: 450.8, w: 145.7, h: 180.8 } },
-        // Front-rij midden: 3-11 (Nautic; 3-5 beschikbaar, 6-11 sold).
-        { number: 3,  type: 'Nautic', state: 'available', rect: { x: 420.3,  y: 486.2, w: 55.3,  h: 145.4 }, price: 242500 },
+        // Front-rij midden: 3-11 (Nautic; 4, 7, 8 beschikbaar — rest sold).
+        { number: 3,  type: 'Nautic', state: 'sold',      rect: { x: 420.3,  y: 486.2, w: 55.3,  h: 145.4 } },
         { number: 4,  type: 'Nautic', state: 'available', rect: { x: 480.2,  y: 486.2, w: 55.3,  h: 145.4 }, price: 242500 },
-        { number: 5,  type: 'Nautic', state: 'available', rect: { x: 540.2,  y: 486.1, w: 55.3,  h: 145.4 }, price: 242500 },
+        { number: 5,  type: 'Nautic', state: 'sold',      rect: { x: 540.2,  y: 486.1, w: 55.3,  h: 145.4 } },
         { number: 6,  type: 'Nautic', state: 'sold',      rect: { x: 600.1,  y: 486.1, w: 55.3,  h: 145.4 } },
-        { number: 7,  type: 'Nautic', state: 'sold',      rect: { x: 660,    y: 486.2, w: 55.3,  h: 145.4 } },
-        { number: 8,  type: 'Nautic', state: 'sold',      rect: { x: 719.9,  y: 486.2, w: 55.3,  h: 145.4 } },
+        { number: 7,  type: 'Nautic', state: 'available', rect: { x: 660,    y: 486.2, w: 55.3,  h: 145.4 }, price: 242500 },
+        { number: 8,  type: 'Nautic', state: 'available', rect: { x: 719.9,  y: 486.2, w: 55.3,  h: 145.4 }, price: 242500 },
         { number: 9,  type: 'Nautic', state: 'sold',      rect: { x: 779.8,  y: 486.1, w: 55.3,  h: 145.4 } },
         { number: 10, type: 'Nautic', state: 'sold',      rect: { x: 839.8,  y: 486.1, w: 55.3,  h: 145.4 } },
         { number: 11, type: 'Nautic', state: 'sold',      rect: { x: 899.7,  y: 486.2, w: 55.3,  h: 145.4 } },
