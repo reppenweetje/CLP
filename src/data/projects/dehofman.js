@@ -63,14 +63,14 @@ export const project = {
       tag: 'Prijs',
       title: 'Vanaf €239.500 v.o.n. excl. btw',
       body: 'Scherpe m²-prijs voor nieuwbouw in de Waarderpolder.',
-      image: '/images/unit-studio.jpg',
+      image: '/images/sfeer-3.jpg',
     },
     {
       id: 'unit-l',
       tag: 'Unit L',
       title: 'Circa 105 m² over twee lagen',
       body: 'Praktisch voor opslag, werkplaats, kantoor, showroom of studio.',
-      image: '/images/showroom.jpg',
+      image: '/images/sfeer-5.jpg',
     },
     {
       id: 'practical',
@@ -84,7 +84,7 @@ export const project = {
       tag: 'Belegging',
       title: 'Schaarste en verhuurbaarheid',
       body: 'Kleinschalig, nieuwbouw en op een gevestigde bedrijvenlocatie in Haarlem. Bij belaste verhuur kunnen fiscale aandachtspunten spelen. Laat je daarover goed adviseren.',
-      image: '/images/werkplaats.jpg',
+      image: '/images/sfeer-2.jpg',
     },
     // Beleggers-specifieke kaarten op basis van het projectinformatie- en marktindicatie-document.
     {
@@ -92,21 +92,21 @@ export const project = {
       tag: 'Rendement',
       title: 'Indicatief 6,7% tot 9,0% BAR',
       body: 'Bruto aanvangsrendement op basis van een markthuur van €150 tot €200 per m² per jaar in de Waarderpolder. Indicatief, geen prognose.',
-      image: '/images/xxl-woning.jpg',
+      image: '/images/xxl-unit.jpg',
     },
     {
       id: 'schaarste-pro',
       tag: 'Schaarste',
       title: 'Beperkt aanbod in Waarderpolder',
       body: 'Ruim duizend bedrijven gevestigd, weinig nieuwe bouwgrond. Vergelijkbare units komen slechts beperkt beschikbaar.',
-      image: '/images/combi.jpg',
+      image: '/images/sfeer-1.jpg',
     },
     {
       id: 'all-in',
       tag: 'Vrij op naam',
       title: 'Geen overdrachtsbelasting',
       body: 'Levering vrij op naam. Geen 10,4% overdrachtsbelasting. Aansluitkosten water en elektra inbegrepen in de koopsom.',
-      image: '/images/showroom.jpg',
+      image: '/images/sfeer-4.jpg',
     },
   ],
 
