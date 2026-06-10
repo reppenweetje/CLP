@@ -917,11 +917,9 @@ function Demo() {
         buyingSignals: buying.signals.map((s) => s.id),
         moreInfoSeen:  state.moreInfoSeen,
         rentRange:     state.answers.rentRange?.id ?? null,
-        // unit: het unit-type waar de bezoeker zich op richt, afgeleid uit
-        // de size-keuze (flow.js koppelt elke size-optie aan een unit, bv.
-        // Hofman "Groter dan 100 m²" → XXL). brevo.ts mapt dit naar de
-        // UNIT-attribute zodat sales in Brevo ziet welke unit de lead wil.
-        unit:          state.answers.size?.unit ?? null,
+        // Unit-signaal niet apart meesturen: size_id (hierboven) landt al in
+        // de Brevo SIZE-attribute, bv. Hofman "Groter dan 100 m²" →
+        // "meer_dan_100" = XXL. Sales ziet de gewenste unit dus via SIZE.
         // leadVariant: sub-doelgroep binnen hetzelfde crmProject. Wordt
         // door brevo.ts in lead-upsert gebruikt om naar een alt-list te
         // routeren (bv. PIER14 nauticGate=nee → 'not_nautical' → lijst #300
