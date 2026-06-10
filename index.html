@@ -29,11 +29,20 @@
     <meta property="og:title" content="REPP, brochure en prijzen" />
     <meta property="og:description" content="Hoogwaardige bedrijfsunits in Nederland. Bekijk plattegronden, prijzen en actuele beschikbaarheid via REPP." />
     <meta property="og:locale" content="nl_NL" />
+    <!-- REPP-branded OG-image (1200x630px). Per-project images zouden vereisen
+         dat we de OG-tags runtime injecteren of via Vercel-edge function
+         rewriten; voor nu één generieke REPP-brand-card die voor alle CLP-
+         subdomeinen (dehofman/paveri/elster/pier14) hetzelfde preview geeft
+         bij Slack/LinkedIn/WhatsApp/Facebook unfurls. -->
+    <meta property="og:image" content="https://clp-xi-tan.vercel.app/images/repp-og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/png" />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="REPP, brochure en prijzen" />
     <meta name="twitter:description" content="Hoogwaardige bedrijfsunits in Nederland. Bekijk plattegronden, prijzen en actuele beschikbaarheid via REPP." />
-    <meta name="twitter:image" content="https://clp-xi-tan.vercel.app/images/hero.jpg" />
+    <meta name="twitter:image" content="https://clp-xi-tan.vercel.app/images/repp-og.png" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
