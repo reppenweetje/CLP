@@ -107,7 +107,11 @@ export const project = {
       tag: 'Praktisch',
       title: 'Casco unit met overheaddeur',
       body: 'Royale overheaddeur per unit, 3x35A tot 3x80A elektra, 2,5 m³/u water, glasvezel tot in de meterkast.',
-      image: '/projects/pier14/praktisch.png',
+      // Eerder de Schokbeton-interior (praktisch.png) — die industriële
+      // betonpilaren-look paste niet bij de positionering, vooral niet voor
+      // beleggers. project.png (rooftop-view rendering) toont de échte
+      // unit-architectuur op straat-niveau.
+      image: '/projects/pier14/project.png',
     },
     {
       id: 'history',
@@ -159,7 +163,7 @@ export const project = {
       'Historisch terrein van Schokbeton, drie loodsen worden gerenoveerd.',
       'Specifiek aangewezen door de gemeente voor nautisch gerelateerde bedrijven.',
     ],
-    scarcityNote: 'Kavel 11 is het laatste beschikbare kavel van PIER14. Veel units zijn al verkocht.',
+    scarcityNote: 'PIER14 ligt midden in de maritieme hub van de Drechtsteden, met directe aansluiting op de Oude Maas en korte routes naar Rotterdam en Dordrecht. Een logische plek voor nautische bedrijven die water-toegang en regio-bereik combineren.',
   },
 
   // Status per type aggregeert uit sitePlan.sections hierboven (schema-rename
@@ -557,9 +561,11 @@ export const project = {
 
   whatsappNumber: '+31617192538',
   phoneNumber: '020-2610080',
-  // Brochure host bij repp.nl WordPress ipv lokaal in /public/.
-  // BrochureBubble + brochure-link CTAs ondersteunen externe URLs prima.
-  brochureUrl: 'https://repp.nl/wp-content/uploads/2026/06/28.05.2026-Brochure-PIER14-BVG-2.pdf',
+  // Nieuwste versie 08.06.2026 — gehost lokaal in /public/projects/pier14/
+  // zodat updates via git-commit live gaan (geen WordPress-deploy nodig).
+  // BrochureBubble + brochure-link CTAs ondersteunen ook externe URLs voor
+  // toekomstige updates op repp.nl.
+  brochureUrl: '/projects/pier14/brochure.pdf',
   priceListUrl: '/projects/pier14/prijslijst.pdf',
   portalUrl: 'https://kopen.repp.nl/pier14',
   portalLabel: 'Bekijk PIER14 website',
@@ -657,7 +663,23 @@ export const project = {
   // Onderwerpen die voor PIER14 niet in de moreInfo-chips komen.
   // priceComparison heeft lege rows (nautische units zijn te uniek voor
   // benchmark) — de chip zou een leeg scherm geven, dus uitschakelen.
-  disabledTopics: ['priceCompare'],
+  // 'investor' (Belegger voordelen) is uit voor PIER14 omdat beleggers
+  // hier alleen mogen kopen mits nautische huurder; de algemene BAR-
+  // belegger-tegel past niet bij die boodschap.
+  disabledTopics: ['priceCompare', 'investor'],
+
+  // Project-specifieke exit-intent reasons. Voegt de PIER14-relevante
+  // "Niet nautisch" reden toe aan de standaard-set. ExitIntentPrompt
+  // valt terug op een ingebouwde default als deze niet gezet is.
+  exitIntentReasons: [
+    { id: 'prijs',         label: 'Prijs te hoog' },
+    { id: 'locatie',       label: 'Locatie past niet' },
+    { id: 'oppervlakte',   label: 'Oppervlakte past niet' },
+    { id: 'huur',          label: 'Liever huren' },
+    { id: 'tijd',          label: 'Geen tijd nu' },
+    { id: 'not_branche',   label: 'Niet nautisch' },
+    { id: 'anders',        label: 'Iets anders' },
+  ],
 
   recommendIntroByChoice: {
     nautic:   'Op basis van je antwoorden past een Nautic-unit (108 m²) goed bij wat je zoekt.',
