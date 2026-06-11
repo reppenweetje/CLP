@@ -54,7 +54,7 @@ const nextId = () => ++_id
 // de mount-init slaat dan start() over (messages.length > 0) terwijl de queue
 // leeg is, waardoor de followup- en intent-vraag-bubbles nooit verschijnen
 // (alleen begroeting plus chips). Een nieuwe key forceert een schone cold start.
-const STORAGE_KEY = 'clp-state-v6'
+const STORAGE_KEY = 'clp-state-v7'
 
 // Project-aware vraag-getter. Geeft de flow.questions[key] terug, maar
 // overschrijft met project.flowOverrides[`${key}Question`] als het project
