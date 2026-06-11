@@ -48,7 +48,7 @@ export const flow = {
         { id: 'eigen_bedrijf', label: 'Voor mijn bedrijf', score: 12, persona: 'eigen_gebruiker' },
         { id: 'belegging', label: 'Als belegging', score: 15, persona: 'belegger' },
         { id: 'beide', label: 'Beide', score: 10, persona: 'beide' },
-        { id: 'huur', label: 'Te huur', score: 5, persona: 'huurder' },
+        { id: 'huur', label: 'Om te huren', score: 5, persona: 'huurder' },
         // 'Weet ik nog niet' bewust verwijderd: kreeg de meeste clicks maar
         // levert het minste signaal. Bezoekers zonder keuze vallen verderop
         // alsnog terug op de 'onbekend'-persona via derivePersona().
