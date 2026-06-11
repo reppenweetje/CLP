@@ -182,9 +182,9 @@ export const project = {
         { number: 1, type: 'XL', state: 'sold' },
         { number: 2, type: 'L', state: 'sold' },
         { number: 3, type: 'L', state: 'sold' },
-        { number: 4, type: 'L', state: 'available' },
+        { number: 4, type: 'L', state: 'sold_ov' },
         { number: 5, type: 'L', state: 'available' },
-        { number: 6, type: 'L', state: 'sold_ov' },
+        { number: 6, type: 'L', state: 'available' },
         { number: 7, type: 'XXL', state: 'available' },
       ]},
       { units: [
