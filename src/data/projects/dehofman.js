@@ -90,7 +90,9 @@ export const project = {
       tag: 'Unit XXL',
       title: 'Circa 191 m² over drie lagen',
       body: 'Ruimste variant, mogelijk met bedrijfsgebonden woning en eigen dakterras. Nu in de verkoop.',
-      image: '/images/xxl-woning.jpg',
+      // Officiële XXL-render (XXL UNIT HOFMAN.jpg). Niet meer xxl-woning.jpg —
+      // dat dakterras-render was verouderd.
+      image: '/images/xxl-unit.jpg',
     },
     {
       id: 'practical',
@@ -112,7 +114,9 @@ export const project = {
       tag: 'Rendement',
       title: 'Indicatief 6,7% tot 9,0% BAR',
       body: 'Bruto aanvangsrendement op basis van een markthuur van €150 tot €200 per m² per jaar in de Waarderpolder. Indicatief, geen prognose.',
-      image: '/images/xxl-unit.jpg',
+      // Dusk-exterieur ipv xxl-unit.jpg: die staat nu op de Unit XXL-card en
+      // zou anders in de belegger/beide-routes dubbel verschijnen.
+      image: '/images/sfeer-2.jpg',
     },
     {
       id: 'schaarste-pro',
