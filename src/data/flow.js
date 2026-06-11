@@ -40,8 +40,8 @@ export const flow = {
         a: 'Waarom ben je op zoek naar een bedrijfsunit?',
         // B: directe binaire frame-shift. Test of pre-framing op
         //    de twee dominante personae (eigen-gebruiker + belegger)
-        //    de qualificatie sneller laat klikken zonder dat de 5
-        //    chip-opties (incl. beide/huur/weet niet) verwarren.
+        //    de qualificatie sneller laat klikken zonder dat de 4
+        //    chip-opties (incl. beide/huur) verwarren.
         b: 'Eigen gebruik of belegging?',
       },
       options: [
@@ -49,7 +49,9 @@ export const flow = {
         { id: 'belegging', label: 'Als belegging', score: 15, persona: 'belegger' },
         { id: 'beide', label: 'Beide', score: 10, persona: 'beide' },
         { id: 'huur', label: 'Te huur', score: 5, persona: 'huurder' },
-        { id: 'weet_niet', label: 'Weet ik nog niet', score: 4, persona: 'onbekend' },
+        // 'Weet ik nog niet' bewust verwijderd: kreeg de meeste clicks maar
+        // levert het minste signaal. Bezoekers zonder keuze vallen verderop
+        // alsnog terug op de 'onbekend'-persona via derivePersona().
       ],
     },
 
