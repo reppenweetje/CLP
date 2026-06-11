@@ -6,7 +6,11 @@ export const project = {
   displayName: 'De Hofman',
   tagline: 'Omdat Haarlem werkt.',
   shortDescription: '14 hoogwaardige bedrijfsunits in Haarlem Waarderpolder.',
-  hero: '/images/hero.jpg',
+  // hero = cover van de brochure-card (BrochureBubble). Bewust de actuele
+  // 3-laags dusk-render (project-2026.jpg, gebouw 27), niet meer de oude
+  // hero.jpg. De locatie-USP-card gebruikt /images/hero.jpg nog wel los als
+  // video-poster, dus die blijft ongemoeid.
+  hero: '/images/project-2026.jpg',
   logo: '/images/logo.svg',
   exterior: '/images/exterieur.jpg',
 
@@ -17,6 +21,15 @@ export const project = {
   // Vercel-project (dehofman + depaveri) automatisch correct getagd
   // op basis van de hostname.
   crmProject: 'clp_dehofman',
+
+  // Huur-leads (intent "Te huur" → persona huurder) krijgen via deze variant
+  // een leadVariant-tag mee, zodat lead-upsert/brevo.ts ze naar een aparte
+  // Brevo-lijst routeert i.p.v. de normale CLP Hofman-lijst. Routing-env:
+  //   BREVO_LIST_ID_CLP_DEHOFMAN_HUURDER = 307  (Supabase secret, los te zetten)
+  // Zonder die secret valt 'ie alsnog terug op de default Hofman-lijst.
+  flowOverrides: {
+    rentLeadVariant: 'huurder',
+  },
 
   // Gallery wisselt visueel tussen exterieur en interieur shots zodat de
   // hero-carousel duidelijk transformeert, niet twee bijna-identieke avond-shots.
