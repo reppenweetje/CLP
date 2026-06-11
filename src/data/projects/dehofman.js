@@ -73,6 +73,13 @@ export const project = {
       image: '/images/sfeer-5.jpg',
     },
     {
+      id: 'unit-xxl',
+      tag: 'Unit XXL',
+      title: 'Circa 191 m² over drie lagen',
+      body: 'Ruimste variant, mogelijk met bedrijfsgebonden woning en eigen dakterras. Nu in de verkoop.',
+      image: '/images/xxl-woning.jpg',
+    },
+    {
       id: 'practical',
       tag: 'Praktisch',
       title: 'Overheaddeur en eigen parkeerplaats',
@@ -513,12 +520,12 @@ export const project = {
 export function uspCardOrder(persona) {
   const ids =
     persona === 'belegger'
-      ? ['project', 'bar', 'schaarste-pro', 'all-in', 'price', 'location']
+      ? ['project', 'bar', 'unit-xxl', 'schaarste-pro', 'all-in', 'price', 'location']
       : persona === 'beide'
-      ? ['project', 'location', 'bar', 'price', 'unit-l', 'all-in']
+      ? ['project', 'location', 'bar', 'price', 'unit-l', 'unit-xxl', 'all-in']
       : persona === 'eigen_gebruiker'
-      ? ['project', 'location', 'availability', 'price', 'unit-l', 'practical']
-      : ['project', 'location', 'availability', 'price', 'unit-l', 'practical']
+      ? ['project', 'location', 'availability', 'price', 'unit-l', 'unit-xxl', 'practical']
+      : ['project', 'location', 'availability', 'price', 'unit-l', 'unit-xxl', 'practical']
   return ids
     .map((id) => project.uspCards.find((c) => c.id === id))
     .filter(Boolean)
