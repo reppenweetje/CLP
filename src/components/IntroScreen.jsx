@@ -45,9 +45,8 @@ export default function IntroScreen({ onStart }) {
             Welkom. Via een korte chat krijg je direct de brochure en de prijzen te zien die het beste bij jouw wensen passen.
           </h1>
 
-          <div className="grid grid-cols-3 gap-2 lg:gap-3 pt-1">
+          <div className="grid grid-cols-2 gap-2 lg:gap-3 pt-1">
             <Stat label="Units" value={String(countProjectUnits(project) || '')} />
-            <Stat label="Verkocht" value={`${project.status?.soldPercent ?? ''}%`} />
             <Stat label="Vanaf" value={formatPriceK(project.units?.find((u) => u.state === 'available')?.priceFrom ?? project.units?.[0]?.priceFrom)} />
           </div>
         </div>
