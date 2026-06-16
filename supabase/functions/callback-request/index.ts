@@ -25,9 +25,14 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 
 const DEFAULT_ALLOWED = [
+  // CLP-hostnames per project + lokale dev + Vercel preview
   'https://dehofman.clp.repp.nl',
+  'https://depaveri.clp.repp.nl',
+  'https://elster11.clp.repp.nl',
+  'https://pier14.clp.repp.nl',
   'https://clp-xi-tan.vercel.app',
   'http://localhost:5173',
+  'http://localhost:5174',
   'http://localhost:4173',
 ]
 const VERCEL_PREVIEW_REGEX = /^https:\/\/[a-z0-9-]+-repp-1bdaee61\.vercel\.app$/
@@ -119,7 +124,7 @@ async function sendCallbackEmail(payload: CallbackPayload): Promise<void> {
 
   const htmlBody = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; color: #1d1d1f; max-width: 560px;">
-      <h2 style="margin: 0 0 12px; font-size: 20px;">\u260e\ufe0f Lead wil gebeld worden \u2014 ${escapeHtml(projectLabel)}</h2>
+      <h2 style="margin: 0 0 12px; font-size: 20px;">\u260e\ufe0f Lead wilt gebeld worden \u2014 ${escapeHtml(projectLabel)}</h2>
       <p style="margin: 0 0 16px; color: #6b6a66;">Iemand heeft via de CLP gevraagd om teruggebeld te worden.</p>
       <table style="border-collapse: collapse; width: 100%; margin-bottom: 16px;">
         ${lead.firstName ? row('Naam', lead.firstName) : ''}
@@ -142,7 +147,7 @@ async function sendCallbackEmail(payload: CallbackPayload): Promise<void> {
     sender: { email: fromEmail, name: fromName },
     to: [{ email: to }],
     replyTo: { email: 'info@repp.nl' },
-    subject: 'Lead bellen de Hofman',
+    subject: `Lead wilt gebeld worden \u2014 ${projectLabel}`,
     htmlContent: htmlBody,
     textContent: textBody,
   }
@@ -195,7 +200,7 @@ async function postSlack(webhook: string, payload: CallbackPayload): Promise<voi
     blocks: [
       {
         type: 'header',
-        text: { type: 'plain_text', text: `\u260e\ufe0f Lead wil gebeld worden \u2014 ${projectLabel}`, emoji: true },
+        text: { type: 'plain_text', text: `\u260e\ufe0f Lead wilt gebeld worden \u2014 ${projectLabel}`, emoji: true },
       },
       ...(contactLines ? [{
         type: 'section',
@@ -212,7 +217,7 @@ async function postSlack(webhook: string, payload: CallbackPayload): Promise<voi
         ],
       },
     ],
-    text: `\u260e\ufe0f Lead wil gebeld worden \u2014 ${projectLabel} \u00b7 ${lead.firstName ?? ''} ${lead.phone ?? ''}`.trim(),
+    text: `\u260e\ufe0f Lead wilt gebeld worden \u2014 ${projectLabel} \u00b7 ${lead.firstName ?? ''} ${lead.phone ?? ''}`.trim(),
   }
 
   const res = await fetch(webhook, {
@@ -242,7 +247,10 @@ serve(async (req: Request) => {
   // Fire Slack + Email parallel. Beide best-effort; één faal blokkeert
   // de ander niet. Edge Function returnt 200 zolang we überhaupt iets
   // hebben kunnen versturen.
-  const webhook = Deno.env.get('SLACK_CALLBACK_WEBHOOK_URL')
+  // Callbacks gaan naar het lead-generation kanaal (waar de overige
+  // lead-notificaties ook landen). Valt terug op de losse callback-webhook
+  // als die ooit apart geconfigureerd is.
+  const webhook = Deno.env.get('SLACK_LEADGEN_WEBHOOK_URL') ?? Deno.env.get('SLACK_CALLBACK_WEBHOOK_URL')
   const slackPromise = webhook
     ? postSlack(webhook, body).catch((err) => {
         console.error('[callback-request] slack post failed', err)
