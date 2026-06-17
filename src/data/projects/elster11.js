@@ -98,7 +98,7 @@ export const project = {
     address: 'Veenendaalsestraatweg 11, Elst',
     city: 'Elst (Utrecht)',
     district: 'Veenendaalsestraatweg, Elst',
-    blurb: 'ELSTER 11 ligt aan de Veenendaalsestraatweg in Elst (Utrecht), met de A12 binnen enkele minuten bereikbaar.',
+    blurb: 'ELSTER 11 ligt aan de Veenendaalsestraatweg in Elst bij Rhenen (Utrecht), met de A12 binnen enkele minuten bereikbaar.',
     aerialImage: '/projects/elster11/locatie.jpg',
     // Stylized map; pulse-marker uit (null) zodat we geen pin op een
     // gestileerde kaart tonen.
