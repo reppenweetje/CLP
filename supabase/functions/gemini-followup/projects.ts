@@ -122,7 +122,7 @@ export const ELSTER_CONFIG: ProjectPromptConfig = {
   city: 'Elst',
   area_label: 'Veenendaalsestraatweg / A12',
   units_left_phrase: '11 units in Type A, B en C',
-  price_route_sentence: 'Met circa €1.985 per m² voor Type A en vanaf €300.000 voor de ruime Type C-units ligt ELSTER 11 scherp voor casco nieuwbouw aan de A12, inclusief eigen parkeerplaats. Levering is vrij op naam, exclusief 21% btw.',
+  price_route_sentence: 'Met circa €1.985 per m² voor Type A en vanaf €300.000 voor de ruime Type C-units ligt ELSTER 11 scherp voor casco nieuwbouw aan de A12, inclusief eigen parkeerplaats. Levering is kosten koper: overdrachtsbelasting over de grondwaarde (circa 45% van de koopsom) en 21% btw enkel over de bouwsom (circa 55%), bij belaste verhuur of eigen gebruik vaak terugvorderbaar.',
   location_route_question: 'In welke regio of plaats zou een bedrijfsunit wél beter bij je passen?',
   size_translations: {
     around_70:  'rond 70 m² (Type A)',
