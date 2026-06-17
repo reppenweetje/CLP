@@ -1,7 +1,7 @@
 import Avatar from './Avatar.jsx'
 
 // prijslijst compact alleen actuele types prijs vanaf en m² prijs
-export default function PriceBubble({ units }) {
+export default function PriceBubble({ units, note }) {
   return (
     <div className="flex gap-2.5 items-start fade-up">
       <Avatar />
@@ -48,7 +48,7 @@ export default function PriceBubble({ units }) {
               })}
             </div>
             <div className="text-[12px] text-ink-mute leading-snug mt-3 pt-3 border-t border-mist-light">
-              prijzen zijn indicatief en exclusief btw vrij op naam
+              {note || 'prijzen zijn indicatief en exclusief btw vrij op naam'}
             </div>
           </div>
         </div>

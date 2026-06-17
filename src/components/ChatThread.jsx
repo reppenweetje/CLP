@@ -183,7 +183,7 @@ function renderMessage(m, { onBrochure, onReset, onUnitView, onCalcInteract, onC
     case 'investor':
       return <InvestorBubble benefits={m.payload.benefits} investor={m.payload.investor} intro={m.payload.intro} />
     case 'price':
-      return <PriceBubble units={m.payload.units} />
+      return <PriceBubble units={m.payload.units} note={m.payload.note} />
     case 'price-compare':
       return <PriceCompareBubble priceComparison={m.payload.priceComparison} />
     case 'brochure':

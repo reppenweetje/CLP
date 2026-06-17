@@ -67,8 +67,8 @@ export const project = {
     {
       id: 'price',
       tag: 'Prijs',
-      title: 'Vanaf €135.000 v.o.n. excl. btw',
-      body: 'Type A vanaf €135.000, Type B vanaf €175.000 en Type C vanaf €300.000. Vrij op naam, exclusief 21% btw.',
+      title: 'Vanaf €135.000 kosten koper, excl. btw',
+      body: 'Type A vanaf €135.000, Type B vanaf €175.000 en Type C vanaf €300.000. Kosten koper: je betaalt overdrachtsbelasting over de grondwaarde (45% van de koopsom) en 21% btw enkel over de bouwsom (55%). Btw vaak terugvorderbaar.',
       image: '/projects/elster11/detail.jpg',
     },
     {
@@ -327,8 +327,8 @@ export const project = {
       'Onderhoudsarm vastgoed.',
     ],
     fiscaal: [
-      'Vrij op naam: koopsom exclusief 21% btw.',
-      '21% btw bij verhuur of eigen gebruik vaak terugvorderbaar, fiscaal advies aanbevolen.',
+      'Kosten koper: je betaalt overdrachtsbelasting over de grondwaarde, circa 45% van de koopsom.',
+      'De 21% btw wordt enkel over de bouwsom berekend (circa 55% van de koopsom) en is bij belaste verhuur of eigen gebruik vaak terugvorderbaar.',
       'Aankoop in privé of bv heeft verschillende fiscale gevolgen, laat je adviseren.',
     ],
   },
@@ -358,7 +358,7 @@ export const project = {
     {
       id: 'price',
       title: 'Prijs',
-      body: 'Vanaf €135.000 v.o.n. excl. btw voor Type A. Type B vanaf €175.000, Type C vanaf €300.000.',
+      body: 'Vanaf €135.000 kosten koper voor Type A. Type B vanaf €175.000, Type C vanaf €300.000. Kosten koper, prijzen exclusief 21% btw over de bouwsom.',
       tag: 'Prijs',
     },
     {
@@ -400,10 +400,13 @@ export const project = {
   //  • priceCompare — geen prijsvergelijking voor dit project.
   //  • financing    — REPP biedt geen financiering aan voor ELSTER 11.
   disabledTopics: ['priceCompare', 'financing'],
-  // Brochure: gehost op repp.nl (officiële ELSTER 11-brochure). Prijslijst
-  // lokaal onder /public/projects/elster11/.
-  brochureUrl: 'https://repp.nl/wp-content/uploads/2026/03/Brochure-ELSTER-11-Elst.pdf',
+  // Brochure + prijslijst lokaal gehost onder /public/projects/elster11/
+  // (v3, juni 2026 — kosten koper en fiscale splitsing toegevoegd).
+  brochureUrl: '/projects/elster11/brochure.pdf',
   priceListUrl: '/projects/elster11/prijslijst.pdf',
+  // Prijslijst-voetnoot override (PriceBubble). ELSTER 11 is kosten koper, niet
+  // vrij op naam: btw enkel over de bouwsom, overdrachtsbelasting over de grond.
+  priceListNote: 'Prijzen indicatief, kosten koper en exclusief 21% btw. De btw wordt enkel over de bouwsom (circa 55% van de koopsom) berekend, de overdrachtsbelasting over de grondwaarde (circa 45%). Btw vaak terugvorderbaar.',
 
   // Sales team — Jesse namens REPP.
   salesTeam: {

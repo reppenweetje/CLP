@@ -533,7 +533,7 @@ function buildMoreInfoMessages(id, persona, opts = {}) {
         },
       }]
     case 'price':
-      return [{ kind: 'price', payload: { units: project.units } }]
+      return [{ kind: 'price', payload: { units: project.units, note: project.priceListNote } }]
     case 'priceCompare':
       return [{ kind: 'price-compare', payload: { priceComparison: project.priceComparison } }]
     case 'planning':
