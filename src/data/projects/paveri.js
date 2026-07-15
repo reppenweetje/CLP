@@ -66,8 +66,8 @@ export const project = {
     {
       id: 'availability',
       tag: 'Beschikbaarheid',
-      title: 'Nog 4 units beschikbaar',
-      body: 'Type A, B en D uitverkocht. Vier Type C-units van 178 m² nog beschikbaar.',
+      title: 'Nog 3 units beschikbaar',
+      body: 'Type A, B en D uitverkocht. Drie Type C-units van 178 m² nog beschikbaar.',
       image: '/projects/depaveri/avond.jpg',
     },
     {
@@ -149,10 +149,10 @@ export const project = {
   },
 
   status: {
-    // 4 van 16 nog beschikbaar = 75% verkocht. Type A, B en D zijn volledig
+    // 3 van 16 nog beschikbaar = 81% verkocht. Type A, B en D zijn volledig
     // vergeven; alleen Type C heeft nog concreet beschikbare units.
-    soldPercent: 75,
-    headline: 'Circa 75% verkocht. Type A, B en D uitverkocht. Nog enkele Type C-units beschikbaar.',
+    soldPercent: 81,
+    headline: 'Circa 81% verkocht. Type A, B en D uitverkocht. Nog enkele Type C-units beschikbaar.',
     units: {
       A: { label: 'Uitverkocht', state: 'sold_out' },
       B: { label: 'Uitverkocht', state: 'sold_out' },
@@ -187,7 +187,7 @@ export const project = {
             cols: 5,
             aspect: 'portrait',
             units: [
-              { number: 8, type: 'C', state: 'available' },
+              { number: 8, type: 'C', state: 'sold' },
               { number: 7, type: 'C', state: 'available' },
               { number: 6, type: 'C', state: 'available' },
               { number: 5, type: 'C', state: 'available' },
@@ -199,10 +199,10 @@ export const project = {
             aspect: 'tall',
             units: [
               { number: 9, type: 'D', state: 'sold' },
-              { number: 10, type: 'D', state: 'sold_ov' },
+              { number: 10, type: 'D', state: 'sold' },
               { number: 11, type: 'D', state: 'sold' },
               { number: 12, type: 'D', state: 'sold' },
-              { number: 13, type: 'D', state: 'sold_ov' },
+              { number: 13, type: 'D', state: 'sold' },
               { number: 14, type: 'D', state: 'sold' },
               { number: 15, type: 'D', state: 'sold' },
               { number: 16, type: 'D', state: 'sold' },
@@ -459,7 +459,7 @@ export const project = {
     {
       id: 'scarcity',
       title: 'Beschikbaarheid',
-      body: 'Circa 75% verkocht. Type A, B en D uitverkocht. Nog enkele Type C-units beschikbaar.',
+      body: 'Circa 81% verkocht. Type A, B en D uitverkocht. Nog enkele Type C-units beschikbaar.',
       tag: 'Schaarste',
     },
     {
