@@ -140,10 +140,14 @@ function buildAttributes(lead: BrevoLeadInput): Record<string, unknown> {
     if (typeof (extras as Record<string, unknown>).rentRange === 'string') {
       set('RENT_RANGE', (extras as Record<string, string>).rentRange)
     }
-    // Unit-signaal: NIET als losse UNIT-attribute. De size-keuze landt al in
-    // de bestaande SIZE-attribute (set('SIZE', lead.size_id) hierboven), bv.
-    // Hofman "Groter dan 100 m²" → size_id "meer_dan_100" = XXL. Sales ziet
-    // de gewenste unit dus via SIZE; een extra UNIT-attribute is overbodig.
+    // Unit-keuze als losse UNIT-attribute. De portal-reservering zet
+    // attributes.unit_id (slug, bv. "unit-6"); sales wil per contact terug
+    // kunnen zien welke concrete unit gereserveerd is. SIZE blijft de grove
+    // grootte-categorie; UNIT is de specifieke unit. Brevo dropt UNIT stil
+    // tot het attribuut in het dashboard is aangemaakt.
+    if (typeof (extras as Record<string, unknown>).unit_id === 'string') {
+      set('UNIT', (extras as Record<string, string>).unit_id)
+    }
   }
 
   return attrs

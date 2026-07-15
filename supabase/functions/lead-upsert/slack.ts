@@ -213,10 +213,18 @@ export async function notifyHotLead(lead: HotLeadInput, leadId: string | null): 
     fmt('Telefoon',   lead.phone),
   ].filter(Boolean).join('\n')
 
+  // Unit-keuze landt in attributes.unit_id (slug, bv. "unit-6") — gezet door
+  // de portal-reservering. Tonen zodat sales meteen ziet welke unit de lead
+  // wil reserveren, zonder in Supabase te hoeven kijken.
+  const unitId = typeof lead.attributes?.unit_id === 'string'
+    ? (lead.attributes.unit_id as string)
+    : null
+
   const qualLines = [
     fmt('Persona',    persona),
     fmt('Termijn',    timeline),
     fmt('Grootte',    lead.size_id),
+    fmt('Unit',       unitId),
     fmt('Stage',      lead.stage),
     fmt('Score',      lead.score != null ? String(lead.score) : null),
   ].filter(Boolean).join('\n')
