@@ -153,6 +153,30 @@ interface UpsertLeadResult {
   error:        string | null
 }
 
+// Partial-unique index (CRM-dedup) op de leads-tabel:
+//   UNIQUE (phone_normalized, project)
+//   WHERE phone_normalized IS NOT NULL AND project IS NOT NULL
+//         AND non_inbound_outbound_status IS NULL
+// Dwingt max één ACTIEVE lead per telefoonnummer per project af.
+//
+// phone_normalized is een GENERATED ALWAYS-kolom (uit phone). Zodra een
+// CLP-bezoeker een 06 invult dat al een actieve lead heeft in hetzelfde
+// project (terugkerende bezoeker, of herhaalde test met hetzelfde nummer),
+// botst de INSERT/UPDATE op deze index en faalde de hele functie met 500 —
+// waardoor de lead NOCH in Supabase NOCH in Brevo landde.
+const PHONE_DEDUP_CONSTRAINT = 'leads_phone_normalized_project_uniq'
+
+// Detecteert exact de phone-dedup unique-violation (SQLSTATE 23505 op de
+// bovenstaande index). Andere 23505's (bv. andere constraints) laten we
+// gewoon als fout doorlopen — we verbreden de catch bewust niet.
+function isPhoneDedupViolation(
+  error: { code?: string; message?: string; details?: string } | null,
+): boolean {
+  if (!error || error.code !== '23505') return false
+  const haystack = `${error.message ?? ''} ${error.details ?? ''}`
+  return haystack.includes(PHONE_DEDUP_CONSTRAINT)
+}
+
 async function upsertLead(supa: SupabaseClient, p: LeadPayload): Promise<UpsertLeadResult> {
   // portal_token is INTENTIONALLY not in this row object. DB DEFAULT fills it
   // on INSERT, existing value preserved on UPDATE.
@@ -183,11 +207,29 @@ async function upsertLead(supa: SupabaseClient, p: LeadPayload): Promise<UpsertL
     if (p[k] !== undefined) row[k] = p[k]
   }
 
-  const { data, error } = await supa
-    .from('leads')
-    .upsert(row, { onConflict: 'source,session_id', ignoreDuplicates: false })
-    .select('id, portal_token')
-    .single()
+  const writeRow = (r: Record<string, unknown>) =>
+    supa
+      .from('leads')
+      .upsert(r, { onConflict: 'source,session_id', ignoreDuplicates: false })
+      .select('id, portal_token')
+      .single()
+
+  let { data, error } = await writeRow(row)
+
+  // Phone-dedup botsing: schrijf het duplicaat alsnog weg, maar gemarkeerd
+  // als 'duplicate'. Die niet-lege status haalt de rij uit de partial-unique
+  // index (WHERE ... non_inbound_outbound_status IS NULL) ÉN uit de outbound-
+  // dispatcher-selectie (die uitsluitend status IS NULL / 'pending' pakt).
+  //
+  // Gevolg: de ORIGINELE actieve lead blijft volledig ongemoeid en houdt de
+  // WhatsApp-opvolging; dit duplicaat is zichtbaar voor sales + wordt naar
+  // Brevo ge-upsert (Brevo dedupt op email), maar krijgt géén eigen outbound.
+  // Dat is identiek aan het bestaande dedup-gedrag — geen nieuw automation-
+  // pad. Subsequente upserts in dezelfde sessie laten de 'duplicate'-status
+  // ongemoeid (kolom zit niet in row), dus de rij blijft buiten de index.
+  if (error && isPhoneDedupViolation(error as { code?: string; message?: string; details?: string })) {
+    ;({ data, error } = await writeRow({ ...row, non_inbound_outbound_status: 'duplicate' }))
+  }
 
   if (error) {
     return { id: null, portal_token: null, isNew: false, error: error.message }

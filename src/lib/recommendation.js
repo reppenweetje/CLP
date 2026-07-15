@@ -157,12 +157,12 @@ export function buildCustomerWaSummary(answers, project) {
       : null)
 
   const sizePhrase =
-    sizeId === 'tot_50'
-      ? 'rond 50 m²'
-      : sizeId === 'rond_100'
-      ? 'rond 100 m²'
-      : sizeId === 'meer_dan_100'
-      ? 'groter dan 100 m²'
+    sizeId === 'rond_105'
+      ? 'rond 105 m²'
+      : sizeId === 'rond_113'
+      ? 'rond 113 m²'
+      : sizeId === 'rond_192'
+      ? 'rond 192 m²'
       : null
 
   const tlPhrase =

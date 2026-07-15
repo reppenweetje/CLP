@@ -561,11 +561,10 @@ export const project = {
 
   whatsappNumber: '+31617192538',
   phoneNumber: '020-2610080',
-  // Nieuwste versie 08.06.2026 — gehost lokaal in /public/projects/pier14/
-  // zodat updates via git-commit live gaan (geen WordPress-deploy nodig).
-  // BrochureBubble + brochure-link CTAs ondersteunen ook externe URLs voor
-  // toekomstige updates op repp.nl.
-  brochureUrl: '/projects/pier14/brochure.pdf',
+  // Brochure 08.06.2026 op WordPress repp.nl — één bron voor zowel CLP als
+  // de externe knowledge bot (Reppit) zodat updates centraal gebeuren.
+  // Knowledge-bot doc verwijst naar dezelfde URL.
+  brochureUrl: 'https://repp.nl/wp-content/uploads/2026/06/08.06.2026-Brochure-PIER14-BVG-1.pdf',
   priceListUrl: '/projects/pier14/prijslijst.pdf',
   portalUrl: 'https://kopen.repp.nl/pier14',
   portalLabel: 'Bekijk PIER14 website',

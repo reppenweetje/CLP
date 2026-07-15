@@ -109,8 +109,8 @@ export function computeBuyingSignals(answers = {}, behaviors = EMPTY_BEHAVIORS) 
     case 'weet_niet': push('timeline_unknown'); break
   }
 
-  // Size
-  if (answers.size?.id === 'meer_dan_100') push('size_xxl')
+  // Size — 'rond_192' is De Hofman's expliciete XXL-keuze (was 'meer_dan_100').
+  if (answers.size?.id === 'meer_dan_100' || answers.size?.id === 'rond_192') push('size_xxl')
   else if (answers.size && answers.size.id !== 'weet_niet') push('size_specific')
 
   // Lead-commitment

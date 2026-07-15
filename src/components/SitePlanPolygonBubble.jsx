@@ -175,7 +175,9 @@ function unitCenter(u) {
 
 function UnitDetail({ unit, typeData, persona, onCalcInteract, onCredionRequest }) {
   const showRentability = persona === 'belegger' || persona === 'beide'
-  const isSold = unit.state === 'sold'
+  // sold_ov (verkocht onder voorbehoud) toont net als sold geen prijs of
+  // rekentool: de unit is niet vrij verhandelbaar zolang het voorbehoud loopt.
+  const isSold = unit.state === 'sold' || unit.state === 'sold_ov'
   const hasVerdieping = unit.bgM2 && unit.verdM2
   return (
     <div className="mt-4 rounded-2xl bg-canvas-2 border border-mist-light overflow-hidden fade-up">

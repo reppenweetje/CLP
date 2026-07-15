@@ -64,14 +64,16 @@ export const HOFMAN_CONFIG: ProjectPromptConfig = {
   project_name: 'De Hofman',
   city: 'Haarlem',
   area_label: 'Waarderpolder',
-  units_left_phrase: 'twee units',
-  price_route_sentence: 'Met circa €2.250 per m² ligt De Hofman relatief scherp ten opzichte van recente 2-laags nieuwbouw bedrijfsunits in de Waarderpolder.',
+  units_left_phrase: 'twee XXL-kopunits',
+  price_route_sentence: 'Met circa €2.487 per m² voor de XXL-kopunit ligt De Hofman marktconform ten opzichte van recente nieuwbouw bedrijfsunits in de Waarderpolder.',
   location_route_question: 'In welke regio of plaats zou een bedrijfsunit wél beter bij je passen?',
+  // Size-IDs komen uit dehofman.js flowOverrides.sizeQuestion (rond_105/113/192).
+  // Alleen de XXL is nog te koop; elke keuze mondt uit in de XXL-kopunit.
   size_translations: {
-    tot_50:       '100 m² (50 m² BG)',
-    rond_100:     '200 m² (100 m² BG)',
-    meer_dan_100: 'meer dan 200 m² (meer dan 100 m² BG)',
-    weet_niet:    '',
+    rond_105:  'circa 105 m²',
+    rond_113:  'circa 113 m²',
+    rond_192:  'circa 192 m² (XXL, over drie lagen)',
+    weet_niet: '',
   },
   rent_range_translations: {
     tot_1500:    'tot €1.500 per maand',
@@ -121,8 +123,8 @@ export const ELSTER_CONFIG: ProjectPromptConfig = {
   project_name: 'ELSTER 11',
   city: 'Elst',
   area_label: 'Veenendaalsestraatweg / A12',
-  units_left_phrase: '11 units in Type A, B en C',
-  price_route_sentence: 'Met circa €1.985 per m² voor Type A en vanaf €300.000 voor de ruime Type C-units ligt ELSTER 11 scherp voor casco nieuwbouw aan de A12, inclusief eigen parkeerplaats. Levering is vrij op naam, exclusief 21% btw.',
+  units_left_phrase: '5 direct beschikbare units in Type A, B en C',
+  price_route_sentence: 'Met circa €1.985 per m² voor Type A en vanaf €300.000 voor de ruime Type C-units ligt ELSTER 11 scherp voor casco nieuwbouw aan de A12, inclusief eigen parkeerplaats. Levering is kosten koper: overdrachtsbelasting over de grondwaarde (circa 45% van de koopsom) en 21% btw enkel over de bouwsom (circa 55%), bij belaste verhuur of eigen gebruik vaak terugvorderbaar.',
   location_route_question: 'In welke regio of plaats zou een bedrijfsunit wél beter bij je passen?',
   size_translations: {
     around_70:  'rond 70 m² (Type A)',

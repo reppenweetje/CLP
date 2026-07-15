@@ -67,8 +67,8 @@ export const project = {
     {
       id: 'price',
       tag: 'Prijs',
-      title: 'Vanaf €135.000 v.o.n. excl. btw',
-      body: 'Type A vanaf €135.000, Type B vanaf €175.000 en Type C vanaf €300.000. Vrij op naam, exclusief 21% btw.',
+      title: 'Vanaf €135.000 kosten koper, excl. btw',
+      body: 'Type A vanaf €135.000, Type B vanaf €175.000 en Type C vanaf €300.000. Kosten koper: je betaalt overdrachtsbelasting over de grondwaarde (45% van de koopsom) en 21% btw enkel over de bouwsom (55%). Btw vaak terugvorderbaar.',
       image: '/projects/elster11/detail.jpg',
     },
     {
@@ -98,6 +98,7 @@ export const project = {
     address: 'Veenendaalsestraatweg 11, Elst',
     city: 'Elst (Utrecht)',
     district: 'Veenendaalsestraatweg, Elst',
+    blurb: 'ELSTER 11 ligt aan de Veenendaalsestraatweg in Elst bij Rhenen (Utrecht), met de A12 binnen enkele minuten bereikbaar.',
     aerialImage: '/projects/elster11/locatie.jpg',
     // Stylized map; pulse-marker uit (null) zodat we geen pin op een
     // gestileerde kaart tonen.
@@ -126,17 +127,18 @@ export const project = {
       'Besloten, veilig eigen bedrijventerrein.',
       'Hoogwaardige industriële uitstraling.',
     ],
-    scarcityNote: 'Beperkt aanbod nieuwbouw bedrijfsunits in de regio Elst. Van de 15 units zijn er nog 11 beschikbaar.',
+    scarcityNote: 'Beperkt aanbod nieuwbouw bedrijfsunits in de regio Elst. Van de 15 units zijn er nog 5 direct beschikbaar, naast enkele units onder voorbehoud.',
   },
 
   status: {
-    // 4 van 15 verkocht (units 1, 2, 8, 9) ≈ 27% verkocht.
-    soldPercent: 27,
-    headline: 'Circa 27% verkocht. Nog 11 units beschikbaar in Type A, B en C.',
+    // 6 van 15 verkocht (units 1, 2, 8, 9, 11, 12) ≈ 40%, plus 4 onder
+    // voorbehoud (units 3, 4, 5, 15). Nog 5 direct beschikbaar (6, 7, 10, 13, 14).
+    soldPercent: 40,
+    headline: 'Circa 40% verkocht en enkele units onder voorbehoud. Nog 5 units direct beschikbaar in Type A, B en C.',
     units: {
       A: { label: 'Nog enkele beschikbaar', state: 'available' },
-      B: { label: 'Beschikbaar', state: 'available' },
-      C: { label: 'Beschikbaar', state: 'available' },
+      B: { label: 'Laatste unit beschikbaar', state: 'available' },
+      C: { label: 'Nog enkele beschikbaar', state: 'available' },
     },
   },
 
@@ -156,23 +158,24 @@ export const project = {
       units: [
         { number: 1,  type: 'B', state: 'sold',      size: 77.2,  rect: { x: 1208.15, y: 131.67, w: 102.49, h: 177.20 } },
         { number: 2,  type: 'B', state: 'sold',      size: 71.1,  rect: { x: 1112.78, y: 127.11, w: 94.34,  h: 181.53 } },
-        { number: 3,  type: 'A', state: 'available', size: 67.8,  price: 135000, rect: { x: 1023.997, y: 127.071, w: 87.939, h: 181.528 } },
-        { number: 4,  type: 'A', state: 'available', size: 68.2,  price: 135000, rect: { x: 935.273,  y: 127.085, w: 87.939, h: 181.528 } },
-        { number: 5,  type: 'A', state: 'available', size: 68.2,  price: 135000, rect: { x: 846.533,  y: 127.085, w: 87.939, h: 181.528 } },
+        { number: 3,  type: 'A', state: 'sold_ov',   size: 67.8,  price: 135000, rect: { x: 1023.997, y: 127.071, w: 87.939, h: 181.528 } },
+        { number: 4,  type: 'A', state: 'sold_ov',   size: 68.2,  price: 135000, rect: { x: 935.273,  y: 127.085, w: 87.939, h: 181.528 } },
+        { number: 5,  type: 'A', state: 'sold_ov',   size: 68.2,  price: 135000, rect: { x: 846.533,  y: 127.085, w: 87.939, h: 181.528 } },
         { number: 6,  type: 'A', state: 'available', size: 68.2,  price: 135000, rect: { x: 753.217,  y: 127.192, w: 92.470, h: 181.528 } },
         { number: 7,  type: 'A', state: 'available', size: 68.3,  price: 135000, rect: { x: 663.392,  y: 127.192, w: 89.178, h: 181.528 } },
         { number: 8,  type: 'A', state: 'sold',      size: 68.5,  rect: { x: 573.626,  y: 127.282, w: 89.178, h: 181.528 } },
         { number: 9,  type: 'A', state: 'sold',      size: 68.2,  rect: { x: 484.289,  y: 127.198, w: 88.655, h: 181.528 } },
         { number: 10, type: 'B', state: 'available', size: 89.9,  price: 175000, polygon: '483.45,308.87 377.58,310.75 354.47,124.49 483.45,127.34' },
-        { number: 11, type: 'C', state: 'available', size: 307.3, price: 375000, bgM2: 258.4, verdM2: 48.9, polygon: '387.15,389.31 169.81,417.79 133.58,152.65 354.47,124.49' },
-        { number: 12, type: 'B', state: 'available', size: 114.1, price: 225000, polygon: '402.83,491.70 337.34,500.15 340.62,525.19 186.74,545.55 169.81,417.79 387.15,389.31' },
+        { number: 11, type: 'C', state: 'sold',      size: 307.3, polygon: '387.15,389.31 169.81,417.79 133.58,152.65 354.47,124.49' },
+        { number: 12, type: 'B', state: 'sold',      size: 114.1, polygon: '402.83,491.70 337.34,500.15 340.62,525.19 186.74,545.55 169.81,417.79 387.15,389.31' },
         { number: 13, type: 'C', state: 'available', size: 238.7, price: 330000, bgM2: 154.3, verdM2: 85.6, rect: { x: 789.871,  y: 547.965, w: 136.099, h: 264.083 } },
         { number: 14, type: 'C', state: 'available', size: 154.3, price: 300000, rect: { x: 926.376,  y: 548.105, w: 136.099, h: 264.083 } },
-        { number: 15, type: 'C', state: 'available', size: 272.1, price: 345000, bgM2: 154.4, verdM2: 117.7, rect: { x: 1062.862, y: 548.220, w: 136.099, h: 264.083 } },
+        { number: 15, type: 'C', state: 'sold_ov',   size: 272.1, price: 345000, bgM2: 154.4, verdM2: 117.7, rect: { x: 1062.862, y: 548.220, w: 136.099, h: 264.083 } },
       ],
     },
     legend: [
       { state: 'available', label: 'Beschikbaar' },
+      { state: 'sold_ov', label: 'Verkocht onder voorbehoud' },
       { state: 'sold', label: 'Verkocht' },
     ],
     cardinalLabels: {
@@ -326,8 +329,8 @@ export const project = {
       'Onderhoudsarm vastgoed.',
     ],
     fiscaal: [
-      'Vrij op naam: koopsom exclusief 21% btw.',
-      '21% btw bij verhuur of eigen gebruik vaak terugvorderbaar, fiscaal advies aanbevolen.',
+      'Kosten koper: je betaalt overdrachtsbelasting over de grondwaarde, circa 45% van de koopsom.',
+      'De 21% btw wordt enkel over de bouwsom berekend (circa 55% van de koopsom) en is bij belaste verhuur of eigen gebruik vaak terugvorderbaar.',
       'Aankoop in privé of bv heeft verschillende fiscale gevolgen, laat je adviseren.',
     ],
   },
@@ -357,13 +360,13 @@ export const project = {
     {
       id: 'price',
       title: 'Prijs',
-      body: 'Vanaf €135.000 v.o.n. excl. btw voor Type A. Type B vanaf €175.000, Type C vanaf €300.000.',
+      body: 'Vanaf €135.000 kosten koper voor Type A. Type B vanaf €175.000, Type C vanaf €300.000. Kosten koper, prijzen exclusief 21% btw over de bouwsom.',
       tag: 'Prijs',
     },
     {
       id: 'scarcity',
       title: 'Beschikbaarheid',
-      body: 'Circa 27% verkocht. Nog 11 units beschikbaar in Type A, B en C.',
+      body: 'Circa 40% verkocht en enkele units onder voorbehoud. Nog 5 units direct beschikbaar in Type A, B en C.',
       tag: 'Schaarste',
     },
     {
@@ -399,10 +402,13 @@ export const project = {
   //  • priceCompare — geen prijsvergelijking voor dit project.
   //  • financing    — REPP biedt geen financiering aan voor ELSTER 11.
   disabledTopics: ['priceCompare', 'financing'],
-  // Brochure: gehost op repp.nl (officiële ELSTER 11-brochure). Prijslijst
-  // lokaal onder /public/projects/elster11/.
-  brochureUrl: 'https://repp.nl/wp-content/uploads/2026/03/Brochure-ELSTER-11-Elst.pdf',
+  // Brochure + prijslijst lokaal gehost onder /public/projects/elster11/
+  // (v3, juni 2026 — kosten koper en fiscale splitsing toegevoegd).
+  brochureUrl: '/projects/elster11/brochure.pdf',
   priceListUrl: '/projects/elster11/prijslijst.pdf',
+  // Prijslijst-voetnoot override (PriceBubble). ELSTER 11 is kosten koper, niet
+  // vrij op naam: btw enkel over de bouwsom, overdrachtsbelasting over de grond.
+  priceListNote: 'Prijzen indicatief, kosten koper en exclusief 21% btw. De btw wordt enkel over de bouwsom (circa 55% van de koopsom) berekend, de overdrachtsbelasting over de grondwaarde (circa 45%). Btw vaak terugvorderbaar.',
 
   // Sales team — Jesse namens REPP.
   salesTeam: {

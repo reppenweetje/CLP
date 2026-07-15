@@ -29,6 +29,29 @@ export const project = {
   // Zonder die secret valt 'ie alsnog terug op de default Hofman-lijst.
   flowOverrides: {
     rentLeadVariant: 'huurder',
+    // Size-vraag herschreven nu alleen de XXL nog beschikbaar is. De drie
+    // maten (105/113/192) verwijzen naar de oorspronkelijke L/XL/XXL-formaten
+    // zodat analytics ziet welk formaat de bezoeker eigenlijk zocht, maar elke
+    // optie stuurt recommendUnit naar de XXL (unit: 'XXL') — het enige type dat
+    // nog te koop is. De 105/113-keuzes krijgen via recommendIntroByChoice een
+    // disclosure dat L en XL verkocht zijn.
+    sizeQuestion: {
+      label: 'Wat voor afmeting zoek je ongeveer?',
+      options: [
+        { id: 'rond_105', label: 'Rond 105 m²', score: 12, unit: 'XXL' },
+        { id: 'rond_113', label: 'Rond 113 m²', score: 13, unit: 'XXL' },
+        { id: 'rond_192', label: 'Rond 192 m²', score: 15, unit: 'XXL' },
+      ],
+    },
+  },
+
+  // Per-keuze intro-tekst boven de aanbevelings-bubble (keyed op size-optie-id).
+  // Wie niet meteen de 192 (XXL) kiest, krijgt eerst de disclosure dat L en XL
+  // verkocht zijn en dat alleen de twee XXL-kopunits nog beschikbaar zijn.
+  recommendIntroByChoice: {
+    rond_105: 'De L- en XL-units zijn inmiddels verkocht. We hebben nog twee ruime XXL-kopunits over, circa 192 m² verdeeld over drie lagen.',
+    rond_113: 'De L- en XL-units zijn inmiddels verkocht. We hebben nog twee ruime XXL-kopunits over, circa 192 m² verdeeld over drie lagen.',
+    rond_192: 'Op basis van je antwoorden past de XXL-kopunit goed: circa 192 m² verdeeld over drie lagen. Nog twee beschikbaar.',
   },
 
   // Gallery wisselt visueel tussen exterieur en interieur shots zodat de
@@ -67,29 +90,22 @@ export const project = {
     {
       id: 'availability',
       tag: 'Beschikbaarheid',
-      title: '70% verkocht',
-      body: 'XL is uitverkocht. Nog enkele L-units beschikbaar. De ruime XXL-units zijn nu ook in de verkoop.',
+      title: 'Bijna uitverkocht',
+      body: 'De L- en XL-units zijn verkocht. Alleen de twee ruime XXL-kopunits zijn nog beschikbaar.',
       image: '/images/availability-2026.jpg',
     },
     {
       id: 'price',
       tag: 'Prijs',
-      title: 'Vanaf €239.500 v.o.n. excl. btw',
-      body: 'Scherpe m²-prijs voor nieuwbouw in de Waarderpolder.',
+      title: 'XXL vanaf €475.000 v.o.n. excl. btw',
+      body: 'Scherpe m²-prijs voor de ruimste nieuwbouwunit in de Waarderpolder.',
       image: '/images/sfeer-3.jpg',
-    },
-    {
-      id: 'unit-l',
-      tag: 'Unit L',
-      title: 'Circa 105 m² over twee lagen',
-      body: 'Praktisch voor opslag, werkplaats, kantoor, showroom of studio.',
-      image: '/images/sfeer-5.jpg',
     },
     {
       id: 'unit-xxl',
       tag: 'Unit XXL',
       title: 'Circa 191 m² over drie lagen',
-      body: 'Ruimste variant, mogelijk met bedrijfsgebonden woning en eigen dakterras. Nu in de verkoop.',
+      body: 'Ruimste variant, mogelijk met bedrijfsgebonden woning en eigen dakterras. Nog twee kopunits beschikbaar.',
       // Officiële XXL-render (XXL UNIT HOFMAN.jpg). Niet meer xxl-woning.jpg —
       // dat dakterras-render was verouderd.
       image: '/images/xxl-unit.jpg',
@@ -165,12 +181,14 @@ export const project = {
   },
 
   status: {
-    soldPercent: 70,
-    headline: 'Circa 70% verkocht. XL uitverkocht. Nog enkele L-units. XXL nu in de verkoop.',
+    // 10 van 14 verkocht, 2 onder voorbehoud (units 6, 13) ≈ 86% weg.
+    // Alleen de twee XXL-kopunits (7, 14) zijn nog vrij beschikbaar.
+    soldPercent: 86,
+    headline: 'Bijna uitverkocht. L en XL zijn weg, alleen de twee XXL-kopunits zijn nog beschikbaar.',
     units: {
-      L: { label: 'Nog enkele beschikbaar', state: 'available' },
+      L: { label: 'Uitverkocht', state: 'sold_out' },
       XL: { label: 'Uitverkocht', state: 'sold_out' },
-      XXL: { label: 'Nu in de verkoop', state: 'available' },
+      XXL: { label: 'Nog twee beschikbaar', state: 'available' },
     },
   },
 
@@ -182,9 +200,9 @@ export const project = {
         { number: 1, type: 'XL', state: 'sold' },
         { number: 2, type: 'L', state: 'sold' },
         { number: 3, type: 'L', state: 'sold' },
-        { number: 4, type: 'L', state: 'sold_ov' },
-        { number: 5, type: 'L', state: 'available' },
-        { number: 6, type: 'L', state: 'available' },
+        { number: 4, type: 'L', state: 'sold' },
+        { number: 5, type: 'L', state: 'sold' },
+        { number: 6, type: 'L', state: 'sold_ov' },
         { number: 7, type: 'XXL', state: 'available' },
       ]},
       { units: [
@@ -192,7 +210,7 @@ export const project = {
         { number: 9, type: 'L', state: 'sold' },
         { number: 10, type: 'L', state: 'sold' },
         { number: 11, type: 'L', state: 'sold' },
-        { number: 12, type: 'L', state: 'sold_ov' },
+        { number: 12, type: 'L', state: 'sold' },
         { number: 13, type: 'L', state: 'sold_ov' },
         { number: 14, type: 'XXL', state: 'available' },
       ]},
@@ -217,10 +235,11 @@ export const project = {
       levels: 2,
       parking: 1,
       levelDetail: '52,5 m² begane grond plus 52,5 m² eerste verdieping',
-      priceFrom: 239500,
+      // Prijs bewust weggelaten: L is uitverkocht, dus de prijslijst toont
+      // 'Uitverkocht' i.p.v. een vanaf-prijs (PriceBubble valt terug op stateLabel).
       pricePerM2: 2281,
-      state: 'available',
-      stateLabel: 'Nog enkele beschikbaar',
+      state: 'sold_out',
+      stateLabel: 'Uitverkocht',
       uses: ['Opslag', 'Werkplaats', 'Kantoor', 'Showroom', 'Studio'],
       image: '/images/unit-l.jpg',
       pitch: 'Praktisch, twee lagen. Geschikt voor opslag, werkplaats, showroom, kantoor of studio.',
@@ -236,7 +255,7 @@ export const project = {
       size: 113,
       levels: 2,
       parking: 1,
-      priceFrom: 259500,
+      // Prijs weggelaten: XL is uitverkocht, prijslijst toont 'Uitverkocht'.
       pricePerM2: 2296,
       state: 'sold_out',
       stateLabel: 'Uitverkocht',
@@ -254,13 +273,13 @@ export const project = {
       size: 191,
       levels: 3,
       parking: 1,
-      priceFrom: 515500,
-      pricePerM2: 2698,
+      priceFrom: 475000,
+      pricePerM2: 2487,
       state: 'available',
-      stateLabel: 'Nu in de verkoop',
+      stateLabel: 'Nog twee beschikbaar',
       uses: ['3-laags bedrijfsunit', 'Variant met bedrijfsgebonden woning'],
       image: '/images/xxl-unit.jpg',
-      pitch: 'Drie lagen. Mogelijk met bedrijfsgebonden woning en eigen dakterras. Nu in de verkoop.',
+      pitch: 'Drie lagen. Mogelijk met bedrijfsgebonden woning en eigen dakterras. Nog twee kopunits beschikbaar.',
       specs: [
         'Circa 191 m² over drie lagen',
         'Optie bedrijfsgebonden woning',
@@ -320,8 +339,8 @@ export const project = {
   priceComparison: {
     peildatum: '26 maart 2026',
     rows: [
-      { name: 'De Hofman L', price: 2281, isOurs: true },
       { name: 'Wateringweg', tag: 'Bestaand 2022', price: 2375 },
+      { name: 'De Hofman XXL', price: 2487, isOurs: true },
       { name: 'Nijverheidsweg', tag: 'Nieuwbouw', price: 2500 },
       { name: 'Beijnesweg', tag: 'Nieuwbouw', price: 2533 },
       { name: 'Enschedéweg', tag: 'Bestaand 2022', price: 2539 },
@@ -382,13 +401,13 @@ export const project = {
     {
       id: 'price',
       title: 'Prijs',
-      body: 'Vanaf circa €239.500 v.o.n. excl. btw. Scherpe m²-prijs in de Waarderpolder.',
+      body: 'XXL-kopunit vanaf €475.000 v.o.n. excl. btw. Scherpe m²-prijs voor de ruimste unit in de Waarderpolder.',
       tag: 'Prijs',
     },
     {
       id: 'scarcity',
       title: 'Beschikbaarheid',
-      body: 'Circa 70% verkocht. XL uitverkocht. Nog enkele L-units. De ruime XXL-units zijn nu ook in de verkoop.',
+      body: 'Bijna uitverkocht. L en XL zijn verkocht, alleen de twee ruime XXL-kopunits zijn nog beschikbaar.',
       tag: 'Schaarste',
     },
     {
@@ -539,10 +558,10 @@ export function uspCardOrder(persona) {
     persona === 'belegger'
       ? ['project', 'bar', 'unit-xxl', 'schaarste-pro', 'all-in', 'price', 'location']
       : persona === 'beide'
-      ? ['project', 'location', 'bar', 'price', 'unit-l', 'unit-xxl', 'all-in']
+      ? ['project', 'location', 'bar', 'price', 'unit-xxl', 'all-in']
       : persona === 'eigen_gebruiker'
-      ? ['project', 'location', 'availability', 'price', 'unit-l', 'unit-xxl', 'practical']
-      : ['project', 'location', 'availability', 'price', 'unit-l', 'unit-xxl', 'practical']
+      ? ['project', 'location', 'availability', 'price', 'unit-xxl', 'practical']
+      : ['project', 'location', 'availability', 'price', 'unit-xxl', 'practical']
   return ids
     .map((id) => project.uspCards.find((c) => c.id === id))
     .filter(Boolean)
