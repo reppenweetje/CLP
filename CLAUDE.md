@@ -192,6 +192,14 @@ Er is geen test-suite. `npm test` doet niets. Wel altijd `npm run build` doen vo
 - Commit-messages: lowercase, geen leestekens, in dezelfde tone-of-voice als de chat. Co-author Claude.
 - Geen `git add -A`. Liever `git add` per bestand.
 
+### Push-bestemming (belangrijk)
+
+Deze repo pusht **alleen** naar `reppenweetje/CLP` (`origin`). Controleer voor een push `git remote -v` als je twijfelt.
+
+- ❌ **NOOIT** pushen naar de eraSauna-repo (`eraSauna/comingsoon`) vanuit een CLP-sessie.
+- De eräSauna coming-soon site is een los project in `/Users/flip/erasauna` met zijn eigen remote. Dat werk gebeurt in een aparte, daarvoor bestemde chat — niet hier.
+- Werk je per ongeluk in `/Users/flip/erasauna`? Dan hoor je hier niet te committen of pushen; stop en meld het aan de user.
+
 ### Vercel
 
 - Vercel auto-detecteert Vite. Geen vercel.json nodig voor de basis.

@@ -12,6 +12,18 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": ["-c", "VITE_PROJECT_OVERRIDE=elster11.clp.repp.nl npm run dev"],
       "port": 5174
+    },
+    {
+      "name": "erasauna",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd /Users/flip/erasauna && npm run dev"],
+      "port": 5180
+    },
+    {
+      "name": "r5-planner",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd /Users/flip/repp-r5-planner && npm run dev -- --port 3005"],
+      "port": 3005
     }
   ]
 }
