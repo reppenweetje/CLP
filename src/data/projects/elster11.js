@@ -127,17 +127,18 @@ export const project = {
       'Besloten, veilig eigen bedrijventerrein.',
       'Hoogwaardige industriële uitstraling.',
     ],
-    scarcityNote: 'Beperkt aanbod nieuwbouw bedrijfsunits in de regio Elst. Van de 15 units zijn er nog 11 beschikbaar.',
+    scarcityNote: 'Beperkt aanbod nieuwbouw bedrijfsunits in de regio Elst. Van de 15 units zijn er nog 5 direct beschikbaar, naast enkele units onder voorbehoud.',
   },
 
   status: {
-    // 4 van 15 verkocht (units 1, 2, 8, 9) ≈ 27% verkocht.
-    soldPercent: 27,
-    headline: 'Circa 27% verkocht. Nog 11 units beschikbaar in Type A, B en C.',
+    // 6 van 15 verkocht (units 1, 2, 8, 9, 11, 12) ≈ 40%, plus 4 onder
+    // voorbehoud (units 3, 4, 5, 15). Nog 5 direct beschikbaar (6, 7, 10, 13, 14).
+    soldPercent: 40,
+    headline: 'Circa 40% verkocht en enkele units onder voorbehoud. Nog 5 units direct beschikbaar in Type A, B en C.',
     units: {
       A: { label: 'Nog enkele beschikbaar', state: 'available' },
-      B: { label: 'Beschikbaar', state: 'available' },
-      C: { label: 'Beschikbaar', state: 'available' },
+      B: { label: 'Laatste unit beschikbaar', state: 'available' },
+      C: { label: 'Nog enkele beschikbaar', state: 'available' },
     },
   },
 
@@ -157,23 +158,24 @@ export const project = {
       units: [
         { number: 1,  type: 'B', state: 'sold',      size: 77.2,  rect: { x: 1208.15, y: 131.67, w: 102.49, h: 177.20 } },
         { number: 2,  type: 'B', state: 'sold',      size: 71.1,  rect: { x: 1112.78, y: 127.11, w: 94.34,  h: 181.53 } },
-        { number: 3,  type: 'A', state: 'available', size: 67.8,  price: 135000, rect: { x: 1023.997, y: 127.071, w: 87.939, h: 181.528 } },
-        { number: 4,  type: 'A', state: 'available', size: 68.2,  price: 135000, rect: { x: 935.273,  y: 127.085, w: 87.939, h: 181.528 } },
-        { number: 5,  type: 'A', state: 'available', size: 68.2,  price: 135000, rect: { x: 846.533,  y: 127.085, w: 87.939, h: 181.528 } },
+        { number: 3,  type: 'A', state: 'sold_ov',   size: 67.8,  price: 135000, rect: { x: 1023.997, y: 127.071, w: 87.939, h: 181.528 } },
+        { number: 4,  type: 'A', state: 'sold_ov',   size: 68.2,  price: 135000, rect: { x: 935.273,  y: 127.085, w: 87.939, h: 181.528 } },
+        { number: 5,  type: 'A', state: 'sold_ov',   size: 68.2,  price: 135000, rect: { x: 846.533,  y: 127.085, w: 87.939, h: 181.528 } },
         { number: 6,  type: 'A', state: 'available', size: 68.2,  price: 135000, rect: { x: 753.217,  y: 127.192, w: 92.470, h: 181.528 } },
         { number: 7,  type: 'A', state: 'available', size: 68.3,  price: 135000, rect: { x: 663.392,  y: 127.192, w: 89.178, h: 181.528 } },
         { number: 8,  type: 'A', state: 'sold',      size: 68.5,  rect: { x: 573.626,  y: 127.282, w: 89.178, h: 181.528 } },
         { number: 9,  type: 'A', state: 'sold',      size: 68.2,  rect: { x: 484.289,  y: 127.198, w: 88.655, h: 181.528 } },
         { number: 10, type: 'B', state: 'available', size: 89.9,  price: 175000, polygon: '483.45,308.87 377.58,310.75 354.47,124.49 483.45,127.34' },
-        { number: 11, type: 'C', state: 'available', size: 307.3, price: 375000, bgM2: 258.4, verdM2: 48.9, polygon: '387.15,389.31 169.81,417.79 133.58,152.65 354.47,124.49' },
-        { number: 12, type: 'B', state: 'available', size: 114.1, price: 225000, polygon: '402.83,491.70 337.34,500.15 340.62,525.19 186.74,545.55 169.81,417.79 387.15,389.31' },
+        { number: 11, type: 'C', state: 'sold',      size: 307.3, polygon: '387.15,389.31 169.81,417.79 133.58,152.65 354.47,124.49' },
+        { number: 12, type: 'B', state: 'sold',      size: 114.1, polygon: '402.83,491.70 337.34,500.15 340.62,525.19 186.74,545.55 169.81,417.79 387.15,389.31' },
         { number: 13, type: 'C', state: 'available', size: 238.7, price: 330000, bgM2: 154.3, verdM2: 85.6, rect: { x: 789.871,  y: 547.965, w: 136.099, h: 264.083 } },
         { number: 14, type: 'C', state: 'available', size: 154.3, price: 300000, rect: { x: 926.376,  y: 548.105, w: 136.099, h: 264.083 } },
-        { number: 15, type: 'C', state: 'available', size: 272.1, price: 345000, bgM2: 154.4, verdM2: 117.7, rect: { x: 1062.862, y: 548.220, w: 136.099, h: 264.083 } },
+        { number: 15, type: 'C', state: 'sold_ov',   size: 272.1, price: 345000, bgM2: 154.4, verdM2: 117.7, rect: { x: 1062.862, y: 548.220, w: 136.099, h: 264.083 } },
       ],
     },
     legend: [
       { state: 'available', label: 'Beschikbaar' },
+      { state: 'sold_ov', label: 'Verkocht onder voorbehoud' },
       { state: 'sold', label: 'Verkocht' },
     ],
     cardinalLabels: {
@@ -364,7 +366,7 @@ export const project = {
     {
       id: 'scarcity',
       title: 'Beschikbaarheid',
-      body: 'Circa 27% verkocht. Nog 11 units beschikbaar in Type A, B en C.',
+      body: 'Circa 40% verkocht en enkele units onder voorbehoud. Nog 5 units direct beschikbaar in Type A, B en C.',
       tag: 'Schaarste',
     },
     {

@@ -59,7 +59,7 @@ const STORAGE_KEY = 'clp-state-v7'
 // Project-aware vraag-getter. Geeft de flow.questions[key] terug, maar
 // overschrijft met project.flowOverrides[`${key}Question`] als het project
 // per-project label/options definieert (bv Paveri's grootte-categorieën
-// 112/178/208 m² ipv De Hofman's tot_50/rond_100/meer_dan_100).
+// 112/178/208 m² ipv De Hofman's rond_105/rond_113/rond_192).
 function getQuestion(key) {
   const base = flow.questions[key]
   if (!base) return base
@@ -83,11 +83,11 @@ function countSitePlanUnits(sp) {
   )
 }
 const initial = {
-  // Default = 'intro' als fallback voor SSR/initial-mount; de useReducer-
-  // initializer in Demo() forceert 'chat' bij cold-start (IntroScreen is
-  // uitgefaseerd). Persisted state houdt zijn eigen view-waarde — logo-back-
-  // pad (RETURN_TO_INTRO) blijft werken voor sessies die zelf naar intro gaan.
-  view: 'intro',
+  // Default = 'chat'. De IntroScreen/startpagina is volledig uitgefaseerd
+  // (A/B-test afgerond: direct-naar-chat won), dus iedere bezoeker landt in
+  // alle CLPs direct in het gesprek. Er is geen pad meer dat view op 'intro'
+  // zet — de useReducer-initializer en persisted-load forceren ook 'chat'.
+  view: 'chat',
   messages: [],
   messageQueue: [],
   currentQuestion: null,
@@ -169,10 +169,10 @@ function reducer(state, action) {
       }
     }
     case 'RETURN_TO_INTRO':
-      // Terugnavigatie via het header-logo. Bewust géén reset van messages,
-      // answers of behaviors zodat de bezoeker via START CHAT direct verder
-      // kan met de bestaande sessie. Alleen de view-flag wisselt.
-      return { ...state, view: 'intro' }
+      // Startpagina is uitgefaseerd: dit pad mag de bezoeker niet meer naar
+      // 'intro' sturen. We houden de actie als no-op (blijft in chat) zodat
+      // een eventuele resterende dispatch nergens meer een IntroScreen toont.
+      return { ...state, view: 'chat' }
     case 'RESUME_CHAT':
       // Tegenhanger van RETURN_TO_INTRO: vanaf intro terug naar chat zonder
       // de welkomst-bubbles opnieuw op te bouwen. START_CHAT zou messages
@@ -707,6 +707,10 @@ function Demo() {
         behaviors: { ...EMPTY_BEHAVIORS, ...(loaded.behaviors || {}) },
         messageQueue: [],
         debugOpen: false,
+        // Forceer 'chat' ook voor terugkerende bezoekers: een eventueel
+        // opgeslagen view:'intro' (uit de A/B-test-periode) mag de startpagina
+        // niet meer laten verschijnen. De chat-historie blijft gewoon intact.
+        view: 'chat',
       }
     }
     // Cold start: iedereen landt direct op de chat (geen IntroScreen meer).
@@ -918,8 +922,8 @@ function Demo() {
         moreInfoSeen:  state.moreInfoSeen,
         rentRange:     state.answers.rentRange?.id ?? null,
         // Unit-signaal niet apart meesturen: size_id (hierboven) landt al in
-        // de Brevo SIZE-attribute, bv. Hofman "Groter dan 100 m²" →
-        // "meer_dan_100" = XXL. Sales ziet de gewenste unit dus via SIZE.
+        // de Brevo SIZE-attribute, bv. Hofman "Rond 192 m²" → "rond_192" = XXL.
+        // Sales ziet de gewenste unit dus via SIZE.
         // leadVariant: sub-doelgroep binnen hetzelfde crmProject. Wordt
         // door brevo.ts in lead-upsert gebruikt om naar een alt-list te
         // routeren (bv. PIER14 nauticGate=nee → 'not_nautical' → lijst #300
@@ -1077,13 +1081,12 @@ function Demo() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-  // Klik op REPP-logo in de header tijdens chat: terugnavigatie naar de
-  // IntroScreen zonder progress-verlies. start() detecteert daarna de
-  // bestaande messages en hervat de chat ipv 'em opnieuw te beginnen.
+  // Klik op REPP-logo in de header: sinds de startpagina is uitgefaseerd
+  // navigeert het logo nergens meer naartoe. We loggen de klik nog wel als
+  // engagement-signaal, maar de bezoeker blijft in de chat.
   const onLogoClick = () => {
     if (state.view !== 'chat') return
     trackEvent('header:logo-clicked', { messagesCount: state.messages.length })
-    dispatch({ type: 'RETURN_TO_INTRO' })
   }
   // Helper: maakt een answer-value met _msgCountBefore zodat ROLLBACK
   // weet tot waar in de messages array geknipt moet worden.
