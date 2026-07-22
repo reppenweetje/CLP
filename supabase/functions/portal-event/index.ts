@@ -13,15 +13,18 @@
 //
 // Flow:
 //   1. Valideer event_name tegen de vaste whitelist (zelfde 10 als lib/track.ts).
-//   2. Resolve session_token -> lead via leads.session_token (met verloop-check).
+//   2. Resolve de lead langs een van twee paden (zie resolveLead):
+//        - session_token -> leads.session_token, met verloop-check (normaal)
+//        - portal_token  -> leads.portal_token (conversie-moment, nog geen sessie)
 //   3. Insert { lead_id, session_id, project, event_name, props } in lead_events.
 //
-// Geen geldige/actieve sessie -> stille no-op ({ ok: true, logged: false }).
+// Geen bruikbare identificatie -> stille no-op ({ ok: true, logged: false }).
 // Zo blokkeert tracking nooit de UX en lekt het geen leadbestaan.
 //
 // Endpoint shape:
 //   POST https://<project>.supabase.co/functions/v1/portal-event
-//   Body: { session_token: string, event_name: string, props?: object, project?: string }
+//   Body: { session_token?: string, portal_token?: string, event_name: string,
+//           props?: object, project?: string }
 //   Response (200): { ok: true, logged: boolean }
 //
 // Secrets nodig:
@@ -95,7 +98,16 @@ interface LeadSessionRow {
   session_id: string | null
 }
 
-async function resolveLead(sessionToken: string): Promise<LeadSessionRow | null> {
+// Twee resolve-paden naar dezelfde lead:
+//   - session_token: de normale weg voor een ingelogde bezoeker.
+//   - portal_token:  voor het conversie-moment (gate-submit), waar de
+//     cookies pas na de ?t=-redirect gezet worden en er dus nog geen
+//     sessie is. Het portal_token geeft via ?t= sowieso al volledige
+//     toegang, dus dit verzwakt het beveiligingsmodel niet.
+async function resolveLead(
+  sessionToken: string,
+  portalToken: string,
+): Promise<LeadSessionRow | null> {
   const url = Deno.env.get('SUPABASE_URL')
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   if (!url || !key) {
@@ -103,21 +115,48 @@ async function resolveLead(sessionToken: string): Promise<LeadSessionRow | null>
     return null
   }
   const supa = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } })
-  const { data, error } = await supa
-    .from('leads')
-    .select('id, session_id, session_expires_at')
-    .eq('session_token', sessionToken)
-    .limit(1)
-    .maybeSingle()
-  if (error) {
-    console.error('[portal-event] lead lookup failed', error.message)
-    return null
+
+  if (sessionToken) {
+    const { data, error } = await supa
+      .from('leads')
+      .select('id, session_id, session_expires_at')
+      .eq('session_token', sessionToken)
+      .limit(1)
+      .maybeSingle()
+    if (error) {
+      console.error('[portal-event] session lookup failed', error.message)
+    } else if (data) {
+      // Verloop-check: verlopen sessie telt niet als ingelogd.
+      const exp = (data as { session_expires_at: string | null }).session_expires_at
+      if (!exp || new Date(exp).getTime() >= Date.now()) {
+        return {
+          id: (data as { id: string }).id,
+          session_id: (data as { session_id: string | null }).session_id,
+        }
+      }
+    }
   }
-  if (!data) return null
-  // Verloop-check: verlopen sessie telt niet als ingelogd.
-  const exp = (data as { session_expires_at: string | null }).session_expires_at
-  if (exp && new Date(exp).getTime() < Date.now()) return null
-  return { id: (data as { id: string }).id, session_id: (data as { session_id: string | null }).session_id }
+
+  if (portalToken) {
+    const { data, error } = await supa
+      .from('leads')
+      .select('id, session_id')
+      .eq('portal_token', portalToken)
+      .limit(1)
+      .maybeSingle()
+    if (error) {
+      console.error('[portal-event] portal_token lookup failed', error.message)
+      return null
+    }
+    if (data) {
+      return {
+        id: (data as { id: string }).id,
+        session_id: (data as { session_id: string | null }).session_id,
+      }
+    }
+  }
+
+  return null
 }
 
 async function insertEvent(
@@ -159,6 +198,7 @@ serve(async (req: Request) => {
   const b = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>
 
   const sessionToken = typeof b.session_token === 'string' ? b.session_token.trim() : ''
+  const portalToken = typeof b.portal_token === 'string' ? b.portal_token.trim() : ''
   const eventName = typeof b.event_name === 'string' ? b.event_name.trim() : ''
   const project = typeof b.project === 'string' && b.project.trim() ? b.project.trim() : 'de-hofman'
   const props = sanitizeProps(b.props)
@@ -166,12 +206,18 @@ serve(async (req: Request) => {
   if (!eventName || !ALLOWED_EVENTS.has(eventName)) {
     return json({ error: 'invalid_event' }, 400, cors)
   }
-  // Geen sessie meegegeven -> stille no-op, geen fout. Uitgelogde bezoeker.
-  if (!sessionToken || sessionToken.length < 16) {
+  // Geen enkele identificatie meegegeven -> stille no-op, geen fout.
+  // Anonieme bezoeker; die loggen we bewust niet.
+  const hasSession = sessionToken.length >= 16
+  const hasPortalToken = portalToken.length >= 16
+  if (!hasSession && !hasPortalToken) {
     return json({ ok: true, logged: false }, 200, cors)
   }
 
-  const lead = await resolveLead(sessionToken)
+  const lead = await resolveLead(
+    hasSession ? sessionToken : '',
+    hasPortalToken ? portalToken : '',
+  )
   if (!lead) {
     // Sessie onbekend/verlopen: niet loggen, maar ook geen fout naar de UX.
     return json({ ok: true, logged: false }, 200, cors)
