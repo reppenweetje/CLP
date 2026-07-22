@@ -18,6 +18,7 @@ import {
   leadConfidence,
 } from './lib/recommendation.js'
 import { parseLeadInput, mergeLead } from './lib/parseLead.js'
+import { captureAttribution, getAttribution } from './lib/attribution.js'
 import { startNewSession, trackEvent, getSessionId } from './lib/analytics.js'
 import { notifyHotLead } from './lib/slack.js'
 import { pushLead, flushPending, isApiConfigured } from './lib/api.js'
@@ -784,6 +785,9 @@ function Demo() {
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
     if (params.get('debug') === '1') dispatch({ type: 'TOGGLE_DEBUG' })
+    // Marketing-herkomst vastleggen zolang de utm-params nog in de URL staan.
+    // Moet vóór de eerste conversie gebeuren; pushLead leest 'm later terug.
+    captureAttribution()
     // IP-detectie zodat eventuele uitsluiting van team-traffic werkt.
     // Faalt-soft als netwerk weigert; gewoon doorgaan met tracking aan.
     detectCurrentIp().catch(() => {})
@@ -918,6 +922,10 @@ function Demo() {
       size_id:     state.answers.size?.id ?? null,
       timeline_id: state.answers.timeline?.id ?? null,
       attributes: {
+        // Marketing-herkomst zoals vastgelegd bij binnenkomst. Zelfde shape als
+        // de portal wegschrijft, zodat het CRM één weergave heeft. Blijft weg
+        // als er geen herkomst-signaal in de URL zat (directe bezoeker).
+        ...(getAttribution() ? { attribution: getAttribution() } : {}),
         buyingSignals: buying.signals.map((s) => s.id),
         moreInfoSeen:  state.moreInfoSeen,
         rentRange:     state.answers.rentRange?.id ?? null,
