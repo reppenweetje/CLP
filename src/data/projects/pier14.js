@@ -91,8 +91,8 @@ export const project = {
     {
       id: 'availability',
       tag: 'Beschikbaarheid',
-      title: 'Nog 5 units beschikbaar',
-      body: '81% verkocht. Nog beschikbaar: 3 Nautic (108 m²), 1 Harbor+ (289 m²) en 1 Anchor (298 m²).',
+      title: 'Nog 4 units beschikbaar',
+      body: '85% verkocht. Nog beschikbaar: 2 Nautic (108 m²), 1 Harbor+ (289 m²) en 1 Anchor (298 m²).',
       image: '/projects/pier14/beschikbaarheid.png',
     },
     {
@@ -173,12 +173,12 @@ export const project = {
   // Status van het project. soldPercent is een schatting, moet door
   // user bijgewerkt worden zodra de exacte beschikbaarheid bekend is.
   status: {
-    soldPercent: 81,
-    headline: 'Circa 81% verkocht. Nog 5 units beschikbaar: 3 Nautic (108 m²), 1 Harbor+ (289 m²) en 1 Anchor (298 m²). Stern, Marina, Tidal, Bow en Harbor- uitverkocht.',
+    soldPercent: 85,
+    headline: 'Circa 85% verkocht. Nog 4 units beschikbaar: 2 Nautic (108 m²), 1 Harbor+ (289 m²) en 1 Anchor (298 m²). Stern, Marina, Tidal, Bow en Harbor- uitverkocht.',
     units: {
       Stern:  { label: 'Uitverkocht', state: 'sold_out' },
       Marina: { label: 'Uitverkocht', state: 'sold_out' },
-      Nautic: { label: 'Nog 3 beschikbaar', state: 'available' },
+      Nautic: { label: 'Nog 2 beschikbaar', state: 'available' },
       Tidal:  { label: 'Uitverkocht', state: 'sold_out' },
       Harbor: { label: 'Harbor+ beschikbaar (Harbor- uitverkocht)', state: 'available' },
       Anchor: { label: 'Nog 1 beschikbaar', state: 'available' },
@@ -236,9 +236,9 @@ export const project = {
         // Front-rij links: grote sold units (1, 2).
         { number: 1,  type: 'Stern',  state: 'sold',      rect: { x: 71,     y: 450.7, w: 193.3, h: 180.8 } },
         { number: 2,  type: 'Marina', state: 'sold',      rect: { x: 269.4,  y: 450.8, w: 145.7, h: 180.8 } },
-        // Front-rij midden: 3-11 (Nautic; 4, 7, 8 beschikbaar — rest sold).
+        // Front-rij midden: 3-11 (Nautic; 7, 8 beschikbaar — rest sold).
         { number: 3,  type: 'Nautic', state: 'sold',      rect: { x: 420.3,  y: 486.2, w: 55.3,  h: 145.4 } },
-        { number: 4,  type: 'Nautic', state: 'available', rect: { x: 480.2,  y: 486.2, w: 55.3,  h: 145.4 }, price: 242500 },
+        { number: 4,  type: 'Nautic', state: 'sold',      rect: { x: 480.2,  y: 486.2, w: 55.3,  h: 145.4 } },
         { number: 5,  type: 'Nautic', state: 'sold',      rect: { x: 540.2,  y: 486.1, w: 55.3,  h: 145.4 } },
         { number: 6,  type: 'Nautic', state: 'sold',      rect: { x: 600.1,  y: 486.1, w: 55.3,  h: 145.4 } },
         { number: 7,  type: 'Nautic', state: 'available', rect: { x: 660,    y: 486.2, w: 55.3,  h: 145.4 }, price: 242500 },
