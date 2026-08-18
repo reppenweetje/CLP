@@ -1268,6 +1268,7 @@ function Demo() {
     dispatch({
       type: 'ANSWER',
       key: 'interestLocations',
+      value: { id: 'interestLocations', label: chosenLabel, value: ids, _msgCountBefore: state.messages.length },
       // Sentinel 'einde' ipv null: na de finalBubble tonen we twee actie-chips
       // (opnieuw beginnen / antwoorden aanpassen). Alleen survey-modus bereikt
       // dit — 'einde' zit bewust NIET in SURVEY_CHIP_KEYS en wordt expliciet
