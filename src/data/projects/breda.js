@@ -105,7 +105,7 @@ export const project = {
       // Wrap-up-bubble ná de financiering-vraag, vlak vóór de cross-sell +
       // locaties-multiselect (zie financiering-handler). Markeert dat de
       // Breda-vragen klaar zijn en dat de antwoorden opgeslagen worden.
-      wrapUpIntro: 'Super, dat was het voor Breda. Je antwoorden en gegevens worden opgeslagen.',
+      wrapUpIntro: 'Super, dat was het voor Breda. Je antwoorden en gegevens worden opgeslagen. We houden je op de hoogte.',
       // Cross-sell-intro die de financiering-handler emit vlak vóór de
       // locaties-multiselect. Was voorheen de tweede closeBubble.
       crossSellIntro: 'REPP ontwikkelt op meer plekken kleinschalige bedrijfsruimte, dus je hoort ook van vergelijkbare kansen in de regio.',

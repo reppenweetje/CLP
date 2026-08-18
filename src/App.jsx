@@ -947,8 +947,11 @@ function Demo() {
       score:       buying.score,
       temperature: buying.temperature,
       intent_id:   state.answers.intent?.id ?? null,
-      size_id:     state.answers.size?.id ?? null,
-      timeline_id: state.answers.timeline?.id ?? null,
+      // Peiling (BREDA) gebruikt eigen answer-keys: afmeting → size_id,
+      // wanneer → timeline_id. De ?? -fallthrough houdt de sales-tenants
+      // ongewijzigd (die hebben geen afmeting/wanneer).
+      size_id:     state.answers.size?.id ?? state.answers.afmeting?.id ?? null,
+      timeline_id: state.answers.timeline?.id ?? state.answers.wanneer?.id ?? null,
       attributes: {
         // Marketing-herkomst zoals vastgelegd bij binnenkomst. Zelfde shape als
         // de portal wegschrijft, zodat het CRM één weergave heeft. Blijft weg
@@ -965,6 +968,13 @@ function Demo() {
         // Bedrijfsnaam uit de BREDA-peiling lead-form. Alleen aanwezig als de
         // survey-variant 'em ophaalde; brevo.ts forwardt 'm naar COMPANY.
         ...(lead.company ? { company: lead.company } : {}),
+        // Peiling-antwoorden (BREDA) zonder eigen kolom, als leesbare labels in
+        // attributes zodat het CRM ze begrijpt (afmeting/wanneer landen als
+        // size_id/timeline_id kolom). Gated op aanwezigheid: andere tenants
+        // hebben deze keys niet, dus verschijnen ze daar nooit.
+        ...(state.answers.branche ? { branche: state.answers.branche.label } : {}),
+        ...(state.answers.budget ? { budget: state.answers.budget.label } : {}),
+        ...(state.answers.financiering ? { financiering: state.answers.financiering.label } : {}),
         // Interesse-locaties uit de BREDA-peiling multiselect. Alleen aanwezig
         // als de bezoeker de locaties-stap liep; brevo.ts forwardt ze naar
         // INTEREST_LOCATIONS. Andere tenants hebben geen answers.interestLocations,
