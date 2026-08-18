@@ -84,9 +84,17 @@ export const project = {
       // wanneer-vraag. De peiling captured de lead nu halverwege (opt-in),
       // waarna budget, financiering en de locaties-multiselect volgen.
       optInIntro: [
-        'Er zijn ontwikkelingsplannen die passen bij wat je zoekt.',
+        'Er zijn in Breda momenteel ontwikkelingsplannen die goed aansluiten op wat jij zoekt.',
         'Laat je gegevens achter, dan houden we je op de hoogte.',
       ],
+      // Overgangs-bubble ná de opt-in lead-capture, vlak vóór de budget-vraag
+      // (zie finishLead survey-tak). Bevestigt de opt-in en kondigt de laatste
+      // paar vragen aan.
+      postLeadIntro: 'Dank, we houden je op de hoogte. Nog een paar korte vragen zodat we beter begrijpen wat je zoekt.',
+      // Wrap-up-bubble ná de financiering-vraag, vlak vóór de cross-sell +
+      // locaties-multiselect (zie financiering-handler). Markeert dat de
+      // Breda-vragen klaar zijn en dat de antwoorden opgeslagen worden.
+      wrapUpIntro: 'Super, dat was het voor Breda. Je antwoorden en gegevens worden opgeslagen.',
       // Cross-sell-intro die de financiering-handler emit vlak vóór de
       // locaties-multiselect. Was voorheen de tweede closeBubble.
       crossSellIntro: 'REPP ontwikkelt op meer plekken kleinschalige bedrijfsruimte, dus je hoort ook van vergelijkbare kansen in de regio.',

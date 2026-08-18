@@ -160,7 +160,7 @@ function reducer(state, action) {
       // "Start chat" (anders voelt die klik laggy).
       const typeFirst = action.typeFirst === true
       const greeting = { kind: 'bot-text', text: `Hoi, ik ben ${bot.name} van ${bot.org}.` }
-      // Peiling-modus (BREDA): survey-intro + werkruimte als eerste vraag.
+      // Peiling-modus (BREDA): survey-intro + doel als eerste vraag.
       // Alleen actief als het project flowOverrides.surveyFlow zet; anders
       // valt de code door naar de standaard verkoop-intro hieronder, byte-
       // voor-byte gelijk aan voorheen.
@@ -1174,12 +1174,6 @@ function Demo() {
   const handleSurveyChip = (q, opt) => {
     const val = answerValue(opt)
     const sf = project.flowOverrides?.surveyFlow || {}
-    if (q === 'werkruimte') {
-      trackEvent('survey:answered', { key: 'werkruimte', id: opt.id })
-      dispatch({ type: 'ANSWER', key: 'werkruimte', value: val, next: 'afmeting' })
-      sendSequence(userTextFromOpt(opt), [{ kind: 'bot-text', text: flow.questions.afmeting.label }])
-      return
-    }
     if (q === 'afmeting') {
       // Alleen bij 'meer_500' de conditionele grondVraag; anders direct doel.
       trackEvent('survey:answered', { key: 'afmeting', id: opt.id })
@@ -1199,9 +1193,10 @@ function Demo() {
     }
     if (q === 'doel') {
       // Onder key 'intent' opslaan zodat derivePersona de persona oppikt.
+      // Werkruimte-vraag is verwijderd: doel routeert nu direct naar afmeting.
       trackEvent('survey:answered', { key: 'doel', id: opt.id, persona: opt.persona })
-      dispatch({ type: 'ANSWER', key: 'intent', value: val, next: 'werkruimte' })
-      sendSequence(userTextFromOpt(opt), [{ kind: 'bot-text', text: flow.questions.werkruimte.label }])
+      dispatch({ type: 'ANSWER', key: 'intent', value: val, next: 'afmeting' })
+      sendSequence(userTextFromOpt(opt), [{ kind: 'bot-text', text: flow.questions.afmeting.label }])
       return
     }
     if (q === 'branche') {
@@ -1247,7 +1242,11 @@ function Demo() {
       // SURVEY_CHIP_KEYS; de location-select bubble handelt de submit af).
       trackEvent('survey:answered', { key: 'financiering', id: opt.id })
       dispatch({ type: 'ANSWER', key: 'financiering', value: val, next: 'locaties' })
+      // Wrap-up-bubble vlak vóór de cross-sell + locaties-multiselect. Uit
+      // surveyFlow.wrapUpIntro; valt weg als het veld ontbreekt.
+      const wrapUp = sf.wrapUpIntro ? [{ kind: 'bot-text', text: sf.wrapUpIntro }] : []
       sendSequence(userTextFromOpt(opt), [
+        ...wrapUp,
         { kind: 'bot-text', text: sf.crossSellIntro || 'REPP ontwikkelt op meer plekken kleinschalige bedrijfsruimte, dus je hoort ook van vergelijkbare kansen in de regio.' },
         { kind: 'bot-text', text: 'Vink aan welke locaties ook eventueel interessant voor jou kunnen zijn.' },
         { kind: 'location-select', payload: {} },
@@ -1269,8 +1268,11 @@ function Demo() {
     dispatch({
       type: 'ANSWER',
       key: 'interestLocations',
-      value: { id: 'interestLocations', label: chosenLabel, value: ids, _msgCountBefore: state.messages.length },
-      next: null,
+      // Sentinel 'einde' ipv null: na de finalBubble tonen we twee actie-chips
+      // (opnieuw beginnen / antwoorden aanpassen). Alleen survey-modus bereikt
+      // dit — 'einde' zit bewust NIET in SURVEY_CHIP_KEYS en wordt expliciet
+      // in onChipPick en de chip-render afgehandeld.
+      next: 'einde',
     })
     const firstName = state.answers.lead?.firstName || state.leadDraft?.firstName || ''
     const finalText = (sf.finalBubble || 'Dank, {firstName}. We houden je op de hoogte zodra er meer bekend is.')
@@ -1321,6 +1323,30 @@ function Demo() {
     // handlers. Nooit actief zonder project.flowOverrides.surveyFlow.
     if (project.flowOverrides?.surveyFlow && SURVEY_CHIP_KEY_SET.has(q)) {
       return handleSurveyChip(q, opt)
+    }
+    // Gated peiling-eindstate (BREDA): twee actie-chips na de finalBubble.
+    // 'einde' zit bewust buiten SURVEY_CHIP_KEYS, dus hier expliciet. Nooit
+    // bereikbaar zonder surveyFlow — andere tenants ongewijzigd.
+    if (project.flowOverrides?.surveyFlow && q === 'einde') {
+      if (opt.id === 'opnieuw') {
+        // Verse start: hergebruik exact de reset die de ChatThread onReset-prop
+        // ook draait (clearPersisted + _id=0 + RESET) en herbouw daarna de
+        // survey-intro via START_CHAT zodat de peiling weer bij doel begint.
+        trackEvent('survey:restart', { from: 'einde' })
+        clearPersisted()
+        _id = 0
+        dispatch({ type: 'RESET' })
+        dispatch({ type: 'START_CHAT', bot: project.salesTeam?.bot, copyVariant })
+        return
+      }
+      if (opt.id === 'aanpassen') {
+        // Open de bestaande antwoorden-sheet (zelfde sheet als de header-knop
+        // 'aanpassen' opent) zodat de bezoeker zijn antwoorden kan bijstellen.
+        trackEvent('survey:edit-answers', { from: 'einde' })
+        setAnswersOpen(true)
+        return
+      }
+      return
     }
     if (q === 'intent') {
       const personaNext = opt.persona || 'onbekend'
@@ -2395,7 +2421,12 @@ function Demo() {
       trackEvent('survey:lead-captured', { persona })
       const userMsgs = prependMessages.filter((m) => m.kind === 'user-text')
       if (userMsgs.length > 0) dispatch({ type: 'APPEND', messages: userMsgs })
-      dispatch({ type: 'ENQUEUE', messages: [{ kind: 'bot-text', text: flow.questions.budget.label }] })
+      // Overgangs-bubble na de lead-capture, vlak vóór de budget-vraag. Uit
+      // surveyFlow.postLeadIntro; valt weg als het veld ontbreekt.
+      const postLead = surveyFlow.postLeadIntro
+        ? [{ kind: 'bot-text', text: surveyFlow.postLeadIntro }]
+        : []
+      dispatch({ type: 'ENQUEUE', messages: [...postLead, { kind: 'bot-text', text: flow.questions.budget.label }] })
       return
     }
     // Volgende stap hangt af van waar de bezoeker in de flow zit. Wanneer
@@ -2848,6 +2879,19 @@ function Demo() {
     ? state.currentQuestion
     : null
   if (surveyChipKey) chipQuestion = flow.questions[surveyChipKey]
+  // Gated peiling-eindstate (BREDA): twee actie-chips na de finalBubble.
+  // 'einde' zit buiten SURVEY_CHIP_KEYS, dus hier als synthetische chipvraag.
+  // Nooit actief zonder surveyFlow — andere tenants ongewijzigd.
+  else if (project.flowOverrides?.surveyFlow && state.currentQuestion === 'einde') {
+    chipQuestion = {
+      key: 'einde',
+      label: 'einde',
+      options: [
+        { id: 'opnieuw',   label: 'Opnieuw beginnen' },
+        { id: 'aanpassen', label: 'Antwoorden aanpassen' },
+      ],
+    }
+  }
   else if (state.currentQuestion === 'intent') chipQuestion = flow.questions.intent
   else if (state.currentQuestion === 'nauticGate') {
     // Twee passes:

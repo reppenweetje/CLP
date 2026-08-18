@@ -196,30 +196,13 @@ export const flow = {
     // Vraaggericht en broad: geen locatie, plan, units of prijzen van ons
     // aanbod. Chips sentence case, zonder punt of vraagteken.
 
-    // Q1 — werkruimte (opener). Resoneert met de ad-creatives (Werkplaats ·
-    // Atelier · Montage · Showroom): meteen waar de maker/ondernemer zijn
-    // eigen ruimte voor zoekt. Vervangt de oude product-fork én neemt de
-    // oude 'toepassing'-vraag in zich op. Geen leadVariant meer hier — de
-    // bouwgrond-fork zit nu op de conditionele grondVraag.
-    werkruimte: {
-      key: 'werkruimte',
-      label: 'Wat voor werkruimte zoek je?',
-      options: [
-        { id: 'werkplaats', label: 'Werkplaats' },
-        { id: 'atelier',    label: 'Atelier' },
-        { id: 'montage',    label: 'Montage' },
-        { id: 'opslag',     label: 'Opslag' },
-        { id: 'showroom',   label: 'Showroom' },
-        { id: 'kantoor',    label: 'Kantoor' },
-      ],
-    },
-
-    // Q2 — afmeting. Alleen bij 'meer_500' volgt de grondVraag-vervolgvraag,
-    // anders direct door naar doel.
+    // Q1 — afmeting (opener). Volgt op de doel-vraag. Alleen bij 'meer_500'
+    // volgt de conditionele grondVraag-vervolgvraag, anders direct branche.
     afmeting: {
       key: 'afmeting',
       label: 'Wat voor afmeting zoek je ongeveer?',
       options: [
+        { id: 'tot_100',   label: 'Kleiner dan 100 m²' },
         { id: '100_150',   label: '100 tot 150 m²' },
         { id: '150_250',   label: '150 tot 250 m²' },
         { id: '250_500',   label: '250 tot 500 m²' },
@@ -259,12 +242,11 @@ export const flow = {
       label: 'In welke branche ben je actief?',
       options: [
         { id: 'bouw_installatie',   label: 'Bouw en installatie' },
-        { id: 'techniek_productie', label: 'Techniek en productie' },
-        { id: 'handel',             label: 'Handel en groothandel' },
+        { id: 'productie_techniek', label: 'Productie en techniek' },
+        { id: 'ambacht_atelier',    label: 'Ambacht en atelier' },
+        { id: 'handel_ecom',        label: 'Handel en e-commerce' },
         { id: 'opslag_logistiek',   label: 'Opslag en logistiek' },
-        { id: 'creatief_ambacht',   label: 'Creatief en ambacht' },
         { id: 'dienstverlening',    label: 'Zakelijke dienstverlening' },
-        { id: 'ecom_marketing',     label: 'E-commerce en marketing' },
         { id: 'anders',             label: 'Anders, namelijk' },
       ],
     },
@@ -316,7 +298,7 @@ export const flow = {
 // vrije-tekst-substap 'brancheAnders' staat NIET in deze lijst (die rendert
 // een tekst-input, geen chips — zie App.jsx onChatInputSend + inputConfig).
 export const SURVEY_CHIP_KEYS = [
-  'werkruimte', 'afmeting', 'grondVraag', 'doel',
+  'afmeting', 'grondVraag', 'doel',
   'branche', 'wanneer', 'budget', 'financiering',
 ]
 
