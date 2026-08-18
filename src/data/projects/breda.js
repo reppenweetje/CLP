@@ -88,6 +88,16 @@ export const project = {
         'Er lopen in de omgeving Breda nu ontwikkelingen die goed passen bij wat jij zoekt.',
         'Laat je gegevens achter, dan houden we je op de hoogte.',
       ],
+      // Bouwgrond-variant van de opt-in: dit is een bouwkavel-lead met andere
+      // sales-opvolging (persoonlijk contact ipv nurture). De bouwgrond-tak
+      // sluit hierna direct af (geen budget/financiering/locaties).
+      optInIntroBouwgrond: [
+        'Fijn, bedankt voor je antwoorden.',
+        'We hebben mogelijk een bouwkavel die bij jou past.',
+        'Laat je gegevens achter, dan nemen we snel contact met je op.',
+      ],
+      // Afsluit-bubble voor de bouwgrond-tak, na de lead-capture.
+      finalBubbleBouwgrond: 'Dank, {firstName}. We nemen binnenkort contact met je op.',
       // Overgangs-bubble ná de opt-in lead-capture, vlak vóór de budget-vraag
       // (zie finishLead survey-tak). Bevestigt de opt-in en kondigt de laatste
       // paar vragen aan.

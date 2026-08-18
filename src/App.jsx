@@ -1215,7 +1215,11 @@ function Demo() {
       // (survey-tak) hervat daarna met budget.
       trackEvent('survey:answered', { key: 'wanneer', id: opt.id })
       dispatch({ type: 'ANSWER', key: 'wanneer', value: val, next: 'lead-form' })
-      const optIn = (sf.optInIntro || []).map((text) => ({ kind: 'bot-text', text }))
+      // Bouwgrond-tak krijgt een eigen opt-in (bouwkavel + persoonlijk contact).
+      const optInSource = state.answers.grondVraag?.id === 'bouwgrond'
+        ? (sf.optInIntroBouwgrond || sf.optInIntro || [])
+        : (sf.optInIntro || [])
+      const optIn = optInSource.map((text) => ({ kind: 'bot-text', text }))
       sendSequence(userTextFromOpt(opt), [
         ...optIn,
         { kind: 'lead-form', payload: { variant: 'survey' } },
@@ -2403,12 +2407,13 @@ function Demo() {
     // na de locaties-multiselect af.
     const surveyFlow = project.flowOverrides?.surveyFlow
     if (surveyFlow) {
-      // Opt-in-capture halverwege de peiling: lead opslaan en de snapshot
-      // vroeg wegschrijven (goede vroege capture), daarna NIET afsluiten maar
-      // door naar de budget-vraag. De definitieve afsluiting gebeurt pas na
-      // de locaties-multiselect (zie onLocationSubmit). currentQuestion gaat
-      // dus naar 'budget' ipv null.
-      dispatch({ type: 'ANSWER', key: 'lead', value: lead, next: 'budget' })
+      // Opt-in-capture halverwege de peiling. De reguliere tak hervat na de
+      // capture met budget; de bouwgrond-tak sluit hier direct af (aparte
+      // bouwkavel-boodschap + persoonlijk contact), zonder budget/financiering/
+      // locaties. currentQuestion → 'einde' (eind-acties) bij bouwgrond,
+      // anders 'budget'.
+      const isBouwgrondLead = state.answers.grondVraag?.id === 'bouwgrond'
+      dispatch({ type: 'ANSWER', key: 'lead', value: lead, next: isBouwgrondLead ? 'einde' : 'budget' })
       pushSnapshot(
         [{ scope: 'peiling-opvolging', granted: true, detail: { from: 'finishLead-survey' } }],
         lead,
@@ -2416,6 +2421,17 @@ function Demo() {
       trackEvent('survey:lead-captured', { persona })
       const userMsgs = prependMessages.filter((m) => m.kind === 'user-text')
       if (userMsgs.length > 0) dispatch({ type: 'APPEND', messages: userMsgs })
+      if (isBouwgrondLead) {
+        const firstName = lead.firstName || ''
+        const closeText = (surveyFlow.finalBubbleBouwgrond || 'Dank, {firstName}. We nemen binnenkort contact met je op.')
+          .replace('{firstName}', firstName)
+          .replace(/,\s*\.\s*/, '. ')
+          .replace(/\s{2,}/g, ' ')
+          .trim()
+        dispatch({ type: 'ENQUEUE', messages: [{ kind: 'bot-text', text: closeText }] })
+        trackEvent('flow:complete', { stage: 'survey-bouwgrond', persona })
+        return
+      }
       // Overgangs-bubble na de lead-capture, vlak vóór de budget-vraag. Uit
       // surveyFlow.postLeadIntro; valt weg als het veld ontbreekt.
       const postLead = surveyFlow.postLeadIntro
