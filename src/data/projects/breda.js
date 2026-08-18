@@ -24,6 +24,11 @@ export const project = {
   tagline: 'We peilen de vraag naar bedrijfsruimte in de regio.',
   shortDescription: 'Korte marktpeiling onder ondernemers in de omgeving Breda.',
 
+  // Header-subtitel onder de projectnaam. Default (andere tenants) is
+  // 'exclusief in verkoop bij REPP'; een peiling verkoopt niks, dus een
+  // neutrale verkenning-subtitel.
+  headerSubtitle: 'marktverkenning door REPP',
+
   // Geen hero-asset aangeleverd: null houdt BrochureBubble/IntroScreen
   // veilig (geen missende-file 404). Brochure staat sowieso uit.
   hero: null,

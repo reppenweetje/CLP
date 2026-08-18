@@ -749,19 +749,23 @@ function Demo() {
   const [showRescue, setShowRescue] = useState(false)
   const chatActive = state.view === 'chat'
   const flowComplete = state.messages.some((m) => m.kind === 'cta-card')
+  // Peiling-modus: geen verkoop-rescue/exit-nudges (die verwijzen naar een
+  // Reppit-WhatsApp-assistent die er voor een peiling niet is) en geen
+  // verkoop-progressbalk. Gated zodat andere tenants ongewijzigd blijven.
+  const isSurvey = !!project.flowOverrides?.surveyFlow
   // Smart resume: bezoeker komt terug na ≥4u in onvoltooide chat MET
   // progressie (≥1 beantwoorde vraag). Banner toont count zodat user
   // weet wat er bewaard is — geen lege belofte bij nul antwoorden.
   const { offerResume, ageMs, answersCount, dismissResume } = useSmartResume(chatActive && !flowComplete)
   // Inactiviteit rescue: 30s niets gedaan → floating nudge.
   useInactivityRescue({
-    active: chatActive && !flowComplete && !showRescue,
+    active: chatActive && !flowComplete && !showRescue && !isSurvey,
     onTrigger: () => setShowRescue(true),
   })
   // Exit intent: cursor verlaat top of tab gaat hidden → why-leaving prompt.
   // Alleen actief als bezoeker iets heeft gedaan en nog niet voltooid is —
   // anders is het te invasief op een verse pageview.
-  const exitActive = chatActive && !flowComplete && Object.keys(state.answers).length >= 2
+  const exitActive = chatActive && !flowComplete && !isSurvey && Object.keys(state.answers).length >= 2
   const { showPrompt: showExitPrompt, dismiss: dismissExitPrompt } = useExitIntent({ active: exitActive })
   // Bewaart de currentQuestion van vóór een lead-edit zodat we na het
   // bijwerken van email/naam/06 terug kunnen naar waar de bezoeker was.
@@ -822,7 +826,9 @@ function Demo() {
   useEffect(() => {
     if (typeof document === 'undefined') return
     const name = project.displayName || project.name || 'REPP'
-    document.title = `${name}, brochure en prijzen`
+    // Peiling (surveyFlow) verkoopt niks, dus geen "brochure en prijzen"-
+    // suffix; andere tenants houden de bestaande tab-titel.
+    document.title = project.flowOverrides?.surveyFlow ? name : `${name}, brochure en prijzen`
   }, [])
   const persona = derivePersona(state.answers)
   const score = computeScore(state.answers)
@@ -2860,7 +2866,7 @@ function Demo() {
   }
   const answeredCount = ['intent', 'brochureTrigger', 'lead', 'size', 'timeline', 'followup']
     .filter((k) => state.answers[k]).length
-  const progress = state.view === 'chat' ? { current: Math.min(6, Math.max(1, answeredCount + 1)), total: 6 } : null
+  const progress = (state.view === 'chat' && !isSurvey) ? { current: Math.min(6, Math.max(1, answeredCount + 1)), total: 6 } : null
   // De aanpassen-knop tonen we vanaf het moment dat er minimaal 1 antwoord is gegeven.
   const showAnswersButton = state.view === 'chat' && Object.values(state.answers).some(Boolean)
   return (

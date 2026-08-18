@@ -55,7 +55,7 @@ export default function AppShell({
               )}
               <div className="flex flex-col leading-tight min-w-0">
                 <div className="text-[13px] tracking-[0.18em] text-ink uppercase font-medium whitespace-nowrap">{project.displayName || project.name}</div>
-                <div className="text-[9px] tracking-[0.14em] text-ink-mute uppercase whitespace-nowrap mt-0.5">exclusief in verkoop bij REPP</div>
+                <div className="text-[9px] tracking-[0.14em] text-ink-mute uppercase whitespace-nowrap mt-0.5">{project.headerSubtitle ?? 'exclusief in verkoop bij REPP'}</div>
               </div>
             </div>
             <div className="flex items-center gap-2">
