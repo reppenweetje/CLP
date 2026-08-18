@@ -20,7 +20,7 @@
 export const project = {
   id: 'breda',
   name: 'breda',
-  displayName: 'Ondernemen in omgeving Breda',
+  displayName: 'Omgeving Breda',
   tagline: 'We peilen de vraag naar bedrijfsruimte in de regio.',
   shortDescription: 'Korte marktpeiling onder ondernemers in de omgeving Breda.',
 
@@ -36,7 +36,7 @@ export const project = {
 
   // CRM-project key. Moet EXACT matchen met de Supabase projects-tabel.
   // Registreer 'Breda BUnit' backend-zijde voordat leads binnenkomen.
-  crmProject: 'Breda BUnit',
+  crmProject: 'Breda',
 
   portalStrategy: 'none',
 
