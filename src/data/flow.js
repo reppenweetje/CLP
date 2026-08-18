@@ -243,11 +243,12 @@ export const flow = {
     // Q3 — doel. persona voedt derivePersona (eigen_gebruiker / belegger / beide).
     doel: {
       key: 'doel',
-      label: 'Is dit voor eigen gebruik of als belegging?',
+      label: 'Is het voor je eigen bedrijf of als belegging?',
       options: [
-        { id: 'eigen_gebruik', label: 'Eigen gebruik', persona: 'eigen_gebruiker' },
-        { id: 'belegging',     label: 'Belegging',     persona: 'belegger' },
-        { id: 'allebei',       label: 'Allebei',       persona: 'beide' },
+        { id: 'eigen_bedrijf', label: 'Voor mijn bedrijf', persona: 'eigen_gebruiker' },
+        { id: 'belegging',     label: 'Als belegging',     persona: 'belegger' },
+        { id: 'beide',         label: 'Beide',             persona: 'beide' },
+        { id: 'huur',          label: 'Om te huren',       persona: 'huurder' },
       ],
     },
 
@@ -280,12 +281,13 @@ export const flow = {
     // Q6 — termijn.
     wanneer: {
       key: 'wanneer',
-      label: 'Wanneer zou je dit willen realiseren?',
+      label: 'Voor wanneer ben je op zoek?',
       options: [
-        { id: '6mnd',         label: 'Binnen 6 maanden' },
-        { id: 'dit_jaar',     label: 'Dit jaar' },
-        { id: 'volgend_jaar', label: 'Volgend jaar' },
-        { id: 'orienterend',  label: 'Nog oriënterend' },
+        { id: 'zsm',       label: 'Zo snel mogelijk' },
+        { id: '3mnd',      label: 'Binnen 3 maanden' },
+        { id: '6mnd',      label: 'Binnen 6 maanden' },
+        { id: 'dit_jaar',  label: 'Later dit jaar' },
+        { id: 'weet_niet', label: 'Weet ik nog niet' },
       ],
     },
 
