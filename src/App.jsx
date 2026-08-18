@@ -698,17 +698,11 @@ function computeReleaseDelay(message) {
   // bubble gerendered, alleen gebruikt om tijd te kopen tussen bubbles.
   if (message.kind === 'pause') return Math.max(0, message.ms || 0)
   if (message.kind === 'bot-text') {
-    const len = message.text?.length || 30
-    // Peiling (surveyFlow): snappier ritme. Ad-verkeer wil snel de eerste
-    // vraag zien, niet een trage typanimatie. Gated, andere tenants houden
-    // het rustige verkoop-ritme hieronder.
-    if (project.flowOverrides?.surveyFlow) {
-      return Math.max(300, Math.min(700, 250 + len * 8))
-    }
     // Bandbreedte verhoogd voor rustiger ritme tussen opeenvolgende bot-
     // bubbles. Kortste delay 700ms, langste 1500ms (was 450-900ms). Per
     // karakter +12ms ipv +9ms zodat lange zinnen daadwerkelijk leestijd
     // krijgen voor de volgende bubble verschijnt.
+    const len = message.text?.length || 30
     return Math.max(700, Math.min(1500, 500 + len * 12))
   }
   // Rich cards en interactieve bubbles vragen iets meer aandacht. Lijst is
