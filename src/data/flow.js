@@ -185,8 +185,145 @@ export const flow = {
         { id: 'wa_nu', label: 'WhatsApp mij nu', score: 32 },
       ],
     },
+
+    // --- Peiling-vragen (survey) -------------------------------------------
+    // Alleen actief voor projecten met flowOverrides.surveyFlow (BREDA).
+    // De survey-sequencer in App.jsx leest deze vragen via de gated
+    // chipQuestion-tak en advanceert langs SURVEY_ORDER. Voor projecten
+    // zonder surveyFlow worden ze nooit aangeroepen — de standaard flow
+    // blijft dus byte-voor-byte identiek.
+    //
+    // Vraaggericht en broad: geen locatie, plan, units of prijzen van ons
+    // aanbod. Chips sentence case, zonder punt of vraagteken.
+
+    // Q1 — product-fork. leadVariant routeert de lead naar de juiste
+    // Brevo-lijst: bouwgrond → 'bouwgrond', garagebox → 'garagebox',
+    // bedrijfsruimte → null (default project-list).
+    productType: {
+      key: 'productType',
+      label: 'Waar ben je naar op zoek?',
+      options: [
+        { id: 'bedrijfsruimte', label: 'Bedrijfsruimte', leadVariant: null },
+        { id: 'bouwgrond',      label: 'Bouwgrond',      leadVariant: 'bouwgrond' },
+        { id: 'garagebox',      label: 'Garagebox',      leadVariant: 'garagebox' },
+      ],
+    },
+
+    // Q2a — oppervlakte bij bedrijfsruimte.
+    sizeRuimte: {
+      key: 'sizeRuimte',
+      label: 'Welke oppervlakte past ongeveer bij je?',
+      options: [
+        { id: 'tot_100',  label: 'Tot 100 m²' },
+        { id: '100_150',  label: '100 tot 150 m²' },
+        { id: '150_250',  label: '150 tot 250 m²' },
+        { id: 'meer_250', label: 'Meer dan 250 m²' },
+        { id: 'weet_niet', label: 'Weet ik nog niet' },
+      ],
+    },
+
+    // Q2b — bouwgrond gebruikt de M2MeterBubble (geen chips). Deze entry
+    // levert alleen het label voor de bot-intro voor de meter.
+    grondSize: {
+      key: 'grondSize',
+      label: 'Hoeveel grond zoek je ongeveer?',
+      options: [],
+    },
+
+    // Q2c — aantal boxen bij garagebox.
+    sizeBox: {
+      key: 'sizeBox',
+      label: 'Zoek je één box of meerdere?',
+      options: [
+        { id: 'een',      label: 'Eén box' },
+        { id: 'meerdere', label: 'Meerdere boxen' },
+      ],
+    },
+
+    // Q3 — doel. persona voedt derivePersona (eigen_gebruiker / belegger / beide).
+    doel: {
+      key: 'doel',
+      label: 'Is dit voor eigen gebruik of als belegging?',
+      options: [
+        { id: 'eigen_gebruik', label: 'Eigen gebruik', persona: 'eigen_gebruiker' },
+        { id: 'belegging',     label: 'Belegging',     persona: 'belegger' },
+        { id: 'allebei',       label: 'Allebei',       persona: 'beide' },
+      ],
+    },
+
+    // Q4 — branche.
+    branche: {
+      key: 'branche',
+      label: 'In welke branche zit je?',
+      options: [
+        { id: 'bouw_techniek',    label: 'Bouw en techniek' },
+        { id: 'handel_opslag',    label: 'Handel en opslag' },
+        { id: 'dienstverlening',  label: 'Dienstverlening' },
+        { id: 'creatief_ambacht', label: 'Creatief en ambacht' },
+        { id: 'anders',           label: 'Anders' },
+      ],
+    },
+
+    // Q5 — toepassing.
+    toepassing: {
+      key: 'toepassing',
+      label: 'Waar ga je de ruimte vooral voor gebruiken?',
+      options: [
+        { id: 'opslag',    label: 'Opslag' },
+        { id: 'werkplaats', label: 'Werkplaats' },
+        { id: 'kantoor',   label: 'Kantoor' },
+        { id: 'showroom',  label: 'Showroom' },
+        { id: 'atelier',   label: 'Atelier' },
+      ],
+    },
+
+    // Q6 — termijn.
+    wanneer: {
+      key: 'wanneer',
+      label: 'Wanneer zou je dit willen realiseren?',
+      options: [
+        { id: '6mnd',         label: 'Binnen 6 maanden' },
+        { id: 'dit_jaar',     label: 'Dit jaar' },
+        { id: 'volgend_jaar', label: 'Volgend jaar' },
+        { id: 'orienterend',  label: 'Nog oriënterend' },
+      ],
+    },
+
+    // Q7 — budget.
+    budget: {
+      key: 'budget',
+      label: 'Welk budget heb je ongeveer in gedachten?',
+      options: [
+        { id: 'tot_150',  label: 'Tot € 150.000' },
+        { id: '150_250',  label: '€ 150.000 tot € 250.000' },
+        { id: '250_400',  label: '€ 250.000 tot € 400.000' },
+        { id: 'meer_400', label: 'Meer dan € 400.000' },
+        { id: 'weet_niet', label: 'Weet ik nog niet' },
+      ],
+    },
+
+    // Q8 — financiering.
+    financiering: {
+      key: 'financiering',
+      label: 'Heb je financiering nodig?',
+      options: [
+        { id: 'ja',        label: 'Ja' },
+        { id: 'nee',       label: 'Nee' },
+        { id: 'weet_niet', label: 'Weet ik nog niet' },
+      ],
+    },
   },
 }
+
+// Ordered lijst van chip-vraag-ids voor de peiling-sequencer. De size-stap
+// (sizeRuimte / grondSize+M2MeterBubble / sizeBox) en de doel-persona-store
+// worden in App.jsx afgehandeld; deze set bepaalt welke currentQuestion-
+// waarden als peiling-chipvraag renderen. 'doel' stort zijn antwoord onder
+// key 'intent' zodat derivePersona de persona oppikt.
+export const SURVEY_CHIP_KEYS = [
+  'productType', 'sizeRuimte', 'sizeBox', 'doel',
+  'branche', 'toepassing', 'wanneer', 'budget', 'financiering',
+]
 
 // A/B variant-aware label resolver. Geeft labelVariants[variant] als die
 // gedefinieerd is op de question, anders de standaard label. Caller geeft

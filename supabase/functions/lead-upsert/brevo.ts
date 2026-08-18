@@ -148,6 +148,16 @@ function buildAttributes(lead: BrevoLeadInput): Record<string, unknown> {
     if (typeof (extras as Record<string, unknown>).unit_id === 'string') {
       set('UNIT', (extras as Record<string, string>).unit_id)
     }
+    // Bouwgrond-oppervlakte uit de BREDA-peiling (M2Meter). Brevo dropt
+    // GROND_M2 stil tot het attribuut in het dashboard is aangemaakt.
+    if (typeof (extras as Record<string, unknown>).grondM2 === 'number') {
+      set('GROND_M2', (extras as Record<string, number>).grondM2)
+    }
+    // Bedrijfsnaam uit de BREDA-peiling lead-form. Brevo dropt COMPANY stil
+    // tot het attribuut in het dashboard is aangemaakt.
+    if (typeof (extras as Record<string, unknown>).company === 'string') {
+      set('COMPANY', (extras as Record<string, string>).company)
+    }
   }
 
   return attrs

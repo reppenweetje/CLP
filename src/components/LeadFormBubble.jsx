@@ -15,9 +15,14 @@ import Avatar from './Avatar.jsx'
 // autocomplete="email"/"tel"/"given-name". We laten 1Password expliciet
 // negeren via data-1p-ignore + random name attributes (zelfde patroon
 // als ChatInput.jsx).
-export default function LeadFormBubble({ onSubmit }) {
+// variant='survey' (BREDA-peiling): bedrijfsnaam-veld erbij, telefoon
+// optioneel, en copy zonder brochure-belofte. Zonder variant blijft de
+// bubble byte-voor-byte de bestaande verkoop-capture voor andere tenants.
+export default function LeadFormBubble({ onSubmit, variant }) {
+  const isSurvey = variant === 'survey'
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [company, setCompany] = useState('')
   const [phone, setPhone] = useState('')
   const [errors, setErrors] = useState({})
   const [submitted, setSubmitted] = useState(false)
@@ -29,8 +34,14 @@ export default function LeadFormBubble({ onSubmit }) {
     else if (!/^[a-z0-9._%+-]+@[a-z0-9-]+\.[a-z]{2,}$/i.test(email.trim())) {
       next.email = 'Dit lijkt geen geldig e-mailadres'
     }
+    if (isSurvey && !company.trim()) next.company = 'Vul je bedrijfsnaam in'
     const phoneDigits = phone.replace(/\D/g, '')
-    if (!phoneDigits) {
+    if (isSurvey) {
+      // Telefoon optioneel in de peiling: alleen valideren als ingevuld.
+      if (phoneDigits && !isValidNLPhone(phoneDigits)) {
+        next.phone = 'Gebruik een NL-mobiel nummer (06...)'
+      }
+    } else if (!phoneDigits) {
       next.phone = 'Vul je 06-nummer in'
     } else if (!isValidNLPhone(phoneDigits)) {
       next.phone = 'Gebruik een NL-mobiel nummer (06...)'
@@ -47,7 +58,8 @@ export default function LeadFormBubble({ onSubmit }) {
     onSubmit?.({
       firstName: capitalize(name.trim()),
       email: email.trim().toLowerCase(),
-      phone: normalizeNLPhone(phone),
+      phone: phone.trim() ? normalizeNLPhone(phone) : null,
+      ...(isSurvey ? { company: company.trim() } : {}),
     })
   }
 
@@ -82,8 +94,19 @@ export default function LeadFormBubble({ onSubmit }) {
             inputMode="email"
             placeholder="jouw@bedrijf.nl"
           />
+          {isSurvey && (
+            <Field
+              label="Bedrijf"
+              value={company}
+              onChange={setCompany}
+              error={errors.company}
+              disabled={submitted}
+              ns={ns + '-c'}
+              placeholder="Bedrijfsnaam"
+            />
+          )}
           <Field
-            label="Telefoon"
+            label={isSurvey ? 'Telefoon (optioneel)' : 'Telefoon'}
             value={phone}
             onChange={setPhone}
             error={errors.phone}
@@ -102,13 +125,13 @@ export default function LeadFormBubble({ onSubmit }) {
           )}
           {submitted && (
             <div className="mt-1 text-sm text-emerald-700 font-medium">
-              ✓ Bedankt, we sturen je zo de brochure.
+              {isSurvey ? '✓ Dank, dat is genoteerd.' : '✓ Bedankt, we sturen je zo de brochure.'}
             </div>
           )}
           <p className="text-[11px] text-ink-mute leading-snug pt-1">
-            We mailen je de brochure en bewaren je voorkeur zodat onze
-            makelaar je gericht kan opvolgen. Hoe we met je gegevens
-            omgaan staat in onze{' '}
+            {isSurvey
+              ? 'We bewaren je gegevens zodat we je op de hoogte kunnen houden over ontwikkelingen in de regio. Hoe we met je gegevens omgaan staat in onze '
+              : 'We mailen je de brochure en bewaren je voorkeur zodat onze makelaar je gericht kan opvolgen. Hoe we met je gegevens omgaan staat in onze '}
             <a
               href="/privacy.html"
               target="_blank"

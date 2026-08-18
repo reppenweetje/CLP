@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useState } from 'react'
 import { project, uspCardOrder } from './data/project.js'
-import { flow, getLabel } from './data/flow.js'
+import { flow, getLabel, SURVEY_CHIP_KEYS } from './data/flow.js'
 import {
   computeScore,
   derivePersona,
@@ -50,6 +50,10 @@ import { useSmartResume, useInactivityRescue, useExitIntent, getOrAssignVariant,
 import { detectCurrentIp } from './lib/ipExclusion.js'
 let _id = 0
 const nextId = () => ++_id
+// Snelle membership-check voor de peiling-sequencer (alleen relevant als
+// project.flowOverrides.surveyFlow gezet is; anders wordt deze set nooit
+// geraadpleegd en blijft de standaard flow ongewijzigd).
+const SURVEY_CHIP_KEY_SET = new Set(SURVEY_CHIP_KEYS)
 // Bump het versie-suffix wanneer de gepersisteerde state-shape wijzigt. Een
 // oude state uit een vorige bundle kan messages bevatten zonder messageQueue;
 // de mount-init slaat dan start() over (messages.length > 0) terwijl de queue
@@ -156,6 +160,24 @@ function reducer(state, action) {
       // "Start chat" (anders voelt die klik laggy).
       const typeFirst = action.typeFirst === true
       const greeting = { kind: 'bot-text', text: `Hoi, ik ben ${bot.name} van ${bot.org}.` }
+      // Peiling-modus (BREDA): survey-intro + productType als eerste vraag.
+      // Alleen actief als het project flowOverrides.surveyFlow zet; anders
+      // valt de code door naar de standaard verkoop-intro hieronder, byte-
+      // voor-byte gelijk aan voorheen.
+      const surveyFlow = project.flowOverrides?.surveyFlow
+      if (surveyFlow) {
+        const introBubbles = (surveyFlow.intro || []).map((text) => ({ kind: 'bot-text', text }))
+        const surveyQuestion = { kind: 'bot-text', text: flow.questions.productType.label }
+        return {
+          ...state,
+          view: 'chat',
+          messages: typeFirst ? [] : [{ id: nextId(), ...greeting }],
+          messageQueue: typeFirst
+            ? [greeting, ...introBubbles, surveyQuestion]
+            : [...introBubbles, surveyQuestion],
+          currentQuestion: 'productType',
+        }
+      }
       const followup = { kind: 'bot-text', text: 'Om de juiste brochure en prijzen met je te delen heb ik een korte vraag.' }
       // Project mag de copy-variant van de intent-vraag overschrijven met
       // één vaste tekst (flowOverrides.intentLabel). Zonder override blijft
@@ -929,6 +951,14 @@ function Demo() {
         buyingSignals: buying.signals.map((s) => s.id),
         moreInfoSeen:  state.moreInfoSeen,
         rentRange:     state.answers.rentRange?.id ?? null,
+        // Bouwgrond-oppervlakte uit de peiling-M2Meter (BREDA). Alleen aanwezig
+        // als de bezoeker de bouwgrond-tak liep; brevo.ts forwardt 'm naar
+        // GROND_M2. Andere tenants hebben geen answers.grondM2, dus deze key
+        // verschijnt daar nooit → snapshot-shape blijft identiek.
+        ...(typeof state.answers.grondM2?.value === 'number' ? { grondM2: state.answers.grondM2.value } : {}),
+        // Bedrijfsnaam uit de BREDA-peiling lead-form. Alleen aanwezig als de
+        // survey-variant 'em ophaalde; brevo.ts forwardt 'm naar COMPANY.
+        ...(lead.company ? { company: lead.company } : {}),
         // Unit-signaal niet apart meesturen: size_id (hierboven) landt al in
         // de Brevo SIZE-attribute, bv. Hofman "Rond 192 m²" → "rond_192" = XXL.
         // Sales ziet de gewenste unit dus via SIZE.
@@ -1117,9 +1147,80 @@ function Demo() {
       dispatch({ type: 'ENQUEUE', messages: botMessages })
     }
   }
+  // Peiling-sequencer (BREDA). Alleen actief als het project
+  // flowOverrides.surveyFlow zet. Eén gated code-pad dat de survey-vragen
+  // afhandelt en langs SURVEY_CHIP_KEYS advanceert. Voor projecten zonder
+  // surveyFlow wordt dit nooit geraakt en blijft onChipPick ongewijzigd.
+  const handleSurveyChip = (q, opt) => {
+    const val = answerValue(opt)
+    const sf = project.flowOverrides?.surveyFlow || {}
+    if (q === 'productType') {
+      // leadVariant per product → Brevo-lijstrouting.
+      dispatch({ type: 'BEHAVIOR_SET_LEAD_VARIANT', variant: opt.leadVariant ?? null })
+      trackEvent('survey:answered', { key: 'productType', id: opt.id })
+      if (opt.id === 'bouwgrond') {
+        // Bouwgrond-tak: M2MeterBubble ipv chips. currentQuestion 'grondM2'
+        // rendert geen chips/input, alleen de bubble met eigen bevestig-knop.
+        dispatch({ type: 'ANSWER', key: 'productType', value: val, next: 'grondM2' })
+        sendSequence(userTextFromOpt(opt), [
+          { kind: 'bot-text', text: flow.questions.grondSize.label },
+          { kind: 'm2-meter', payload: {} },
+        ])
+        return
+      }
+      const sizeKey = opt.id === 'garagebox' ? 'sizeBox' : 'sizeRuimte'
+      dispatch({ type: 'ANSWER', key: 'productType', value: val, next: sizeKey })
+      sendSequence(userTextFromOpt(opt), [{ kind: 'bot-text', text: flow.questions[sizeKey].label }])
+      return
+    }
+    if (q === 'sizeRuimte' || q === 'sizeBox') {
+      trackEvent('survey:answered', { key: q, id: opt.id })
+      dispatch({ type: 'ANSWER', key: q, value: val, next: 'doel' })
+      sendSequence(userTextFromOpt(opt), [{ kind: 'bot-text', text: flow.questions.doel.label }])
+      return
+    }
+    if (q === 'doel') {
+      // Onder key 'intent' opslaan zodat derivePersona de persona oppikt.
+      trackEvent('survey:answered', { key: 'doel', id: opt.id, persona: opt.persona })
+      dispatch({ type: 'ANSWER', key: 'intent', value: val, next: 'branche' })
+      sendSequence(userTextFromOpt(opt), [{ kind: 'bot-text', text: flow.questions.branche.label }])
+      return
+    }
+    const linear = { branche: 'toepassing', toepassing: 'wanneer', wanneer: 'budget', budget: 'financiering' }
+    if (linear[q]) {
+      const next = linear[q]
+      trackEvent('survey:answered', { key: q, id: opt.id })
+      dispatch({ type: 'ANSWER', key: q, value: val, next })
+      sendSequence(userTextFromOpt(opt), [{ kind: 'bot-text', text: flow.questions[next].label }])
+      return
+    }
+    if (q === 'financiering') {
+      trackEvent('survey:answered', { key: 'financiering', id: opt.id })
+      dispatch({ type: 'ANSWER', key: 'financiering', value: val, next: 'lead-form' })
+      sendSequence(userTextFromOpt(opt), [
+        { kind: 'bot-text', text: sf.leadIntro || 'Tot slot je gegevens, dan houden we je op de hoogte.' },
+        { kind: 'lead-form', payload: { variant: 'survey' } },
+      ])
+      return
+    }
+  }
+  // M2MeterBubble-submit voor de bouwgrond-tak. Slaat de oppervlakte op als
+  // answer `grondM2` (met numerieke .value) en gaat door naar de doel-vraag.
+  // pushSnapshot leest state.answers.grondM2.value en zet 'm door naar Brevo.
+  const onM2Submit = (value) => {
+    trackEvent('survey:answered', { key: 'grondM2', value })
+    const answer = { id: 'grondM2', label: `± ${value} m²`, value, _msgCountBefore: state.messages.length }
+    dispatch({ type: 'ANSWER', key: 'grondM2', value: answer, next: 'doel' })
+    sendSequence(`± ${value} m²`, [{ kind: 'bot-text', text: flow.questions.doel.label }])
+  }
   const onChipPick = (opt) => {
     const q = state.currentQuestion
     if (!q) return
+    // Gated peiling-pad: vangt alle survey-chipvragen af vóór de standaard
+    // handlers. Nooit actief zonder project.flowOverrides.surveyFlow.
+    if (project.flowOverrides?.surveyFlow && SURVEY_CHIP_KEY_SET.has(q)) {
+      return handleSurveyChip(q, opt)
+    }
     if (q === 'intent') {
       const personaNext = opt.persona || 'onbekend'
       trackEvent('intent:answered', { id: opt.id, label: opt.label, persona: personaNext })
@@ -2154,13 +2255,13 @@ function Demo() {
   // korte samenvatting (naam · email · telefoon), trackt de drie
   // submitted-events, en delegeert door naar finishLead die de rest
   // van de flow afhandelt (Supabase push, size-vraag, etc.).
-  function handleLeadFormSubmit({ firstName, email, phone }) {
-    const lead = { firstName, email, phone }
+  function handleLeadFormSubmit({ firstName, email, phone, company }) {
+    const lead = { firstName, email, phone, ...(company ? { company } : {}) }
     // Track-events compatible met oude 4-staps flow zodat analytics
     // events-tabel consistent blijft.
     trackNewLeadFields(state.leadDraft || {}, lead)
-    trackEvent('lead-form:submitted', { hasName: !!firstName, hasEmail: !!email, hasPhone: !!phone })
-    const summary = `${firstName} · ${email} · ${phone}`
+    trackEvent('lead-form:submitted', { hasName: !!firstName, hasEmail: !!email, hasPhone: !!phone, hasCompany: !!company })
+    const summary = [firstName, email, company, phone].filter(Boolean).join(' · ')
     finishLead(lead, [{ kind: 'user-text', text: summary }])
   }
   function finishLead(lead, prependMessages = []) {
@@ -2170,6 +2271,27 @@ function Demo() {
     // conversie richting Meta.
     fireMetaCustom('FullLeadComplete', 'lead-complete', { hasPhone: !!lead?.phone })
     dispatch({ type: 'LEAD_DRAFT', draft: lead })
+    // Peiling-afsluiting (BREDA). Gated: alleen als flowOverrides.surveyFlow
+    // gezet is. Geen aanbod om te tonen, dus we slaan size/timeline/
+    // recommendation/moreInfo over en sluiten direct af met de close-bubbles.
+    const surveyFlow = project.flowOverrides?.surveyFlow
+    if (surveyFlow) {
+      dispatch({ type: 'ANSWER', key: 'lead', value: lead, next: null })
+      pushSnapshot(
+        [{ scope: 'peiling-opvolging', granted: true, detail: { from: 'finishLead-survey' } }],
+        lead,
+      )
+      trackEvent('flow:complete', { stage: 'survey', persona })
+      const userMsgs = prependMessages.filter((m) => m.kind === 'user-text')
+      if (userMsgs.length > 0) dispatch({ type: 'APPEND', messages: userMsgs })
+      const firstName = lead.firstName || ''
+      const closeBubbles = (surveyFlow.closeBubbles || []).map((t) => ({
+        kind: 'bot-text',
+        text: t.replace('{firstName}', firstName).replace(/,\s*\.\s*/, '. '),
+      }))
+      dispatch({ type: 'ENQUEUE', messages: closeBubbles })
+      return
+    }
     // Volgende stap hangt af van waar de bezoeker in de flow zit. Wanneer
     // size en timeline al beantwoord zijn (bijv. via warm-handoff callback
     // na timeline), niet terugsturen naar size — dan blijft de bezoeker op
@@ -2614,7 +2736,13 @@ function Demo() {
   const toggleDebug = () => dispatch({ type: 'TOGGLE_DEBUG' })
   let chipQuestion = null
   let inputConfig = null
-  if (state.currentQuestion === 'intent') chipQuestion = flow.questions.intent
+  // Gated peiling-chipvragen (BREDA). Nooit actief zonder surveyFlow, dus de
+  // bestaande resolutie-keten hieronder blijft ongewijzigd voor andere tenants.
+  const surveyChipKey = project.flowOverrides?.surveyFlow && SURVEY_CHIP_KEY_SET.has(state.currentQuestion)
+    ? state.currentQuestion
+    : null
+  if (surveyChipKey) chipQuestion = flow.questions[surveyChipKey]
+  else if (state.currentQuestion === 'intent') chipQuestion = flow.questions.intent
   else if (state.currentQuestion === 'nauticGate') {
     // Twee passes:
     //   1e pass (bezoeker komt net binnen op de gate): "Ja" / "Nee" / "Wat
@@ -2778,6 +2906,7 @@ function Demo() {
             onTopicJump={onTopicJump}
             onPortalClick={onPortalClick}
             onLeadFormSubmit={handleLeadFormSubmit}
+            onM2Submit={onM2Submit}
             onReset={() => {
               clearPersisted()
               _id = 0

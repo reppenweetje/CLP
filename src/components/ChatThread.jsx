@@ -21,6 +21,7 @@ import BrochureBubble from './BrochureBubble.jsx'
 import WarmHandoffBubble from './WarmHandoffBubble.jsx'
 import ServiceCardBubble from './ServiceCardBubble.jsx'
 import LeadFormBubble from './LeadFormBubble.jsx'
+import M2MeterBubble from './M2MeterBubble.jsx'
 
 // Bubble-kinds die we tracken voor exposure-analyse. Komt overeen met
 // de switch-cases in renderMessage(). Bot-text/user-text/typing tellen
@@ -29,13 +30,13 @@ const TRACKABLE_BUBBLE_KINDS = new Set([
   'content-card', 'unit-card', 'gallery', 'usp-cards', 'location',
   'site-plan', 'site-plan-svg', 'highlights', 'process', 'planning', 'investor',
   'price', 'price-compare', 'brochure', 'cta-card', 'warm-handoff',
-  'service-card', 'lead-form',
+  'service-card', 'lead-form', 'm2-meter',
 ])
 
 // Scrollable chat thread. Bij nieuwe messages scrollen we zo dat
 // het laatste user-bubble bovenaan komt te staan; de bot-replies daaronder
 // blijven leesbaar zonder dat de bezoeker handmatig terug moet scrollen.
-export default function ChatThread({ messages, showTyping = false, onBrochure, onReset, onUnitView, onCalcInteract, onCredionRequest, onHandoffAction, onServiceCardAction, onServiceCardSubmitPhone, onWaRequest, onTopicJump, onPortalClick, onLeadFormSubmit }) {
+export default function ChatThread({ messages, showTyping = false, onBrochure, onReset, onUnitView, onCalcInteract, onCredionRequest, onHandoffAction, onServiceCardAction, onServiceCardSubmitPhone, onWaRequest, onTopicJump, onPortalClick, onLeadFormSubmit, onM2Submit }) {
   const containerRef = useRef(null)
   const prevLengthRef = useRef(0)
   const trackedIdsRef = useRef(new Set())
@@ -73,7 +74,7 @@ export default function ChatThread({ messages, showTyping = false, onBrochure, o
     <div ref={containerRef} className="flex-1 overflow-y-auto px-4 pt-4 pb-2 space-y-3">
       {messages.map((m, i) => (
         <div key={m.id} data-msg-idx={i} data-msg-id={m.id} data-msg-kind={m.kind}>
-          {renderMessage(m, { onBrochure, onReset, onUnitView, onCalcInteract, onCredionRequest, onHandoffAction, onServiceCardAction, onServiceCardSubmitPhone, onWaRequest, onTopicJump, onPortalClick, onLeadFormSubmit })}
+          {renderMessage(m, { onBrochure, onReset, onUnitView, onCalcInteract, onCredionRequest, onHandoffAction, onServiceCardAction, onServiceCardSubmitPhone, onWaRequest, onTopicJump, onPortalClick, onLeadFormSubmit, onM2Submit })}
         </div>
       ))}
       {showTyping && (
@@ -85,7 +86,7 @@ export default function ChatThread({ messages, showTyping = false, onBrochure, o
   )
 }
 
-function renderMessage(m, { onBrochure, onReset, onUnitView, onCalcInteract, onCredionRequest, onHandoffAction, onServiceCardAction, onServiceCardSubmitPhone, onWaRequest, onTopicJump, onPortalClick, onLeadFormSubmit }) {
+function renderMessage(m, { onBrochure, onReset, onUnitView, onCalcInteract, onCredionRequest, onHandoffAction, onServiceCardAction, onServiceCardSubmitPhone, onWaRequest, onTopicJump, onPortalClick, onLeadFormSubmit, onM2Submit }) {
   switch (m.kind) {
     case 'bot-text':
       return <BotMessage>{m.text}</BotMessage>
@@ -189,7 +190,9 @@ function renderMessage(m, { onBrochure, onReset, onUnitView, onCalcInteract, onC
     case 'brochure':
       return <BrochureBubble url={m.payload.url} hero={m.payload.hero} projectName={m.payload.projectName} />
     case 'lead-form':
-      return <LeadFormBubble onSubmit={onLeadFormSubmit} />
+      return <LeadFormBubble onSubmit={onLeadFormSubmit} variant={m.payload?.variant} />
+    case 'm2-meter':
+      return <M2MeterBubble onSubmit={onM2Submit} />
     case 'cta-card':
       return (
         <CtaBubble
