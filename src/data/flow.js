@@ -220,8 +220,8 @@ export const flow = {
       key: 'afmeting',
       label: 'Wat voor afmeting zoek je ongeveer?',
       options: [
-        { id: 'tot_100',   label: 'Tot 100 m²' },
-        { id: '100_250',   label: '100 tot 250 m²' },
+        { id: '100_150',   label: '100 tot 150 m²' },
+        { id: '150_250',   label: '150 tot 250 m²' },
         { id: '250_500',   label: '250 tot 500 m²' },
         { id: 'meer_500',  label: 'Meer dan 500 m²' },
         { id: 'weet_niet', label: 'Weet ik nog niet' },
@@ -264,6 +264,7 @@ export const flow = {
         { id: 'opslag_logistiek',   label: 'Opslag en logistiek' },
         { id: 'creatief_ambacht',   label: 'Creatief en ambacht' },
         { id: 'dienstverlening',    label: 'Zakelijke dienstverlening' },
+        { id: 'ecom_marketing',     label: 'E-commerce en marketing' },
         { id: 'anders',             label: 'Anders, namelijk' },
       ],
     },

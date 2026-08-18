@@ -167,7 +167,7 @@ function reducer(state, action) {
       const surveyFlow = project.flowOverrides?.surveyFlow
       if (surveyFlow) {
         const introBubbles = (surveyFlow.intro || []).map((text) => ({ kind: 'bot-text', text }))
-        const surveyQuestion = { kind: 'bot-text', text: flow.questions.werkruimte.label }
+        const surveyQuestion = { kind: 'bot-text', text: flow.questions.doel.label }
         return {
           ...state,
           view: 'chat',
@@ -175,7 +175,7 @@ function reducer(state, action) {
           messageQueue: typeFirst
             ? [greeting, ...introBubbles, surveyQuestion]
             : [...introBubbles, surveyQuestion],
-          currentQuestion: 'werkruimte',
+          currentQuestion: 'doel',
         }
       }
       const followup = { kind: 'bot-text', text: 'Om de juiste brochure en prijzen met je te delen heb ik een korte vraag.' }
@@ -1169,7 +1169,7 @@ function Demo() {
     if (q === 'afmeting') {
       // Alleen bij 'meer_500' de conditionele grondVraag; anders direct doel.
       trackEvent('survey:answered', { key: 'afmeting', id: opt.id })
-      const next = opt.id === 'meer_500' ? 'grondVraag' : 'doel'
+      const next = opt.id === 'meer_500' ? 'grondVraag' : 'branche'
       dispatch({ type: 'ANSWER', key: 'afmeting', value: val, next })
       sendSequence(userTextFromOpt(opt), [{ kind: 'bot-text', text: flow.questions[next].label }])
       return
@@ -1179,15 +1179,15 @@ function Demo() {
       // ontwikkeld → null default project-lijst).
       dispatch({ type: 'BEHAVIOR_SET_LEAD_VARIANT', variant: opt.leadVariant ?? null })
       trackEvent('survey:answered', { key: 'grondVraag', id: opt.id })
-      dispatch({ type: 'ANSWER', key: 'grondVraag', value: val, next: 'doel' })
-      sendSequence(userTextFromOpt(opt), [{ kind: 'bot-text', text: flow.questions.doel.label }])
+      dispatch({ type: 'ANSWER', key: 'grondVraag', value: val, next: 'branche' })
+      sendSequence(userTextFromOpt(opt), [{ kind: 'bot-text', text: flow.questions.branche.label }])
       return
     }
     if (q === 'doel') {
       // Onder key 'intent' opslaan zodat derivePersona de persona oppikt.
       trackEvent('survey:answered', { key: 'doel', id: opt.id, persona: opt.persona })
-      dispatch({ type: 'ANSWER', key: 'intent', value: val, next: 'branche' })
-      sendSequence(userTextFromOpt(opt), [{ kind: 'bot-text', text: flow.questions.branche.label }])
+      dispatch({ type: 'ANSWER', key: 'intent', value: val, next: 'werkruimte' })
+      sendSequence(userTextFromOpt(opt), [{ kind: 'bot-text', text: flow.questions.werkruimte.label }])
       return
     }
     if (q === 'branche') {
