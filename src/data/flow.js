@@ -196,47 +196,47 @@ export const flow = {
     // Vraaggericht en broad: geen locatie, plan, units of prijzen van ons
     // aanbod. Chips sentence case, zonder punt of vraagteken.
 
-    // Q1 — product-fork. leadVariant routeert de lead naar de juiste
-    // Brevo-lijst: bouwgrond → 'bouwgrond', garagebox → 'garagebox',
-    // bedrijfsruimte → null (default project-list).
-    productType: {
-      key: 'productType',
-      label: 'Waar ben je naar op zoek?',
+    // Q1 — werkruimte (opener). Resoneert met de ad-creatives (Werkplaats ·
+    // Atelier · Montage · Showroom): meteen waar de maker/ondernemer zijn
+    // eigen ruimte voor zoekt. Vervangt de oude product-fork én neemt de
+    // oude 'toepassing'-vraag in zich op. Geen leadVariant meer hier — de
+    // bouwgrond-fork zit nu op de conditionele grondVraag.
+    werkruimte: {
+      key: 'werkruimte',
+      label: 'Wat voor werkruimte zoek je?',
       options: [
-        { id: 'bedrijfsruimte', label: 'Bedrijfsruimte', leadVariant: null },
-        { id: 'bouwgrond',      label: 'Bouwgrond',      leadVariant: 'bouwgrond' },
-        { id: 'garagebox',      label: 'Garagebox',      leadVariant: 'garagebox' },
+        { id: 'werkplaats', label: 'Werkplaats' },
+        { id: 'atelier',    label: 'Atelier' },
+        { id: 'montage',    label: 'Montage' },
+        { id: 'opslag',     label: 'Opslag' },
+        { id: 'showroom',   label: 'Showroom' },
+        { id: 'kantoor',    label: 'Kantoor' },
       ],
     },
 
-    // Q2a — oppervlakte bij bedrijfsruimte.
-    sizeRuimte: {
-      key: 'sizeRuimte',
-      label: 'Welke oppervlakte past ongeveer bij je?',
+    // Q2 — afmeting. Alleen bij 'meer_500' volgt de grondVraag-vervolgvraag,
+    // anders direct door naar doel.
+    afmeting: {
+      key: 'afmeting',
+      label: 'Wat voor afmeting zoek je ongeveer?',
       options: [
-        { id: 'tot_100',  label: 'Tot 100 m²' },
-        { id: '100_150',  label: '100 tot 150 m²' },
-        { id: '150_250',  label: '150 tot 250 m²' },
-        { id: 'meer_250', label: 'Meer dan 250 m²' },
+        { id: 'tot_100',   label: 'Tot 100 m²' },
+        { id: '100_250',   label: '100 tot 250 m²' },
+        { id: '250_500',   label: '250 tot 500 m²' },
+        { id: 'meer_500',  label: 'Meer dan 500 m²' },
         { id: 'weet_niet', label: 'Weet ik nog niet' },
       ],
     },
 
-    // Q2b — bouwgrond gebruikt de M2MeterBubble (geen chips). Deze entry
-    // levert alleen het label voor de bot-intro voor de meter.
-    grondSize: {
-      key: 'grondSize',
-      label: 'Hoeveel grond zoek je ongeveer?',
-      options: [],
-    },
-
-    // Q2c — aantal boxen bij garagebox.
-    sizeBox: {
-      key: 'sizeBox',
-      label: 'Zoek je één box of meerdere?',
+    // Q2b — conditionele vervolgvraag, alleen bij afmeting 'meer_500'.
+    // leadVariant routeert de lead naar de juiste Brevo-lijst:
+    // bouwgrond → 'bouwgrond', ontwikkelde ruimte → null (default project-list).
+    grondVraag: {
+      key: 'grondVraag',
+      label: 'Zoek je een ontwikkelde bedrijfsruimte of bouwgrond?',
       options: [
-        { id: 'een',      label: 'Eén box' },
-        { id: 'meerdere', label: 'Meerdere boxen' },
+        { id: 'ontwikkeld', label: 'Ontwikkelde ruimte', leadVariant: null },
+        { id: 'bouwgrond',  label: 'Bouwgrond',          leadVariant: 'bouwgrond' },
       ],
     },
 
@@ -252,29 +252,19 @@ export const flow = {
       ],
     },
 
-    // Q4 — branche.
+    // Q4 — branche. Chips plus een vrije-tekst-escape: bij 'anders' vraagt de
+    // sequencer om de branche te typen (currentQuestion 'brancheAnders').
     branche: {
       key: 'branche',
-      label: 'In welke branche zit je?',
+      label: 'In welke branche ben je actief?',
       options: [
-        { id: 'bouw_techniek',    label: 'Bouw en techniek' },
-        { id: 'handel_opslag',    label: 'Handel en opslag' },
-        { id: 'dienstverlening',  label: 'Dienstverlening' },
-        { id: 'creatief_ambacht', label: 'Creatief en ambacht' },
-        { id: 'anders',           label: 'Anders' },
-      ],
-    },
-
-    // Q5 — toepassing.
-    toepassing: {
-      key: 'toepassing',
-      label: 'Waar ga je de ruimte vooral voor gebruiken?',
-      options: [
-        { id: 'opslag',    label: 'Opslag' },
-        { id: 'werkplaats', label: 'Werkplaats' },
-        { id: 'kantoor',   label: 'Kantoor' },
-        { id: 'showroom',  label: 'Showroom' },
-        { id: 'atelier',   label: 'Atelier' },
+        { id: 'bouw_installatie',   label: 'Bouw en installatie' },
+        { id: 'techniek_productie', label: 'Techniek en productie' },
+        { id: 'handel',             label: 'Handel en groothandel' },
+        { id: 'opslag_logistiek',   label: 'Opslag en logistiek' },
+        { id: 'creatief_ambacht',   label: 'Creatief en ambacht' },
+        { id: 'dienstverlening',    label: 'Zakelijke dienstverlening' },
+        { id: 'anders',             label: 'Anders, namelijk' },
       ],
     },
 
@@ -317,14 +307,16 @@ export const flow = {
   },
 }
 
-// Ordered lijst van chip-vraag-ids voor de peiling-sequencer. De size-stap
-// (sizeRuimte / grondSize+M2MeterBubble / sizeBox) en de doel-persona-store
-// worden in App.jsx afgehandeld; deze set bepaalt welke currentQuestion-
-// waarden als peiling-chipvraag renderen. 'doel' stort zijn antwoord onder
-// key 'intent' zodat derivePersona de persona oppikt.
+// Ordered lijst van chip-vraag-ids voor de peiling-sequencer. De conditionele
+// grondVraag (alleen bij afmeting 'meer_500') en de doel-persona-store worden
+// in App.jsx afgehandeld; deze set bepaalt welke currentQuestion-waarden als
+// peiling-chipvraag renderen. 'doel' stort zijn antwoord onder key 'intent'
+// zodat derivePersona de persona oppikt. 'branche' blijft een chipvraag; de
+// vrije-tekst-substap 'brancheAnders' staat NIET in deze lijst (die rendert
+// een tekst-input, geen chips — zie App.jsx onChatInputSend + inputConfig).
 export const SURVEY_CHIP_KEYS = [
-  'productType', 'sizeRuimte', 'sizeBox', 'doel',
-  'branche', 'toepassing', 'wanneer', 'budget', 'financiering',
+  'werkruimte', 'afmeting', 'grondVraag', 'doel',
+  'branche', 'wanneer', 'budget', 'financiering',
 ]
 
 // A/B variant-aware label resolver. Geeft labelVariants[variant] als die

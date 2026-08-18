@@ -73,9 +73,10 @@ export const project = {
     // (zie App.jsx). Ontbreekt het, dan draait de standaard verkoop-flow.
     surveyFlow: {
       // Intro-bubbles na de begroeting "Hoi, ik ben Jesse van REPP.".
+      // Echo de ad: eigen bedrijfspand in de omgeving Breda.
       intro: [
-        'We onderzoeken hoeveel ondernemers in de omgeving Breda op zoek zijn naar eigen bedrijfsruimte.',
-        'Een paar korte vragen, dan weten we wat er speelt en houden we je op de hoogte.',
+        'Je zoekt een eigen bedrijfspand in de omgeving Breda.',
+        'Een paar korte vragen, zodat we weten wat je zoekt.',
       ],
       // Bot-tekst vlak voor het lead-formulier.
       leadIntro: 'Tot slot je gegevens, dan houden we je op de hoogte.',

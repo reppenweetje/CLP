@@ -160,14 +160,14 @@ function reducer(state, action) {
       // "Start chat" (anders voelt die klik laggy).
       const typeFirst = action.typeFirst === true
       const greeting = { kind: 'bot-text', text: `Hoi, ik ben ${bot.name} van ${bot.org}.` }
-      // Peiling-modus (BREDA): survey-intro + productType als eerste vraag.
+      // Peiling-modus (BREDA): survey-intro + werkruimte als eerste vraag.
       // Alleen actief als het project flowOverrides.surveyFlow zet; anders
       // valt de code door naar de standaard verkoop-intro hieronder, byte-
       // voor-byte gelijk aan voorheen.
       const surveyFlow = project.flowOverrides?.surveyFlow
       if (surveyFlow) {
         const introBubbles = (surveyFlow.intro || []).map((text) => ({ kind: 'bot-text', text }))
-        const surveyQuestion = { kind: 'bot-text', text: flow.questions.productType.label }
+        const surveyQuestion = { kind: 'bot-text', text: flow.questions.werkruimte.label }
         return {
           ...state,
           view: 'chat',
@@ -175,7 +175,7 @@ function reducer(state, action) {
           messageQueue: typeFirst
             ? [greeting, ...introBubbles, surveyQuestion]
             : [...introBubbles, surveyQuestion],
-          currentQuestion: 'productType',
+          currentQuestion: 'werkruimte',
         }
       }
       const followup = { kind: 'bot-text', text: 'Om de juiste brochure en prijzen met je te delen heb ik een korte vraag.' }
@@ -1160,28 +1160,26 @@ function Demo() {
   const handleSurveyChip = (q, opt) => {
     const val = answerValue(opt)
     const sf = project.flowOverrides?.surveyFlow || {}
-    if (q === 'productType') {
-      // leadVariant per product → Brevo-lijstrouting.
-      dispatch({ type: 'BEHAVIOR_SET_LEAD_VARIANT', variant: opt.leadVariant ?? null })
-      trackEvent('survey:answered', { key: 'productType', id: opt.id })
-      if (opt.id === 'bouwgrond') {
-        // Bouwgrond-tak: M2MeterBubble ipv chips. currentQuestion 'grondM2'
-        // rendert geen chips/input, alleen de bubble met eigen bevestig-knop.
-        dispatch({ type: 'ANSWER', key: 'productType', value: val, next: 'grondM2' })
-        sendSequence(userTextFromOpt(opt), [
-          { kind: 'bot-text', text: flow.questions.grondSize.label },
-          { kind: 'm2-meter', payload: {} },
-        ])
-        return
-      }
-      const sizeKey = opt.id === 'garagebox' ? 'sizeBox' : 'sizeRuimte'
-      dispatch({ type: 'ANSWER', key: 'productType', value: val, next: sizeKey })
-      sendSequence(userTextFromOpt(opt), [{ kind: 'bot-text', text: flow.questions[sizeKey].label }])
+    if (q === 'werkruimte') {
+      trackEvent('survey:answered', { key: 'werkruimte', id: opt.id })
+      dispatch({ type: 'ANSWER', key: 'werkruimte', value: val, next: 'afmeting' })
+      sendSequence(userTextFromOpt(opt), [{ kind: 'bot-text', text: flow.questions.afmeting.label }])
       return
     }
-    if (q === 'sizeRuimte' || q === 'sizeBox') {
-      trackEvent('survey:answered', { key: q, id: opt.id })
-      dispatch({ type: 'ANSWER', key: q, value: val, next: 'doel' })
+    if (q === 'afmeting') {
+      // Alleen bij 'meer_500' de conditionele grondVraag; anders direct doel.
+      trackEvent('survey:answered', { key: 'afmeting', id: opt.id })
+      const next = opt.id === 'meer_500' ? 'grondVraag' : 'doel'
+      dispatch({ type: 'ANSWER', key: 'afmeting', value: val, next })
+      sendSequence(userTextFromOpt(opt), [{ kind: 'bot-text', text: flow.questions[next].label }])
+      return
+    }
+    if (q === 'grondVraag') {
+      // leadVariant per keuze → Brevo-lijstrouting (bouwgrond → 'bouwgrond',
+      // ontwikkeld → null default project-lijst).
+      dispatch({ type: 'BEHAVIOR_SET_LEAD_VARIANT', variant: opt.leadVariant ?? null })
+      trackEvent('survey:answered', { key: 'grondVraag', id: opt.id })
+      dispatch({ type: 'ANSWER', key: 'grondVraag', value: val, next: 'doel' })
       sendSequence(userTextFromOpt(opt), [{ kind: 'bot-text', text: flow.questions.doel.label }])
       return
     }
@@ -1192,7 +1190,22 @@ function Demo() {
       sendSequence(userTextFromOpt(opt), [{ kind: 'bot-text', text: flow.questions.branche.label }])
       return
     }
-    const linear = { branche: 'toepassing', toepassing: 'wanneer', wanneer: 'budget', budget: 'financiering' }
+    if (q === 'branche') {
+      // Vrije-tekst-escape: bij 'anders' NIET advancen, maar om de branche
+      // vragen via een tekst-input (currentQuestion 'brancheAnders'). De
+      // gettypte waarde wordt in onChatInputSend als branche-antwoord opgeslagen.
+      if (opt.id === 'anders') {
+        trackEvent('survey:answered', { key: 'branche', id: 'anders' })
+        dispatch({ type: 'SET_QUESTION', next: 'brancheAnders' })
+        sendSequence(userTextFromOpt(opt), [{ kind: 'bot-text', text: 'In welke branche ben je actief?' }])
+        return
+      }
+      trackEvent('survey:answered', { key: 'branche', id: opt.id })
+      dispatch({ type: 'ANSWER', key: 'branche', value: val, next: 'wanneer' })
+      sendSequence(userTextFromOpt(opt), [{ kind: 'bot-text', text: flow.questions.wanneer.label }])
+      return
+    }
+    const linear = { wanneer: 'budget', budget: 'financiering' }
     if (linear[q]) {
       const next = linear[q]
       trackEvent('survey:answered', { key: q, id: opt.id })
@@ -1210,9 +1223,25 @@ function Demo() {
       return
     }
   }
-  // M2MeterBubble-submit voor de bouwgrond-tak. Slaat de oppervlakte op als
-  // answer `grondM2` (met numerieke .value) en gaat door naar de doel-vraag.
-  // pushSnapshot leest state.answers.grondM2.value en zet 'm door naar Brevo.
+  // Vrije-tekst-antwoord op de branche 'anders, namelijk'-escape. Slaat de
+  // getypte branche op als branche-antwoord en gaat door naar wanneer. Alleen
+  // bereikbaar in survey-modus (gated in onChatInputSend).
+  function handleSurveyBrancheAnders(text) {
+    const typed = (text || '').trim()
+    if (!typed) {
+      sendSequence(text, [{ kind: 'bot-text', text: 'Kun je kort je branche typen?' }])
+      return
+    }
+    trackEvent('survey:answered', { key: 'branche', id: 'anders', value: typed })
+    const answer = { id: 'anders', label: typed, value: typed, _msgCountBefore: state.messages.length }
+    dispatch({ type: 'ANSWER', key: 'branche', value: answer, next: 'wanneer' })
+    sendSequence(typed, [{ kind: 'bot-text', text: flow.questions.wanneer.label }])
+  }
+  // M2MeterBubble-submit — dormant. De peiling dispatcht geen m2-meter meer
+  // (de bouwgrond-fork loopt nu via grondVraag met chips), dus dit pad wordt
+  // niet meer geraakt. De handler blijft staan zodat de ChatThread-prop en de
+  // grondM2/GROND_M2-plumbing in pushSnapshot + brevo.ts onschadelijk dormant
+  // blijven zonder andere tenants te breken.
   const onM2Submit = (value) => {
     trackEvent('survey:answered', { key: 'grondM2', value })
     const answer = { id: 'grondM2', label: `± ${value} m²`, value, _msgCountBefore: state.messages.length }
@@ -2017,6 +2046,9 @@ function Demo() {
   }
   const onChatInputSend = (text) => {
     const q = state.currentQuestion
+    // Gated peiling-vrijetekst: branche 'anders, namelijk'. Nooit actief
+    // zonder project.flowOverrides.surveyFlow — andere tenants ongewijzigd.
+    if (project.flowOverrides?.surveyFlow && q === 'brancheAnders') return handleSurveyBrancheAnders(text)
     if (q === 'lead-email') return handleLeadEmailText(text)
     if (q === 'lead-name') return handleLeadNameText(text)
     if (q === 'lead-phone') return handleLeadPhoneText(text)
@@ -2863,6 +2895,10 @@ function Demo() {
     inputConfig = { placeholder: 'Je naam', inputMode: undefined }
   } else if (state.currentQuestion === 'lead-phone' || state.currentQuestion === 'lead-edit-phone') {
     inputConfig = { placeholder: '06 12 34 56 78', inputMode: 'tel', validate: isValidPhoneText }
+  } else if (project.flowOverrides?.surveyFlow && state.currentQuestion === 'brancheAnders') {
+    // Gated peiling-vrijetekst voor branche 'anders, namelijk'. Nooit actief
+    // zonder surveyFlow, dus geen invloed op andere tenants.
+    inputConfig = { placeholder: 'Bijvoorbeeld schilder, cateraar, webshop', inputMode: undefined }
   }
   const answeredCount = ['intent', 'brochureTrigger', 'lead', 'size', 'timeline', 'followup']
     .filter((k) => state.answers[k]).length
