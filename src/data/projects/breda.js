@@ -80,7 +80,21 @@ export const project = {
       ],
       // Bot-tekst vlak voor het lead-formulier.
       leadIntro: 'Tot slot je gegevens, dan houden we je op de hoogte.',
-      // Afsluiting na lead-capture. {firstName} wordt ingevuld.
+      // Opt-in intro (2 bubbles) vlak vóór het lead-formulier, ná de
+      // wanneer-vraag. De peiling captured de lead nu halverwege (opt-in),
+      // waarna budget, financiering en de locaties-multiselect volgen.
+      optInIntro: [
+        'Er zijn ontwikkelingsplannen die passen bij wat je zoekt.',
+        'Laat je gegevens achter, dan houden we je op de hoogte.',
+      ],
+      // Cross-sell-intro die de financiering-handler emit vlak vóór de
+      // locaties-multiselect. Was voorheen de tweede closeBubble.
+      crossSellIntro: 'REPP ontwikkelt op meer plekken kleinschalige bedrijfsruimte, dus je hoort ook van vergelijkbare kansen in de regio.',
+      // Definitieve afsluit-bubble ná de locaties-multiselect. {firstName}
+      // wordt ingevuld (valt netjes weg als de naam leeg is).
+      finalBubble: 'Dank, {firstName}. We houden je op de hoogte zodra er meer bekend is.',
+      // Behouden voor compatibiliteit; niet langer gebruikt door finishLead
+      // (die captured nu halverwege en eindigt via finalBubble na locaties).
       closeBubbles: [
         'Dank, {firstName}. We houden je als eerste op de hoogte zodra er meer bekend is.',
         'REPP ontwikkelt op meer plekken kleinschalige bedrijfsruimte, dus je hoort ook van vergelijkbare kansen in de regio.',

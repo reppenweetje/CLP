@@ -910,7 +910,7 @@ function Demo() {
   //  - finishLead (lead-gegevens binnen)
   //  - timeline-answer (qualification compleet)
   //  - flow:complete momenten (followup-keuze, all-seen wrap-up, rent-match)
-  function pushSnapshot(extraConsents = [], freshLead = null) {
+  function pushSnapshot(extraConsents = [], freshLead = null, extraAttributes = null) {
     if (!isApiConfigured()) return // master-switch uit of env-vars ontbreken
     // freshLead override is voor finishLead-callsite waar de lead-arg al
     // bekend is maar React-state nog niet via de async dispatch is bijgewerkt.
@@ -965,6 +965,14 @@ function Demo() {
         // Bedrijfsnaam uit de BREDA-peiling lead-form. Alleen aanwezig als de
         // survey-variant 'em ophaalde; brevo.ts forwardt 'm naar COMPANY.
         ...(lead.company ? { company: lead.company } : {}),
+        // Interesse-locaties uit de BREDA-peiling multiselect. Alleen aanwezig
+        // als de bezoeker de locaties-stap liep; brevo.ts forwardt ze naar
+        // INTEREST_LOCATIONS. Andere tenants hebben geen answers.interestLocations,
+        // dus deze key verschijnt daar nooit → snapshot-shape blijft identiek.
+        ...(Array.isArray(state.answers.interestLocations?.value) && state.answers.interestLocations.value.length ? { interestLocations: state.answers.interestLocations.value } : {}),
+        // Verse override voor de callsite waar de async dispatch nog niet is
+        // bijgewerkt (onLocationSubmit). Andere callers geven niks mee.
+        ...(Array.isArray(extraAttributes?.interestLocations) && extraAttributes.interestLocations.length ? { interestLocations: extraAttributes.interestLocations } : {}),
         // Unit-signaal niet apart meesturen: size_id (hierboven) landt al in
         // de Brevo SIZE-attribute, bv. Hofman "Rond 192 m²" → "rond_192" = XXL.
         // Sales ziet de gewenste unit dus via SIZE.
@@ -1205,7 +1213,21 @@ function Demo() {
       sendSequence(userTextFromOpt(opt), [{ kind: 'bot-text', text: flow.questions.wanneer.label }])
       return
     }
-    const linear = { wanneer: 'budget', budget: 'financiering' }
+    if (q === 'wanneer') {
+      // Nieuwe volgorde: ná de wanneer-vraag captured de peiling de lead via
+      // een opt-in. Route dus naar het lead-formulier ipv door naar budget.
+      // De opt-in intro-bubbles komen uit surveyFlow.optInIntro. finishLead
+      // (survey-tak) hervat daarna met budget.
+      trackEvent('survey:answered', { key: 'wanneer', id: opt.id })
+      dispatch({ type: 'ANSWER', key: 'wanneer', value: val, next: 'lead-form' })
+      const optIn = (sf.optInIntro || []).map((text) => ({ kind: 'bot-text', text }))
+      sendSequence(userTextFromOpt(opt), [
+        ...optIn,
+        { kind: 'lead-form', payload: { variant: 'survey' } },
+      ])
+      return
+    }
+    const linear = { budget: 'financiering' }
     if (linear[q]) {
       const next = linear[q]
       trackEvent('survey:answered', { key: q, id: opt.id })
@@ -1214,14 +1236,52 @@ function Demo() {
       return
     }
     if (q === 'financiering') {
+      // Laatste chipvraag. Daarna cross-sell-intro + de locaties-multiselect
+      // (currentQuestion 'locaties' — geen chipvraag, dus buiten
+      // SURVEY_CHIP_KEYS; de location-select bubble handelt de submit af).
       trackEvent('survey:answered', { key: 'financiering', id: opt.id })
-      dispatch({ type: 'ANSWER', key: 'financiering', value: val, next: 'lead-form' })
+      dispatch({ type: 'ANSWER', key: 'financiering', value: val, next: 'locaties' })
       sendSequence(userTextFromOpt(opt), [
-        { kind: 'bot-text', text: sf.leadIntro || 'Tot slot je gegevens, dan houden we je op de hoogte.' },
-        { kind: 'lead-form', payload: { variant: 'survey' } },
+        { kind: 'bot-text', text: sf.crossSellIntro || 'REPP ontwikkelt op meer plekken kleinschalige bedrijfsruimte, dus je hoort ook van vergelijkbare kansen in de regio.' },
+        { kind: 'bot-text', text: 'Vink aan welke locaties ook eventueel interessant voor jou kunnen zijn.' },
+        { kind: 'location-select', payload: {} },
       ])
       return
     }
+  }
+  // Locaties-multiselect submit (BREDA peiling). Slaat de gekozen regio-ids op
+  // als answer `interestLocations` (array), sluit de flow af met de
+  // finalBubble en pusht de snapshot nog een keer zodat de locaties-attribuut
+  // (INTEREST_LOCATIONS) bij Brevo landt. Nul locaties mag: dan direct de
+  // afsluit-bubble. Alleen bereikbaar in survey-modus (location-select bubble
+  // wordt nergens anders gedispatcht).
+  const onLocationSubmit = (selectedIds) => {
+    const sf = project.flowOverrides?.surveyFlow || {}
+    const ids = Array.isArray(selectedIds) ? selectedIds : []
+    trackEvent('survey:answered', { key: 'interestLocations', value: ids })
+    const chosenLabel = ids.length ? ids.map(capitalize).join(', ') : 'Geen'
+    dispatch({
+      type: 'ANSWER',
+      key: 'interestLocations',
+      value: { id: 'interestLocations', label: chosenLabel, value: ids, _msgCountBefore: state.messages.length },
+      next: null,
+    })
+    const firstName = state.answers.lead?.firstName || state.leadDraft?.firstName || ''
+    const finalText = (sf.finalBubble || 'Dank, {firstName}. We houden je op de hoogte zodra er meer bekend is.')
+      .replace('{firstName}', firstName)
+      .replace(/,\s*\.\s*/, '. ')
+      .replace(/\s{2,}/g, ' ')
+      .trim()
+    trackEvent('flow:complete', { stage: 'survey', persona })
+    sendSequence(ids.length ? chosenLabel : 'Geen extra locaties', [{ kind: 'bot-text', text: finalText }])
+    // Tweede snapshot: state.answers.interestLocations is via de async dispatch
+    // nog niet bijgewerkt, dus geef de verse ids mee als attribuut-override.
+    // pushSnapshot is idempotent (upsert op sessionId).
+    pushSnapshot(
+      [{ scope: 'peiling-locaties', granted: true, detail: { from: 'location-select' } }],
+      null,
+      ids.length ? { interestLocations: ids } : null,
+    )
   }
   // Vrije-tekst-antwoord op de branche 'anders, namelijk'-escape. Slaat de
   // getypte branche op als branche-antwoord en gaat door naar wanneer. Alleen
@@ -2309,25 +2369,27 @@ function Demo() {
     // conversie richting Meta.
     fireMetaCustom('FullLeadComplete', 'lead-complete', { hasPhone: !!lead?.phone })
     dispatch({ type: 'LEAD_DRAFT', draft: lead })
-    // Peiling-afsluiting (BREDA). Gated: alleen als flowOverrides.surveyFlow
+    // Peiling opt-in-capture (BREDA). Gated: alleen als flowOverrides.surveyFlow
     // gezet is. Geen aanbod om te tonen, dus we slaan size/timeline/
-    // recommendation/moreInfo over en sluiten direct af met de close-bubbles.
+    // recommendation/moreInfo over. De lead komt hier halverwege binnen
+    // (na de wanneer-vraag); de flow hervat daarna met budget en sluit pas
+    // na de locaties-multiselect af.
     const surveyFlow = project.flowOverrides?.surveyFlow
     if (surveyFlow) {
-      dispatch({ type: 'ANSWER', key: 'lead', value: lead, next: null })
+      // Opt-in-capture halverwege de peiling: lead opslaan en de snapshot
+      // vroeg wegschrijven (goede vroege capture), daarna NIET afsluiten maar
+      // door naar de budget-vraag. De definitieve afsluiting gebeurt pas na
+      // de locaties-multiselect (zie onLocationSubmit). currentQuestion gaat
+      // dus naar 'budget' ipv null.
+      dispatch({ type: 'ANSWER', key: 'lead', value: lead, next: 'budget' })
       pushSnapshot(
         [{ scope: 'peiling-opvolging', granted: true, detail: { from: 'finishLead-survey' } }],
         lead,
       )
-      trackEvent('flow:complete', { stage: 'survey', persona })
+      trackEvent('survey:lead-captured', { persona })
       const userMsgs = prependMessages.filter((m) => m.kind === 'user-text')
       if (userMsgs.length > 0) dispatch({ type: 'APPEND', messages: userMsgs })
-      const firstName = lead.firstName || ''
-      const closeBubbles = (surveyFlow.closeBubbles || []).map((t) => ({
-        kind: 'bot-text',
-        text: t.replace('{firstName}', firstName).replace(/,\s*\.\s*/, '. '),
-      }))
-      dispatch({ type: 'ENQUEUE', messages: closeBubbles })
+      dispatch({ type: 'ENQUEUE', messages: [{ kind: 'bot-text', text: flow.questions.budget.label }] })
       return
     }
     // Volgende stap hangt af van waar de bezoeker in de flow zit. Wanneer
@@ -2949,6 +3011,7 @@ function Demo() {
             onPortalClick={onPortalClick}
             onLeadFormSubmit={handleLeadFormSubmit}
             onM2Submit={onM2Submit}
+            onLocationSubmit={onLocationSubmit}
             onReset={() => {
               clearPersisted()
               _id = 0

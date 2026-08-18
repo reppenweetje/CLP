@@ -158,6 +158,13 @@ function buildAttributes(lead: BrevoLeadInput): Record<string, unknown> {
     if (typeof (extras as Record<string, unknown>).company === 'string') {
       set('COMPANY', (extras as Record<string, string>).company)
     }
+    // Interesse-locaties uit de BREDA-peiling multiselect. Komma-gescheiden
+    // string zodat één tekst-attribuut in Brevo volstaat. LET OP:
+    // INTEREST_LOCATIONS moet eerst als attribuut in het Brevo-dashboard
+    // worden aangemaakt; tot dan dropt Brevo de waarde stil.
+    if (Array.isArray((extras as Record<string, unknown>).interestLocations)) {
+      set('INTEREST_LOCATIONS', (extras as Record<string, string[]>).interestLocations.join(', '))
+    }
   }
 
   return attrs
