@@ -226,7 +226,7 @@ export const flow = {
     // Q3 — doel. persona voedt derivePersona (eigen_gebruiker / belegger / beide).
     doel: {
       key: 'doel',
-      label: 'Is het voor je eigen bedrijf of als belegging?',
+      label: 'Waarom ben je op zoek naar een bedrijfsruimte?',
       options: [
         { id: 'eigen_bedrijf', label: 'Voor mijn bedrijf', persona: 'eigen_gebruiker' },
         { id: 'belegging',     label: 'Als belegging',     persona: 'belegger' },
