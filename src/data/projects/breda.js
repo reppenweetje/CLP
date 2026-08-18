@@ -85,7 +85,7 @@ export const project = {
       // waarna budget, financiering en de locaties-multiselect volgen.
       optInIntro: [
         'Fijn, bedankt voor je antwoorden.',
-        'Er lopen in de omgeving Breda nu ontwikkelingen die goed passen bij wat jij zoekt.',
+        'We werken in de omgeving Breda aan ontwikkelplannen die goed passen bij wat jij zoekt.',
         'Laat je gegevens achter, dan houden we je op de hoogte.',
       ],
       // Bouwgrond-variant van de opt-in: dit is een bouwkavel-lead met andere
