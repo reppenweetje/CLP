@@ -3009,7 +3009,17 @@ function Demo() {
   }
   const answeredCount = ['intent', 'brochureTrigger', 'lead', 'size', 'timeline', 'followup']
     .filter((k) => state.answers[k]).length
-  const progress = (state.view === 'chat' && !isSurvey) ? { current: Math.min(6, Math.max(1, answeredCount + 1)), total: 6 } : null
+  // Peiling-progress: eigen telling over de survey-milestones (doel/afmeting/
+  // branche/wanneer/opt-in-lead/budget/financiering/locaties = 8 stappen).
+  // grondVraag telt niet mee (conditioneel). Andere tenants houden de 6-staps
+  // verkoop-progress hieronder.
+  const surveyAnsweredCount = ['intent', 'afmeting', 'branche', 'wanneer', 'lead', 'budget', 'financiering', 'interestLocations']
+    .filter((k) => state.answers[k]).length
+  const progress = state.view !== 'chat'
+    ? null
+    : isSurvey
+      ? { current: Math.min(8, Math.max(1, surveyAnsweredCount + 1)), total: 8 }
+      : { current: Math.min(6, Math.max(1, answeredCount + 1)), total: 6 }
   // De aanpassen-knop tonen we vanaf het moment dat er minimaal 1 antwoord is gegeven.
   const showAnswersButton = state.view === 'chat' && Object.values(state.answers).some(Boolean)
   return (

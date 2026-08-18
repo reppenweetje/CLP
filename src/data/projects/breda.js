@@ -84,7 +84,8 @@ export const project = {
       // wanneer-vraag. De peiling captured de lead nu halverwege (opt-in),
       // waarna budget, financiering en de locaties-multiselect volgen.
       optInIntro: [
-        'Er zijn in Breda momenteel ontwikkelingsplannen die goed aansluiten op wat jij zoekt.',
+        'Fijn, bedankt voor je antwoorden.',
+        'Er lopen in de omgeving Breda nu ontwikkelingen die goed passen bij wat jij zoekt.',
         'Laat je gegevens achter, dan houden we je op de hoogte.',
       ],
       // Overgangs-bubble ná de opt-in lead-capture, vlak vóór de budget-vraag
