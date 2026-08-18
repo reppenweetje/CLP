@@ -7,7 +7,7 @@ import { useEffect } from 'react'
 // Lead-data tonen we per veld (naam / e-mail / 06) zodat de bezoeker
 // alleen het veld kan aanpassen dat hij wil veranderen, of in één keer
 // alles vergeten.
-export default function AnswersSheet({ open, answers, onClose, onEdit, onEditLeadField, onForgetLead, onReset }) {
+export default function AnswersSheet({ open, answers, onClose, onEdit, onEditLeadField, onForgetLead, onReset, surveyMode }) {
   useEffect(() => {
     if (!open) return
     const onKey = (e) => e.key === 'Escape' && onClose()
@@ -37,7 +37,9 @@ export default function AnswersSheet({ open, answers, onClose, onEdit, onEditLea
           </button>
         </div>
         <p className="text-[13px] text-ink-soft mb-4">
-          Tik op "Wijzig" om een antwoord aan te passen. We gaan dan vanaf dat punt verder.
+          {surveyMode
+            ? 'Hier kun je je contactgegevens aanpassen.'
+            : 'Tik op "Wijzig" om een antwoord aan te passen. We gaan dan vanaf dat punt verder.'}
         </p>
 
         {(lead?.email || lead?.firstName || lead?.phone) && (
@@ -103,7 +105,7 @@ export default function AnswersSheet({ open, answers, onClose, onEdit, onEditLea
           </div>
         )}
 
-        {rows.length === 0 ? (
+        {!surveyMode && (rows.length === 0 ? (
           <div className="rounded-2xl border border-mist-light bg-canvas-2 p-4 text-[14px] text-ink-soft text-center">
             Nog geen antwoorden om aan te passen.
           </div>
@@ -132,7 +134,7 @@ export default function AnswersSheet({ open, answers, onClose, onEdit, onEditLea
               </div>
             ))}
           </div>
-        )}
+        ))}
 
         <button
           onClick={onClose}

@@ -3105,6 +3105,7 @@ function Demo() {
       <AnswersSheet
         open={answersOpen}
         answers={state.answers}
+        surveyMode={isSurvey}
         onClose={() => setAnswersOpen(false)}
         onEdit={onEditAnswer}
         onEditLeadField={onEditLeadField}
