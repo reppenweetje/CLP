@@ -130,8 +130,8 @@ export default function LeadFormBubble({ onSubmit, variant }) {
           )}
           <p className="text-[11px] text-ink-mute leading-snug pt-1">
             {isSurvey
-              ? 'We bewaren je gegevens zodat we je op de hoogte kunnen houden over ontwikkelingen in de regio. Hoe we met je gegevens omgaan staat in onze '
-              : 'We mailen je de brochure en bewaren je voorkeur zodat onze makelaar je gericht kan opvolgen. Hoe we met je gegevens omgaan staat in onze '}
+              ? 'We bewaren je gegevens zodat we je op de hoogte kunnen houden van ontwikkelingen in de regio. Hoe we met je gegevens omgaan staat in ons '
+              : 'We mailen je de brochure en bewaren je voorkeur zodat onze makelaar je gericht kan opvolgen. Hoe we met je gegevens omgaan staat in ons '}
             <a
               href="/privacy.html"
               target="_blank"

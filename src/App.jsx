@@ -2260,7 +2260,7 @@ function Demo() {
     // Privacy-claim staat NA de email-input, in dezelfde bubble-set als
     // de bevestiging dat de brochure verstuurd wordt. Daarmee komt 'ie
     // op een natuurlijk moment ipv als drempel ervoor.
-    const privacyClaim = 'We mailen je de brochure en bewaren je voorkeur. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).'
+    const privacyClaim = 'We mailen je de brochure en bewaren je voorkeur. Hoe we daarmee omgaan staat in ons [privacystatement](/privacy.html).'
     if (draft.firstName) {
       dispatch({ type: 'LEAD_DRAFT', draft })
       // Credion-eerst-pad waarbij bezoeker email plus naam in 1 invoer gaf
@@ -2269,7 +2269,7 @@ function Demo() {
       // waarom we ook nummer vragen, daarna direct de nummer-vraag.
       if (state.behaviors?.credionRequested && !draft.phone) {
         sendSequence(text, [
-          { kind: 'bot-text', text: `Dank. We delen je gegevens met ${financePartner} zodat ze je kunnen bellen voor de financieringsscan. Daarvoor hebben we alleen nog even je nummer nodig. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).` },
+          { kind: 'bot-text', text: `Dank. We delen je gegevens met ${financePartner} zodat ze je kunnen bellen voor de financieringsscan. Daarvoor hebben we alleen nog even je nummer nodig. Hoe we daarmee omgaan staat in ons [privacystatement](/privacy.html).` },
           { kind: 'bot-text', text: 'Wat is je nummer?' },
         ])
         dispatch({ type: 'SET_QUESTION', next: 'lead-phone' })
@@ -2281,7 +2281,7 @@ function Demo() {
       if (state.behaviors?.rentMatchRequested && !draft.phone) {
         sendSequence(text, [
           { kind: 'bot-text', text: 'Dank.' },
-          { kind: 'bot-text', text: 'We bewaren je voorkeur en mailen je zodra er een match is. Hoe we met je gegevens omgaan staat in onze [privacystatement](/privacy.html).' },
+          { kind: 'bot-text', text: 'We bewaren je voorkeur en mailen je zodra er een match is. Hoe we met je gegevens omgaan staat in ons [privacystatement](/privacy.html).' },
           { kind: 'bot-text', text: `Top, ${draft.firstName}.` },
           { kind: 'bot-text', text: 'Tot slot je 06-nummer, zodat we je kunnen bereiken zodra er een match is.' },
         ])
@@ -2303,7 +2303,7 @@ function Demo() {
     if (state.behaviors?.rentMatchRequested) {
       sendSequence(text, [
         { kind: 'bot-text', text: 'Dank.' },
-        { kind: 'bot-text', text: 'We bewaren je voorkeur en mailen je zodra er een match is. Hoe we met je gegevens omgaan staat in onze [privacystatement](/privacy.html).' },
+        { kind: 'bot-text', text: 'We bewaren je voorkeur en mailen je zodra er een match is. Hoe we met je gegevens omgaan staat in ons [privacystatement](/privacy.html).' },
         { kind: 'bot-text', text: 'Ook nog handig om je naam te weten, zodat we weten aan wie we het sturen.' },
         { kind: 'bot-text', text: 'Wat is je naam?' },
       ])
@@ -2316,7 +2316,7 @@ function Demo() {
     // De brochure-belofte komt aan het eind als we daadwerkelijk versturen.
     if (state.behaviors?.credionRequested) {
       sendSequence(text, [
-        { kind: 'bot-text', text: `Dank. We delen je gegevens met ${financePartner} zodat ze je kunnen bellen voor de financieringsscan. Daarvoor hebben we alleen nog even je naam en nummer nodig. Hoe we daarmee omgaan staat in onze [privacystatement](/privacy.html).` },
+        { kind: 'bot-text', text: `Dank. We delen je gegevens met ${financePartner} zodat ze je kunnen bellen voor de financieringsscan. Daarvoor hebben we alleen nog even je naam en nummer nodig. Hoe we daarmee omgaan staat in ons [privacystatement](/privacy.html).` },
         { kind: 'bot-text', text: 'Wat is je naam?' },
       ])
       dispatch({ type: 'SET_QUESTION', next: 'lead-name' })

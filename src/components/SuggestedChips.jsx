@@ -18,6 +18,9 @@ import { project } from '../data/project.js'
 // met de chips.
 export default function SuggestedChips({ options, onPick, hint }) {
   const [collapsed, setCollapsed] = useState(false)
+  // Peiling-modus: geen verkoop-framing. De info-sheet praat dan over de
+  // marktverkenning ipv "verkopend makelaar" / "Verkoop door REPP".
+  const isSurvey = !!project.flowOverrides?.surveyFlow
   const [showInfo, setShowInfo] = useState(false)
   const startY = useRef(null)
   const lastY = useRef(null)
@@ -150,7 +153,7 @@ export default function SuggestedChips({ options, onPick, hint }) {
         <button
           type="button"
           onClick={() => setShowInfo(true)}
-          aria-label="Info over privacy en verkoop"
+          aria-label={isSurvey ? 'Info over privacy' : 'Info over privacy en verkoop'}
           className="text-ink-mute/60 hover:text-ink-mute text-[10px] tracking-[0.14em] uppercase flex items-center gap-1 px-2 py-1 transition"
         >
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -172,7 +175,7 @@ export default function SuggestedChips({ options, onPick, hint }) {
           <div
             className="relative pointer-events-auto bg-paper rounded-t-3xl shadow-[0_-4px_30px_rgba(15,15,112,0.15)] slide-in-bottom"
             role="dialog"
-            aria-label="Privacy en verkoop"
+            aria-label={isSurvey ? 'Privacy' : 'Privacy en verkoop'}
           >
             <div className="sticky top-0 bg-paper pt-3 pb-2 flex flex-col items-center">
               <div className="w-10 h-1 rounded-full bg-mist" aria-hidden />
@@ -189,8 +192,10 @@ export default function SuggestedChips({ options, onPick, hint }) {
               </div>
               <div className="mt-3 space-y-3 text-[13.5px] text-ink-soft leading-relaxed">
                 <p>
-                  Deze landingspagina is in beheer van REPP, verkopend makelaar van {project.displayName}.
-                  We bewaren alleen de antwoorden die je deelt om je goed te helpen.
+                  {isSurvey
+                    ? `Deze pagina is in beheer van REPP en dient als marktverkenning voor ${project.displayName}.`
+                    : `Deze landingspagina is in beheer van REPP, verkopend makelaar van ${project.displayName}.`}
+                  {' '}We bewaren alleen de antwoorden die je deelt om je goed te helpen.
                 </p>
                 <div className="flex flex-col gap-2 pt-1">
                   <a
@@ -207,7 +212,7 @@ export default function SuggestedChips({ options, onPick, hint }) {
                     rel="noopener noreferrer"
                     className="rounded-full border border-mist hover:border-midnite text-ink hover:text-midnite text-[13.5px] px-4 py-2.5 text-center transition"
                   >
-                    Verkoop door REPP
+                    {isSurvey ? 'Over REPP' : 'Verkoop door REPP'}
                   </a>
                 </div>
               </div>
