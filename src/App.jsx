@@ -626,24 +626,33 @@ function capitalize(s) {
 // optimaliseert Meta's algoritme op het juiste doelpubliek. Voorheen
 // telden phone, callback-clicks en portal-clicks ook als Lead, wat
 // zorgde voor 1-4 Lead-events per echte lead en vervuilde signalen.
-function fireMetaPixelEvent(eventName, reason, extra = {}, isCustom = false) {
+function fireMetaPixelEvent(eventName, reason, extra = {}, isCustom = false, eventId = null) {
   if (typeof window === 'undefined') return
   if (typeof window.fbq !== 'function') return
   try {
-    const eventId = `${eventName.toLowerCase()}-${reason}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+    const id = eventId || `${eventName.toLowerCase()}-${reason}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
     window.fbq(
       isCustom ? 'trackCustom' : 'track',
       eventName,
       { content_name: reason, ...extra },
-      { eventID: eventId },
+      { eventID: id },
     )
   } catch {
     // Pixel-fouten mogen de UX nooit blokkeren.
   }
 }
 
+// Deterministische Lead-event_id per sessie: `lead-<session_id>`. De
+// server-side CAPI-Lead moet EXACT dezelfde id als `event_id` sturen (die
+// leest 'ie uit attributes.fb_event_id, zie pushSnapshot) zodat Meta het
+// browser-Pixel-event en het CAPI-event dedupliceert i.p.v. dubbel telt.
+function leadEventId() {
+  const sid = getSessionId() || ''
+  return sid ? `lead-${sid}` : null
+}
+
 function fireMetaLead(reason, extra = {}) {
-  fireMetaPixelEvent('Lead', reason, extra)
+  fireMetaPixelEvent('Lead', reason, extra, false, leadEventId())
 }
 
 function fireMetaContact(reason, extra = {}) {
@@ -957,6 +966,11 @@ function Demo() {
         // de portal wegschrijft, zodat het CRM één weergave heeft. Blijft weg
         // als er geen herkomst-signaal in de URL zat (directe bezoeker).
         ...(getAttribution() ? { attribution: getAttribution() } : {}),
+        // Deterministische Meta Pixel Lead-event_id (`lead-<session_id>`). De
+        // CAPI-kant (server-side Lead, bv. via n8n op de Supabase-rij) moet
+        // deze waarde als `event_id` meesturen zodat Meta browser + CAPI
+        // dedupliceert. Zonder gedeelde id telt Meta elke lead dubbel.
+        ...(leadEventId() ? { fb_event_id: leadEventId() } : {}),
         buyingSignals: buying.signals.map((s) => s.id),
         moreInfoSeen:  state.moreInfoSeen,
         rentRange:     state.answers.rentRange?.id ?? null,
