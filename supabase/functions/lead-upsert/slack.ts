@@ -45,6 +45,23 @@ function fmt(label: string, value: string | null | undefined): string {
   return `*${label}:* ${value}`
 }
 
+// Unit-slug ("unit-13") → leesbaar label ("Unit 13") voor in Slack. De portal-
+// reservering zet attributes.unit_id als slug; sales wil in de melding meteen
+// zien welke concrete unit het is, zonder in Supabase/CRM te hoeven kijken.
+function unitLabel(slug: string | null | undefined): string | null {
+  if (!slug) return null
+  const m = /^unit-(\d+)$/.exec(slug)
+  return m ? `Unit ${m[1]}` : slug
+}
+
+// Contactmoment-slug → leesbaar label. Gezet door de portal-reservering
+// (attributes.contact_moment): wanneer de lead gebeld wil worden.
+const CONTACT_MOMENT_LABEL: Record<string, string> = {
+  asap:      'Zo snel mogelijk',
+  this_week: 'Deze week',
+  no_pref:   'Geen voorkeur',
+}
+
 /**
  * notifyError — stuurt een server-side fout naar het Slack #errors-kanaal
  * zodat sales/dev kan ingrijpen voor de lead-data verloren raakt.
@@ -141,10 +158,25 @@ export async function notifyNewLead(lead: HotLeadInput, leadId: string | null): 
   const persona  = PERSONA_LABEL[lead.persona ?? ''] ?? lead.persona ?? null
   const timeline = TIMELINE_LABEL[lead.timeline_id ?? ''] ?? lead.timeline_id ?? null
 
+  // Reserverings-specifiek: welke unit + wanneer bellen. Alleen aanwezig bij
+  // een portal-reservering; bij andere lead-types vallen deze regels via
+  // filter(Boolean) gewoon weg, dus die meldingen veranderen niet.
+  const unitId = typeof lead.attributes?.unit_id === 'string'
+    ? (lead.attributes.unit_id as string)
+    : null
+  const contactMomentRaw = typeof lead.attributes?.contact_moment === 'string'
+    ? (lead.attributes.contact_moment as string)
+    : null
+  const contactMoment = contactMomentRaw
+    ? (CONTACT_MOMENT_LABEL[contactMomentRaw] ?? contactMomentRaw)
+    : null
+
   const contactLines = [
     fmt('Naam',     lead.first_name),
     fmt('E-mail',   lead.email),
     fmt('Telefoon', lead.phone),
+    fmt('Unit',     unitLabel(unitId)),
+    fmt('Contact',  contactMoment),
   ].filter(Boolean).join('\n')
 
   // Context-info (persona/timeline/score) is vaak nog leeg op het moment
@@ -224,7 +256,7 @@ export async function notifyHotLead(lead: HotLeadInput, leadId: string | null): 
     fmt('Persona',    persona),
     fmt('Termijn',    timeline),
     fmt('Grootte',    lead.size_id),
-    fmt('Unit',       unitId),
+    fmt('Unit',       unitLabel(unitId)),
     fmt('Stage',      lead.stage),
     fmt('Score',      lead.score != null ? String(lead.score) : null),
   ].filter(Boolean).join('\n')

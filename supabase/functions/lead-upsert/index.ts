@@ -346,12 +346,20 @@ serve(async (req: Request) => {
   // Brevo + Zapier hebben hun eigen notifyError-paden inline (in brevo.ts
   // en zapier.ts). Hier alleen nog last-resort console.error voor unhandled
   // throws die buiten hun internal catch ontsnappen.
-  keepAlive(
-    upsertBrevoContact(
-      { ...v.data, portal_token: lead.portal_token },
-      lead.id,
-    ).catch((err) => console.error('[brevo] upsertBrevoContact threw', err)),
-  )
+  //
+  // Peiling-bronnen (bv. "Breda") gaan bewust NIET naar Brevo — die leads
+  // horen alleen in Supabase (eigen CRM), niet in de De Hofman-marketinglijst
+  // waar ze anders via de BREVO_LIST_ID-fallback zouden landen. Verkoop-CLP's
+  // en portal walk-ins blijven ongewijzigd naar Brevo gaan.
+  const BREVO_SKIP_SOURCES = new Set(['Breda'])
+  if (!BREVO_SKIP_SOURCES.has(v.data.source)) {
+    keepAlive(
+      upsertBrevoContact(
+        { ...v.data, portal_token: lead.portal_token },
+        lead.id,
+      ).catch((err) => console.error('[brevo] upsertBrevoContact threw', err)),
+    )
+  }
 
   // Zapier walk-in webhook — alleen voor dehofman_portal_* sources.
   // CLP-leads gaan via Slack + Brevo, dus niet dubbel via Zapier.
