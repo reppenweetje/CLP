@@ -125,6 +125,11 @@ export function thankYouCopy(stage, persona, name) {
 
 export function whatsAppDeeplink(project, name, summary) {
   const num = (project.whatsappNumber || '').replace(/[^0-9]/g, '')
+  // Peiling-override: vaste prefill-tekst zonder naam/samenvatting-append.
+  const fixed = project.flowOverrides?.surveyFlow?.whatsappMessage
+  if (fixed) {
+    return `https://wa.me/${num}?text=${encodeURIComponent(fixed)}`
+  }
   const projectName = project.displayName || project.name
   const opener = name
     ? `Hoi REPP, ik ben ${name} en heb interesse in ${projectName}.`

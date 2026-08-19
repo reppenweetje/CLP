@@ -48,7 +48,7 @@ export const project = {
   contentCards: [],
   personaCopy: {},
 
-  whatsappNumber: '+31617192538',
+  whatsappNumber: '+31616079428',
 
   // Brochure uitgeschakeld: '#' zorgt dat een eventuele brochure-trigger
   // nergens naartoe linkt. In de peiling-flow wordt de brochure sowieso
@@ -80,6 +80,10 @@ export const project = {
       ],
       // Bot-tekst vlak voor het lead-formulier.
       leadIntro: 'Tot slot je gegevens, dan houden we je op de hoogte.',
+      // Vaste WhatsApp-prefill voor de peiling. whatsAppDeeplink gebruikt deze
+      // letterlijk (geen naam- of samenvatting-append), zodat de bezoeker een
+      // neutraal bericht opent zonder projectdetails.
+      whatsappMessage: 'Hoi REPP, ik heb interesse in de ontwikkelingen in Breda.',
       // Opt-in intro (2 bubbles) vlak vóór het lead-formulier, ná de
       // wanneer-vraag. De peiling captured de lead nu halverwege (opt-in),
       // waarna budget, financiering en de locaties-multiselect volgen.
