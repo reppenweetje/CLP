@@ -973,7 +973,9 @@ function Demo() {
         // size_id/timeline_id kolom). Gated op aanwezigheid: andere tenants
         // hebben deze keys niet, dus verschijnen ze daar nooit.
         ...(state.answers.branche ? { branche: state.answers.branche.label } : {}),
-        ...(state.answers.waarInBreda ? { waarInBreda: state.answers.waarInBreda.label } : {}),
+        // CRM-attribuut heet 'voorkeurlocatie' (leesbaar in de portal); de
+        // interne answer-key blijft 'waarInBreda'.
+        ...(state.answers.waarInBreda ? { voorkeurlocatie: state.answers.waarInBreda.label } : {}),
         ...(state.answers.budget ? { budget: state.answers.budget.label } : {}),
         ...(state.answers.financiering ? { financiering: state.answers.financiering.label } : {}),
         // Interesse-locaties uit de BREDA-peiling multiselect. Alleen aanwezig
