@@ -264,10 +264,11 @@ export const flow = {
       ],
     },
 
-    // Q6b — open-tekst: locatievoorkeur binnen Breda. Verschijnt na de lead-
-    // capture, vóór budget. Vrije tekst (geen chips), dus NIET in
-    // SURVEY_CHIP_KEYS — rendert een tekst-input (zie App.jsx inputConfig +
-    // handleSurveyWaarInBreda).
+    // Q6b — locatievoorkeur binnen Breda. Verschijnt na de lead-capture, vóór
+    // budget. Multiselect windrichtingen + 'anders' vrije-tekst via
+    // RegionSelectBubble (geen chips, dus NIET in SURVEY_CHIP_KEYS). Deze label
+    // wordt als bot-vraag geëmit; de opties staan in RegionSelectBubble.
+    // Afhandeling: App.jsx onRegionSubmit.
     waarInBreda: {
       key: 'waarInBreda',
       label: 'Waar in Breda zou je een bedrijfsruimte willen hebben?',

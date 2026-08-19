@@ -1315,20 +1315,24 @@ function Demo() {
     dispatch({ type: 'ANSWER', key: 'branche', value: answer, next: 'wanneer' })
     sendSequence(typed, [{ kind: 'bot-text', text: flow.questions.wanneer.label }])
   }
-  // Vrije-tekst-antwoord op de locatievoorkeur binnen Breda. Verschijnt na de
-  // lead-capture, vóór budget. Slaat de getypte plek op onder key 'waarInBreda'
-  // en gaat door naar budget. Alleen bereikbaar in survey-modus (gated in
-  // onChatInputSend).
-  function handleSurveyWaarInBreda(text) {
-    const typed = (text || '').trim()
-    if (!typed) {
-      sendSequence(text, [{ kind: 'bot-text', text: 'Kun je kort aangeven waar in Breda?' }])
-      return
+  // Locatievoorkeur binnen Breda (BREDA peiling). Multiselect windrichtingen +
+  // een 'anders' vrije-tekst-escape via RegionSelectBubble. Verschijnt na de
+  // lead-capture, vóór budget. Slaat de keuze op onder key 'waarInBreda'
+  // (leesbaar label + gestructureerde value) en gaat door naar budget. Nul
+  // aanvinken mag: telt als "geen voorkeur". Alleen bereikbaar in survey-modus
+  // (region-select bubble wordt nergens anders gedispatcht).
+  const onRegionSubmit = ({ ids = [], labels = [], other = '' } = {}) => {
+    const parts = [...labels, ...(other ? [`anders: ${other}`] : [])]
+    const chosenLabel = parts.length ? parts.join(', ') : 'Geen voorkeur'
+    trackEvent('survey:answered', { key: 'waarInBreda', value: { ids, other: other || null } })
+    const answer = {
+      id: 'waarInBreda',
+      label: chosenLabel,
+      value: { regions: ids, other: other || null },
+      _msgCountBefore: state.messages.length,
     }
-    trackEvent('survey:answered', { key: 'waarInBreda', value: typed })
-    const answer = { id: 'waarInBreda', label: typed, value: typed, _msgCountBefore: state.messages.length }
     dispatch({ type: 'ANSWER', key: 'waarInBreda', value: answer, next: 'budget' })
-    sendSequence(typed, [{ kind: 'bot-text', text: flow.questions.budget.label }])
+    sendSequence(chosenLabel, [{ kind: 'bot-text', text: flow.questions.budget.label }])
   }
   // M2MeterBubble-submit — dormant. De peiling dispatcht geen m2-meter meer
   // (de bouwgrond-fork loopt nu via grondVraag met chips), dus dit pad wordt
@@ -2166,7 +2170,6 @@ function Demo() {
     // Gated peiling-vrijetekst: branche 'anders, namelijk'. Nooit actief
     // zonder project.flowOverrides.surveyFlow — andere tenants ongewijzigd.
     if (project.flowOverrides?.surveyFlow && q === 'brancheAnders') return handleSurveyBrancheAnders(text)
-    if (project.flowOverrides?.surveyFlow && q === 'waarInBreda') return handleSurveyWaarInBreda(text)
     if (q === 'lead-email') return handleLeadEmailText(text)
     if (q === 'lead-name') return handleLeadNameText(text)
     if (q === 'lead-phone') return handleLeadPhoneText(text)
@@ -2464,7 +2467,7 @@ function Demo() {
       const postLead = surveyFlow.postLeadIntro
         ? [{ kind: 'bot-text', text: surveyFlow.postLeadIntro }]
         : []
-      dispatch({ type: 'ENQUEUE', messages: [...postLead, { kind: 'bot-text', text: flow.questions.waarInBreda.label }] })
+      dispatch({ type: 'ENQUEUE', messages: [...postLead, { kind: 'bot-text', text: flow.questions.waarInBreda.label }, { kind: 'region-select', payload: {} }] })
       return
     }
     // Volgende stap hangt af van waar de bezoeker in de flow zit. Wanneer
@@ -3049,10 +3052,6 @@ function Demo() {
     // Gated peiling-vrijetekst voor branche 'anders, namelijk'. Nooit actief
     // zonder surveyFlow, dus geen invloed op andere tenants.
     inputConfig = { placeholder: 'Bijvoorbeeld schilder, cateraar, webshop', inputMode: undefined }
-  } else if (project.flowOverrides?.surveyFlow && state.currentQuestion === 'waarInBreda') {
-    // Gated peiling-vrijetekst voor de locatievoorkeur binnen Breda. Neutrale
-    // placeholder — verklapt niets over het daadwerkelijke plan of gebied.
-    inputConfig = { placeholder: 'Bijvoorbeeld een wijk, buurt of omgeving', inputMode: undefined }
   }
   const answeredCount = ['intent', 'brochureTrigger', 'lead', 'size', 'timeline', 'followup']
     .filter((k) => state.answers[k]).length
@@ -3114,6 +3113,7 @@ function Demo() {
             onLeadFormSubmit={handleLeadFormSubmit}
             onM2Submit={onM2Submit}
             onLocationSubmit={onLocationSubmit}
+            onRegionSubmit={onRegionSubmit}
             onReset={() => {
               clearPersisted()
               _id = 0
