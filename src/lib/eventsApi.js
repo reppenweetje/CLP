@@ -54,6 +54,7 @@ const TENANT_MAP = {
   'Paveri BUnit':  'depaveri',
   'Elst BUnit':    'elst',
   'PIER14 BUnit':  'pier14',
+  Breda:           'breda',
 }
 
 // Source-key + tenant-string voor analytics. Volgorde:
