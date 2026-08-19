@@ -264,6 +264,15 @@ export const flow = {
       ],
     },
 
+    // Q6b — open-tekst: locatievoorkeur binnen Breda. Verschijnt na de lead-
+    // capture, vóór budget. Vrije tekst (geen chips), dus NIET in
+    // SURVEY_CHIP_KEYS — rendert een tekst-input (zie App.jsx inputConfig +
+    // handleSurveyWaarInBreda).
+    waarInBreda: {
+      key: 'waarInBreda',
+      label: 'Waar in Breda zou je een bedrijfsruimte willen hebben?',
+    },
+
     // Q7 — budget.
     budget: {
       key: 'budget',

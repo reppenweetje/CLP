@@ -973,6 +973,7 @@ function Demo() {
         // size_id/timeline_id kolom). Gated op aanwezigheid: andere tenants
         // hebben deze keys niet, dus verschijnen ze daar nooit.
         ...(state.answers.branche ? { branche: state.answers.branche.label } : {}),
+        ...(state.answers.waarInBreda ? { waarInBreda: state.answers.waarInBreda.label } : {}),
         ...(state.answers.budget ? { budget: state.answers.budget.label } : {}),
         ...(state.answers.financiering ? { financiering: state.answers.financiering.label } : {}),
         // Interesse-locaties uit de BREDA-peiling multiselect. Alleen aanwezig
@@ -1313,6 +1314,21 @@ function Demo() {
     const answer = { id: 'anders', label: typed, value: typed, _msgCountBefore: state.messages.length }
     dispatch({ type: 'ANSWER', key: 'branche', value: answer, next: 'wanneer' })
     sendSequence(typed, [{ kind: 'bot-text', text: flow.questions.wanneer.label }])
+  }
+  // Vrije-tekst-antwoord op de locatievoorkeur binnen Breda. Verschijnt na de
+  // lead-capture, vóór budget. Slaat de getypte plek op onder key 'waarInBreda'
+  // en gaat door naar budget. Alleen bereikbaar in survey-modus (gated in
+  // onChatInputSend).
+  function handleSurveyWaarInBreda(text) {
+    const typed = (text || '').trim()
+    if (!typed) {
+      sendSequence(text, [{ kind: 'bot-text', text: 'Kun je kort aangeven waar in Breda?' }])
+      return
+    }
+    trackEvent('survey:answered', { key: 'waarInBreda', value: typed })
+    const answer = { id: 'waarInBreda', label: typed, value: typed, _msgCountBefore: state.messages.length }
+    dispatch({ type: 'ANSWER', key: 'waarInBreda', value: answer, next: 'budget' })
+    sendSequence(typed, [{ kind: 'bot-text', text: flow.questions.budget.label }])
   }
   // M2MeterBubble-submit — dormant. De peiling dispatcht geen m2-meter meer
   // (de bouwgrond-fork loopt nu via grondVraag met chips), dus dit pad wordt
@@ -2150,6 +2166,7 @@ function Demo() {
     // Gated peiling-vrijetekst: branche 'anders, namelijk'. Nooit actief
     // zonder project.flowOverrides.surveyFlow — andere tenants ongewijzigd.
     if (project.flowOverrides?.surveyFlow && q === 'brancheAnders') return handleSurveyBrancheAnders(text)
+    if (project.flowOverrides?.surveyFlow && q === 'waarInBreda') return handleSurveyWaarInBreda(text)
     if (q === 'lead-email') return handleLeadEmailText(text)
     if (q === 'lead-name') return handleLeadNameText(text)
     if (q === 'lead-phone') return handleLeadPhoneText(text)
@@ -2423,7 +2440,7 @@ function Demo() {
       // locaties. currentQuestion → 'einde' (eind-acties) bij bouwgrond,
       // anders 'budget'.
       const isBouwgrondLead = state.answers.grondVraag?.id === 'bouwgrond'
-      dispatch({ type: 'ANSWER', key: 'lead', value: lead, next: isBouwgrondLead ? 'einde' : 'budget' })
+      dispatch({ type: 'ANSWER', key: 'lead', value: lead, next: isBouwgrondLead ? 'einde' : 'waarInBreda' })
       pushSnapshot(
         [{ scope: 'peiling-opvolging', granted: true, detail: { from: 'finishLead-survey' } }],
         lead,
@@ -2447,7 +2464,7 @@ function Demo() {
       const postLead = surveyFlow.postLeadIntro
         ? [{ kind: 'bot-text', text: surveyFlow.postLeadIntro }]
         : []
-      dispatch({ type: 'ENQUEUE', messages: [...postLead, { kind: 'bot-text', text: flow.questions.budget.label }] })
+      dispatch({ type: 'ENQUEUE', messages: [...postLead, { kind: 'bot-text', text: flow.questions.waarInBreda.label }] })
       return
     }
     // Volgende stap hangt af van waar de bezoeker in de flow zit. Wanneer
@@ -3032,6 +3049,10 @@ function Demo() {
     // Gated peiling-vrijetekst voor branche 'anders, namelijk'. Nooit actief
     // zonder surveyFlow, dus geen invloed op andere tenants.
     inputConfig = { placeholder: 'Bijvoorbeeld schilder, cateraar, webshop', inputMode: undefined }
+  } else if (project.flowOverrides?.surveyFlow && state.currentQuestion === 'waarInBreda') {
+    // Gated peiling-vrijetekst voor de locatievoorkeur binnen Breda. Neutrale
+    // placeholder — verklapt niets over het daadwerkelijke plan of gebied.
+    inputConfig = { placeholder: 'Bijvoorbeeld een wijk, buurt of omgeving', inputMode: undefined }
   }
   const answeredCount = ['intent', 'brochureTrigger', 'lead', 'size', 'timeline', 'followup']
     .filter((k) => state.answers[k]).length
@@ -3039,12 +3060,12 @@ function Demo() {
   // branche/wanneer/opt-in-lead/budget/financiering/locaties = 8 stappen).
   // grondVraag telt niet mee (conditioneel). Andere tenants houden de 6-staps
   // verkoop-progress hieronder.
-  const surveyAnsweredCount = ['intent', 'afmeting', 'branche', 'wanneer', 'lead', 'budget', 'financiering', 'interestLocations']
+  const surveyAnsweredCount = ['intent', 'afmeting', 'branche', 'wanneer', 'lead', 'waarInBreda', 'budget', 'financiering', 'interestLocations']
     .filter((k) => state.answers[k]).length
   const progress = state.view !== 'chat'
     ? null
     : isSurvey
-      ? { current: Math.min(8, Math.max(1, surveyAnsweredCount + 1)), total: 8 }
+      ? { current: Math.min(9, Math.max(1, surveyAnsweredCount + 1)), total: 9 }
       : { current: Math.min(6, Math.max(1, answeredCount + 1)), total: 6 }
   // De aanpassen-knop tonen we vanaf het moment dat er minimaal 1 antwoord is gegeven.
   const showAnswersButton = state.view === 'chat' && Object.values(state.answers).some(Boolean)
