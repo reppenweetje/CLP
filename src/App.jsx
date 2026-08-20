@@ -59,7 +59,11 @@ const SURVEY_CHIP_KEY_SET = new Set(SURVEY_CHIP_KEYS)
 // de mount-init slaat dan start() over (messages.length > 0) terwijl de queue
 // leeg is, waardoor de followup- en intent-vraag-bubbles nooit verschijnen
 // (alleen begroeting plus chips). Een nieuwe key forceert een schone cold start.
-const STORAGE_KEY = 'clp-state-v7'
+// Per-project genamespaced: anders delen alle tenants op dezelfde origin
+// dezelfde state-key. In productie zijn tenants aparte subdomeinen (dus
+// geïsoleerd), maar bij lokaal testen via ?project= lekt de state van het
+// ene project (bv. Breda's survey-antwoorden) in het andere (bv. Paveri).
+const STORAGE_KEY = `clp-state-v7-${project.id}`
 
 // Project-aware vraag-getter. Geeft de flow.questions[key] terug, maar
 // overschrijft met project.flowOverrides[`${key}Question`] als het project
