@@ -1009,6 +1009,16 @@ function Demo() {
         // Verse override voor de callsite waar de async dispatch nog niet is
         // bijgewerkt (onLocationSubmit). Andere callers geven niks mee.
         ...(Array.isArray(extraAttributes?.interestLocations) && extraAttributes.interestLocations.length ? { interestLocations: extraAttributes.interestLocations } : {}),
+        // Leesbare string-versie van de interesse-locaties. Nodig omdat het CRM
+        // (readSignup in de portal) array-attributes overslaat en alleen
+        // scalars in "Aanmeldgegevens" toont. Bron: verse override (callsite) of
+        // de al opgeslagen answer-value.
+        ...(() => {
+          const ids = (Array.isArray(extraAttributes?.interestLocations) && extraAttributes.interestLocations.length)
+            ? extraAttributes.interestLocations
+            : (Array.isArray(state.answers.interestLocations?.value) ? state.answers.interestLocations.value : [])
+          return ids.length ? { interesse_locaties: ids.map(capitalize).join(', ') } : {}
+        })(),
         // Unit-signaal niet apart meesturen: size_id (hierboven) landt al in
         // de Brevo SIZE-attribute, bv. Hofman "Rond 192 m²" → "rond_192" = XXL.
         // Sales ziet de gewenste unit dus via SIZE.
