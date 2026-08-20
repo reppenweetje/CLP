@@ -1356,8 +1356,11 @@ function Demo() {
       value: { regions: ids, other: other || null },
       _msgCountBefore: state.messages.length,
     }
-    dispatch({ type: 'ANSWER', key: 'waarInBreda', value: answer, next: 'budget' })
-    sendSequence(chosenLabel, [{ kind: 'bot-text', text: flow.questions.budget.label }])
+    // Budget-vraag staat voor nu uit de flow: na de regio gaan we direct naar
+    // financiering. De budget-vraag-definitie blijft in flow.js staan zodat 'm
+    // later terugzetten alleen deze route hoeft te wijzigen.
+    dispatch({ type: 'ANSWER', key: 'waarInBreda', value: answer, next: 'financiering' })
+    sendSequence(chosenLabel, [{ kind: 'bot-text', text: flow.questions.financiering.label }])
   }
   // M2MeterBubble-submit — dormant. De peiling dispatcht geen m2-meter meer
   // (de bouwgrond-fork loopt nu via grondVraag met chips), dus dit pad wordt
@@ -3081,15 +3084,15 @@ function Demo() {
   const answeredCount = ['intent', 'brochureTrigger', 'lead', 'size', 'timeline', 'followup']
     .filter((k) => state.answers[k]).length
   // Peiling-progress: eigen telling over de survey-milestones (doel/afmeting/
-  // branche/wanneer/opt-in-lead/budget/financiering/locaties = 8 stappen).
-  // grondVraag telt niet mee (conditioneel). Andere tenants houden de 6-staps
-  // verkoop-progress hieronder.
-  const surveyAnsweredCount = ['intent', 'afmeting', 'branche', 'wanneer', 'lead', 'waarInBreda', 'budget', 'financiering', 'interestLocations']
+  // branche/wanneer/opt-in-lead/waarInBreda/financiering/locaties = 8 stappen).
+  // Budget staat voor nu uit de flow. grondVraag telt niet mee (conditioneel).
+  // Andere tenants houden de 6-staps verkoop-progress hieronder.
+  const surveyAnsweredCount = ['intent', 'afmeting', 'branche', 'wanneer', 'lead', 'waarInBreda', 'financiering', 'interestLocations']
     .filter((k) => state.answers[k]).length
   const progress = state.view !== 'chat'
     ? null
     : isSurvey
-      ? { current: Math.min(9, Math.max(1, surveyAnsweredCount + 1)), total: 9 }
+      ? { current: Math.min(8, Math.max(1, surveyAnsweredCount + 1)), total: 8 }
       : { current: Math.min(6, Math.max(1, answeredCount + 1)), total: 6 }
   // De aanpassen-knop tonen we vanaf het moment dat er minimaal 1 antwoord is gegeven.
   const showAnswersButton = state.view === 'chat' && Object.values(state.answers).some(Boolean)
