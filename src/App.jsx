@@ -109,6 +109,11 @@ const initial = {
 function loadPersisted() {
   if (typeof window === 'undefined') return null
   try {
+    // Legacy-opruiming: vóór de per-project namespacing deelden alle tenants
+    // de key 'clp-state-v7'. Op een gedeelde origin (lokaal testen via
+    // ?project=) kon dat de state van het ene project in het andere lekken.
+    // Verwijder de oude key eenmalig zodat 'ie nooit meer meespeelt.
+    window.localStorage.removeItem('clp-state-v7')
     const raw = window.localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw)
