@@ -66,8 +66,8 @@ export const project = {
     {
       id: 'availability',
       tag: 'Beschikbaarheid',
-      title: 'Nog 3 units beschikbaar',
-      body: 'Type A, B en D uitverkocht. Drie Type C-units van 178 m² nog beschikbaar.',
+      title: 'Nog 4 units beschikbaar',
+      body: 'Type A en D uitverkocht. Eén Type B en drie Type C-units nog beschikbaar.',
       image: '/projects/depaveri/avond.jpg',
     },
     {
@@ -145,17 +145,17 @@ export const project = {
       'Strategisch in het hart van de Zaanstreek.',
       'Op een gevestigd bedrijventerrein in Assendelft Noord.',
     ],
-    scarcityNote: 'Beperkt aanbod nieuwbouw bedrijfsunits in de Zaanstreek. Van de 16 units in Fase 2 zijn er nog enkele Type C beschikbaar.',
+    scarcityNote: 'Beperkt aanbod nieuwbouw bedrijfsunits in de Zaanstreek. Van de 16 units in Fase 2 zijn er nog een Type B en enkele Type C beschikbaar.',
   },
 
   status: {
-    // 3 van 16 nog beschikbaar = 81% verkocht. Type A, B en D zijn volledig
-    // vergeven; alleen Type C heeft nog concreet beschikbare units.
-    soldPercent: 81,
-    headline: 'Circa 81% verkocht. Type A, B en D uitverkocht. Nog enkele Type C-units beschikbaar.',
+    // 4 van 16 nog beschikbaar = 75% verkocht. Type A en D zijn volledig
+    // vergeven; Type B heeft nog 1 unit en Type C nog enkele beschikbaar.
+    soldPercent: 75,
+    headline: 'Circa 75% verkocht. Type A en D uitverkocht. Nog een Type B en enkele Type C-units beschikbaar.',
     units: {
       A: { label: 'Uitverkocht', state: 'sold_out' },
-      B: { label: 'Uitverkocht', state: 'sold_out' },
+      B: { label: 'Nog 1 beschikbaar', state: 'available' },
       C: { label: 'Nog enkele beschikbaar', state: 'available' },
       D: { label: 'Uitverkocht', state: 'sold_out' },
     },
@@ -198,7 +198,7 @@ export const project = {
             cols: 8,
             aspect: 'tall',
             units: [
-              { number: 9, type: 'D', state: 'sold' },
+              { number: 9, type: 'D', state: 'sold_ov' },
               { number: 10, type: 'D', state: 'sold' },
               { number: 11, type: 'D', state: 'sold' },
               { number: 12, type: 'D', state: 'sold' },
@@ -213,7 +213,7 @@ export const project = {
       right: {
         units: [
           { number: 1, type: 'A', state: 'sold' },
-          { number: 2, type: 'B', state: 'sold' },
+          { number: 2, type: 'B', state: 'available' },
           { number: 3, type: 'A', state: 'sold' },
         ],
       },
@@ -302,11 +302,11 @@ export const project = {
       levelDetail: '78 m² BG + 78 m² 1e + 54 m² 2e + dakterras ~23 m²',
       priceFrom: 349000,
       pricePerM2: 1678,
-      state: 'sold_out',
-      stateLabel: 'Uitverkocht',
+      state: 'available',
+      stateLabel: 'Nog 1 beschikbaar',
       uses: ['3-laags bedrijfsunit', 'Dakterras'],
       image: '/projects/depaveri/avond.jpg',
-      pitch: 'Drie lagen met groter dakterras (~23 m²) en 3 eigen parkeerplaatsen. Uitverkocht.',
+      pitch: 'Drie lagen met groter dakterras (~23 m²) en 3 eigen parkeerplaatsen. Nog één beschikbaar.',
       specs: [
         '208 m² verdeeld over 3 lagen',
         'Overheaddeur 4,00 m breed × 3,50 m hoog',
@@ -459,7 +459,7 @@ export const project = {
     {
       id: 'scarcity',
       title: 'Beschikbaarheid',
-      body: 'Circa 81% verkocht. Type A, B en D uitverkocht. Nog enkele Type C-units beschikbaar.',
+      body: 'Circa 75% verkocht. Type A en D uitverkocht. Nog een Type B en enkele Type C-units beschikbaar.',
       tag: 'Schaarste',
     },
     {
@@ -617,16 +617,15 @@ export const project = {
     rentLeadVariant: 'huurder',
     sizeQuestion: {
       label: 'Hoeveel m² zoek je?',
-      // Alle opties wijzen naar Unit C als `unit`: bij De Paveri zijn dat
-      // de enige units die nu nog concreet beschikbaar zijn (Type A en B
-      // uitverkocht, Type D bijna vergeven met enkele sold-ov). De score
-      // en option-id blijven verschillen zodat analytics ziet wat de
-      // bezoeker oorspronkelijk koos. De getoonde bot-intro varieert via
-      // `recommendIntroByChoice` hieronder — niet via een ander unit-type.
+      // 208 m² wijst naar Type B (weer beschikbaar, exacte maat); de overige
+      // opties naar Type C — de nog concreet beschikbare units. Type A en D
+      // zijn uitverkocht (Type D op één sold-ov na). De score en option-id
+      // blijven verschillen zodat analytics ziet wat de bezoeker koos. De
+      // bot-intro varieert via `recommendIntroByChoice` hieronder.
       options: [
         { id: 'around_112', label: '112 m²', score: 12, unit: 'C' },
         { id: 'around_178', label: '178 m²', score: 15, unit: 'C' },
-        { id: 'around_208', label: '208 m²', score: 15, unit: 'C' },
+        { id: 'around_208', label: '208 m²', score: 15, unit: 'B' },
         { id: 'weet_niet',  label: 'Weet ik nog niet', score: 5,  unit: 'C' },
       ],
     },
@@ -641,8 +640,9 @@ export const project = {
   // toelichting waarom — voorkomt dat de bezoeker denkt "huh, ik vroeg om
   // 208 m² en krijg 178 m² terug zonder uitleg".
   recommendIntroByChoice: {
-    // 208 m² → Type A is uitverkocht. Korte, eerlijke verwijzing naar C.
-    around_208: 'Op basis van de beschikbaarheid is Unit C de meest passende optie voor je.',
+    // 208 m² → Type A uitverkocht, maar Type B (208 m², drie lagen) is weer
+    // beschikbaar en past exact bij deze oppervlakte.
+    around_208: 'Type B van 208 m² over drie lagen is weer beschikbaar en past precies bij wat je zoekt.',
     // 112 m² → Type D is uitverkocht. Eerlijke verwijzing naar de wel
     // beschikbare Type C; we bieden aan om te bellen bij eventuele uitval.
     around_112: 'De compacte Type D-units zijn inmiddels uitverkocht. Mocht er onverhoopt eentje vrijkomen, dan nemen we contact met je op. Voor nu is Unit C de concreet beschikbare optie.',
