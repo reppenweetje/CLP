@@ -91,6 +91,77 @@ function countSitePlanUnits(sp) {
     (sp.svg?.units?.length || 0)
   )
 }
+// ── Config-survey-engine (generiek, data-gedreven) ──────────────────────────
+//
+// Volledig gated: alle onderstaande helpers zijn alleen betekenisvol wanneer
+// project.flowOverrides.surveyFlow.engine === 'config'. Ze lezen puur uit de
+// project-config (steps/intro/closing) en raken geen enkele bestaande tenant.
+// Breda (surveyFlow ZONDER engine) en de sales-tenants (geen surveyFlow)
+// bereiken deze code nooit.
+function isConfigEngine() {
+  return project.flowOverrides?.surveyFlow?.engine === 'config'
+}
+function configStepList() {
+  return project.flowOverrides?.surveyFlow?.steps || []
+}
+function configClosingBubbles() {
+  return (project.flowOverrides?.surveyFlow?.closing || []).map((text) => ({ kind: 'bot-text', text }))
+}
+// Zoekt een step (of followUp-substep) op key. Retourneert { step, parent }
+// waarbij parent de bovenliggende top-level step is als key een substep is.
+function findConfigStep(key) {
+  for (const s of configStepList()) {
+    if (s.key === key) return { step: s, parent: null }
+    if (s.followUp) {
+      for (const optId of Object.keys(s.followUp)) {
+        if (s.followUp[optId]?.key === key) return { step: s.followUp[optId], parent: s }
+      }
+    }
+  }
+  return { step: null, parent: null }
+}
+// Loopt vanaf top-level index `fromIndex` vooruit: message-steps worden als
+// bot-bubble geëmit en overgeslagen tot de eerstvolgende input-step (open-text
+// / single-choice / multi-choice). Retourneert de te enqueuen bot-bubbles plus
+// de nextQuestion (step-key, of 'einde' als het einde bereikt is).
+function buildConfigAdvance(fromIndex) {
+  const steps = configStepList()
+  const messages = []
+  let i = fromIndex
+  while (i < steps.length) {
+    const s = steps[i]
+    if (s.type === 'message') {
+      messages.push({ kind: 'bot-text', text: s.text })
+      i++
+      continue
+    }
+    messages.push({ kind: 'bot-text', text: s.label })
+    if (s.type === 'multi-choice') {
+      messages.push({ kind: 'config-multi', payload: { stepKey: s.key, options: s.options, label: s.label } })
+    }
+    return { messages, nextQuestion: s.key }
+  }
+  // Einde: afsluit-bubbles + sentinel 'einde' (eind-acties in de chip-render).
+  return { messages: configClosingBubbles(), nextQuestion: 'einde' }
+}
+// Branch-doel: 'end'/'__end__' → afsluiten, anders vanaf de doel-step.
+function buildConfigAdvanceToKey(key) {
+  if (key === 'end' || key === '__end__') {
+    return { messages: configClosingBubbles(), nextQuestion: 'einde' }
+  }
+  const steps = configStepList()
+  const idx = steps.findIndex((s) => s.key === key)
+  if (idx === -1) return { messages: configClosingBubbles(), nextQuestion: 'einde' }
+  return buildConfigAdvance(idx)
+}
+// Vervolg NA een step (respecteert substeps: gaat verder na de PARENT-step).
+function buildConfigAdvanceAfter(step, parent) {
+  const steps = configStepList()
+  const anchorKey = parent ? parent.key : step.key
+  const idx = steps.findIndex((s) => s.key === anchorKey)
+  return buildConfigAdvance(idx + 1)
+}
+
 const initial = {
   // Default = 'chat'. De IntroScreen/startpagina is volledig uitgefaseerd
   // (A/B-test afgerond: direct-naar-chat won), dus iedere bezoeker landt in
@@ -174,6 +245,22 @@ function reducer(state, action) {
       // valt de code door naar de standaard verkoop-intro hieronder, byte-
       // voor-byte gelijk aan voorheen.
       const surveyFlow = project.flowOverrides?.surveyFlow
+      // Config-survey-engine (BREDA-onafhankelijk): data-gedreven intro + eerste
+      // step uit project.flowOverrides.surveyFlow.steps. Geen informele
+      // begroeting (formele u-vorm); alles gaat in de release-queue zodat de
+      // intro en de eerste vraag uittypen. Alleen actief bij engine==='config';
+      // Breda valt door naar de bestaande surveyFlow-tak hieronder.
+      if (surveyFlow?.engine === 'config') {
+        const introBubbles = (surveyFlow.intro || []).map((text) => ({ kind: 'bot-text', text }))
+        const firstAdvance = buildConfigAdvance(0)
+        return {
+          ...state,
+          view: 'chat',
+          messages: [],
+          messageQueue: [...introBubbles, ...firstAdvance.messages],
+          currentQuestion: firstAdvance.nextQuestion,
+        }
+      }
       if (surveyFlow) {
         const introBubbles = (surveyFlow.intro || []).map((text) => ({ kind: 'bot-text', text }))
         const surveyQuestion = { kind: 'bot-text', text: flow.questions.doel.label }
@@ -771,6 +858,9 @@ function Demo() {
   // Reppit-WhatsApp-assistent die er voor een peiling niet is) en geen
   // verkoop-progressbalk. Gated zodat andere tenants ongewijzigd blijven.
   const isSurvey = !!project.flowOverrides?.surveyFlow
+  // Config-survey-engine actief? Enige trigger voor de generieke sequencer.
+  // Breda (surveyFlow zonder engine) en sales-tenants blijven false.
+  const isConfigSurvey = project.flowOverrides?.surveyFlow?.engine === 'config'
   // Smart resume: bezoeker komt terug na ≥4u in onvoltooide chat MET
   // progressie (≥1 beantwoorde vraag). Banner toont count zodat user
   // weet wat er bewaard is — geen lege belofte bij nul antwoorden.
@@ -1383,9 +1473,206 @@ function Demo() {
     dispatch({ type: 'ANSWER', key: 'grondM2', value: answer, next: 'doel' })
     sendSequence(`± ${value} m²`, [{ kind: 'bot-text', text: flow.questions.doel.label }])
   }
+  // ── Config-survey-engine handlers (generiek) ──────────────────────────────
+  //
+  // Volledig gated op isConfigSurvey. Bouwen de Supabase-payload op uit de
+  // per-step CRM-mapping en advanceren via de module-scope walk-helpers. Voor
+  // Breda en de sales-tenants wordt geen van deze functies ooit aangeroepen.
+
+  // Snapshot-push voor de config-survey. Bouwt columns (intent_id/size_id/
+  // timeline_id) + attributes (snake_case) generiek uit de step-config.
+  // Multi-choice schrijft zowel een array (attr) als een leesbare string
+  // (attr_tekst), analoog aan Breda's interesse_locaties. Email-gated, dus een
+  // afhaak vóór stap 17 pusht niets. Idempotent (upsert op source,session_id).
+  function pushConfigSnapshot(extraConsents = [], freshLead = null) {
+    if (!isApiConfigured()) return
+    const lead = freshLead || state.answers.lead || {}
+    if (!lead.email) return // email is de gate, net als pushSnapshot
+    // Flatten top-level steps + followUp-substeps zodat ook sector_anders meekomt.
+    const flat = []
+    for (const s of configStepList()) {
+      flat.push(s)
+      if (s.followUp) for (const k of Object.keys(s.followUp)) flat.push(s.followUp[k])
+    }
+    let intent_id = null
+    let size_id = null
+    let timeline_id = null
+    const attributes = {}
+    for (const s of flat) {
+      if (!s.crm) continue
+      const ans = state.answers[s.key]
+      if (ans === undefined || ans === null) continue
+      if (s.crm.column === 'intent_id') intent_id = ans.id ?? null
+      else if (s.crm.column === 'size_id') size_id = ans.id ?? null
+      else if (s.crm.column === 'timeline_id') timeline_id = ans.id ?? null
+      else if (s.crm.attr) {
+        if (s.type === 'multi-choice') {
+          const ids = Array.isArray(ans.value) ? ans.value : []
+          if (ids.length) {
+            attributes[s.crm.attr] = ids
+            attributes[`${s.crm.attr}_tekst`] = (ans.labels && ans.labels.length ? ans.labels : ids).join(', ')
+          }
+        } else {
+          const v = ans.value ?? ans.label
+          if (v != null && v !== '') attributes[s.crm.attr] = v
+        }
+      }
+      // crm.lead-velden zitten al in het lead-object (firstName/email/phone).
+    }
+    const session = {
+      sessionId:   getSessionId(),
+      events:      [],
+      startedAt:   null,
+      lastEventAt: Date.now(),
+      completed:   state.currentQuestion === 'einde',
+      persona,
+      lead: {
+        firstName: lead.firstName ?? null,
+        email:     lead.email ?? null,
+        phone:     lead.phone ?? null,
+      },
+      ctaVariant: null,
+      stage,
+      followup:   null,
+    }
+    pushLead(session, {
+      intent_id,
+      size_id,
+      timeline_id,
+      attributes: {
+        ...(getAttribution() ? { attribution: getAttribution() } : {}),
+        ...(leadEventId() ? { fb_event_id: leadEventId() } : {}),
+        ...attributes,
+      },
+      consents: extraConsents,
+    }).then((res) => {
+      const newToken = res?.result?.portal_token
+      if (newToken && newToken !== portalToken) {
+        setPortalToken(newToken)
+        try { window.sessionStorage.setItem('clp-portal-token', newToken) } catch {}
+      }
+    }).catch((err) => {
+      console.warn('[pushConfigSnapshot] failed', err)
+    })
+  }
+
+  // Chip-keuze op een single-choice config-step (en de eind-acties). Handelt
+  // followUp (vrije-tekst substap), branch (note + goto) en normale advance af.
+  function handleConfigChip(q, opt) {
+    // Eindstate: twee actie-chips (opnieuw beginnen / antwoorden aanpassen).
+    if (q === 'einde') {
+      if (opt.id === 'opnieuw') {
+        trackEvent('survey:restart', { from: 'einde' })
+        clearPersisted()
+        _id = 0
+        dispatch({ type: 'RESET' })
+        dispatch({ type: 'START_CHAT', bot: project.salesTeam?.bot, copyVariant })
+        return
+      }
+      if (opt.id === 'aanpassen') {
+        trackEvent('survey:edit-answers', { from: 'einde' })
+        setAnswersOpen(true)
+        return
+      }
+      return
+    }
+    const { step } = findConfigStep(q)
+    if (!step || step.type !== 'single-choice') return
+    const val = { id: opt.id, label: opt.label, _msgCountBefore: state.messages.length }
+    trackEvent('survey:answered', { key: step.key, id: opt.id })
+    // followUp: vrije-tekst substap (bv. sector 'anders' → sector_anders).
+    const sub = step.followUp?.[opt.id]
+    if (sub) {
+      dispatch({ type: 'ANSWER', key: step.key, value: val, next: sub.key })
+      sendSequence(opt.label, [{ kind: 'bot-text', text: sub.label }])
+      return
+    }
+    // branch: optionele note-bubble + goto (stepKey of 'end').
+    let adv
+    let noteMsgs = []
+    const br = step.branch?.[opt.id]
+    if (br) {
+      if (br.note) noteMsgs = [{ kind: 'bot-text', text: br.note }]
+      adv = buildConfigAdvanceToKey(br.goto)
+    } else {
+      adv = buildConfigAdvanceAfter(step, null)
+    }
+    dispatch({ type: 'ANSWER', key: step.key, value: val, next: adv.nextQuestion })
+    sendSequence(opt.label, [...noteMsgs, ...adv.messages])
+    if (adv.nextQuestion === 'einde') {
+      pushConfigSnapshot([{ scope: 'peiling-afgerond', granted: true, detail: { from: 'config-end' } }])
+      trackEvent('flow:complete', { stage: 'survey-config', persona })
+    }
+  }
+
+  // Vrije-tekst-antwoord op een open-text config-step (incl. followUp-substep).
+  // Slaat lead-velden (naam/e-mail/telefoon) in answers.lead op en pusht bij
+  // e-mail de eerste snapshot (capture halverwege).
+  function handleConfigText(text) {
+    const q = state.currentQuestion
+    const { step, parent } = findConfigStep(q)
+    if (!step || step.type !== 'open-text') return
+    const typed = (text || '').trim()
+    if (!typed) {
+      sendSequence(text, [{ kind: 'bot-text', text: 'Zou u dat nog kunnen invullen?' }])
+      return
+    }
+    if (step.crm?.lead === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(typed)) {
+      sendSequence(text, [{ kind: 'bot-text', text: 'Dat lijkt geen geldig e-mailadres. Kunt u het opnieuw invullen?' }])
+      return
+    }
+    // Naam en overige vrije tekst blijven verbatim (user-bubble-conventie);
+    // alleen e-mail normaliseren we naar lowercase voor CRM-matching.
+    const stored = step.crm?.lead === 'email' ? typed.toLowerCase() : typed
+    const answer = { id: step.key, label: stored, value: stored, _msgCountBefore: state.messages.length }
+    // Lead-velden bijwerken.
+    let freshLead = state.answers.lead || {}
+    if (step.crm?.lead) {
+      const field = step.crm.lead === 'first_name' ? 'firstName' : step.crm.lead
+      freshLead = { ...freshLead, [field]: stored }
+    }
+    const adv = buildConfigAdvanceAfter(step, parent)
+    dispatch({ type: 'ANSWER', key: step.key, value: answer, next: adv.nextQuestion })
+    if (step.crm?.lead) {
+      dispatch({ type: 'ANSWER', key: 'lead', value: freshLead, next: adv.nextQuestion })
+    }
+    trackEvent('survey:answered', { key: step.key })
+    sendSequence(stored, adv.messages)
+    // Capture halverwege bij e-mail; nogmaals aan het eind (idempotent).
+    if (step.crm?.lead === 'email') {
+      pushConfigSnapshot([{ scope: 'peiling-opvolging', granted: true, detail: { from: 'config-email' } }], freshLead)
+    }
+    if (adv.nextQuestion === 'einde') {
+      pushConfigSnapshot([{ scope: 'peiling-afgerond', granted: true, detail: { from: 'config-end' } }])
+      trackEvent('flow:complete', { stage: 'survey-config', persona })
+    }
+  }
+
+  // Multiselect-submit voor een multi-choice config-step. Slaat array + labels
+  // op en advanceert. Nul aanvinken mag (telt als geen antwoord).
+  const onConfigMultiSubmit = (stepKey, ids = [], labels = []) => {
+    const { step } = findConfigStep(stepKey)
+    if (!step) return
+    const idList = Array.isArray(ids) ? ids : []
+    const labelList = Array.isArray(labels) ? labels : []
+    const chosen = labelList.length ? labelList.join(', ') : 'Geen'
+    const val = { id: stepKey, label: chosen, value: idList, labels: labelList, _msgCountBefore: state.messages.length }
+    trackEvent('survey:answered', { key: stepKey, value: idList })
+    const adv = buildConfigAdvanceAfter(step, null)
+    dispatch({ type: 'ANSWER', key: stepKey, value: val, next: adv.nextQuestion })
+    sendSequence(chosen, adv.messages)
+    if (adv.nextQuestion === 'einde') {
+      pushConfigSnapshot([{ scope: 'peiling-afgerond', granted: true, detail: { from: 'config-end' } }])
+      trackEvent('flow:complete', { stage: 'survey-config', persona })
+    }
+  }
+
   const onChipPick = (opt) => {
     const q = state.currentQuestion
     if (!q) return
+    // Gated config-survey-pad: vangt ALLE chip-keuzes af vóór de standaard
+    // handlers. Nooit actief zonder engine==='config'.
+    if (isConfigSurvey) return handleConfigChip(q, opt)
     // Gated peiling-pad: vangt alle survey-chipvragen af vóór de standaard
     // handlers. Nooit actief zonder project.flowOverrides.surveyFlow.
     if (project.flowOverrides?.surveyFlow && SURVEY_CHIP_KEY_SET.has(q)) {
@@ -2205,6 +2492,13 @@ function Demo() {
   }
   const onChatInputSend = (text) => {
     const q = state.currentQuestion
+    // Gated config-survey-vrijetekst: alle open-text steps. Nooit actief zonder
+    // engine==='config', andere tenants ongewijzigd.
+    if (isConfigSurvey) {
+      const { step } = findConfigStep(q)
+      if (step && step.type === 'open-text') return handleConfigText(text)
+      return
+    }
     // Gated peiling-vrijetekst: branche 'anders, namelijk'. Nooit actief
     // zonder project.flowOverrides.surveyFlow — andere tenants ongewijzigd.
     if (project.flowOverrides?.surveyFlow && q === 'brancheAnders') return handleSurveyBrancheAnders(text)
@@ -2957,7 +3251,31 @@ function Demo() {
   const surveyChipKey = project.flowOverrides?.surveyFlow && SURVEY_CHIP_KEY_SET.has(state.currentQuestion)
     ? state.currentQuestion
     : null
-  if (surveyChipKey) chipQuestion = flow.questions[surveyChipKey]
+  // Gated config-survey-resolutie (generiek). Vangt vóór de bestaande keten:
+  // single-choice → chips, open-text → input, multi-choice → bubble in thread
+  // (geen chip/input). 'einde' → twee actie-chips. Nooit actief zonder
+  // engine==='config'.
+  if (isConfigSurvey) {
+    if (state.currentQuestion === 'einde') {
+      chipQuestion = {
+        key: 'einde',
+        label: 'einde',
+        options: [
+          { id: 'opnieuw',   label: 'Opnieuw beginnen' },
+          { id: 'aanpassen', label: 'Antwoorden aanpassen' },
+        ],
+      }
+    } else {
+      const { step } = findConfigStep(state.currentQuestion)
+      if (step?.type === 'single-choice') {
+        chipQuestion = { key: step.key, label: step.label, options: step.options }
+      } else if (step?.type === 'open-text') {
+        inputConfig = { placeholder: step.placeholder || '', inputMode: step.inputMode }
+      }
+      // multi-choice: gerenderd als config-multi bubble in de thread.
+    }
+  }
+  else if (surveyChipKey) chipQuestion = flow.questions[surveyChipKey]
   // Gated peiling-eindstate (BREDA): twee actie-chips na de finalBubble.
   // 'einde' zit buiten SURVEY_CHIP_KEYS, dus hier als synthetische chipvraag.
   // Nooit actief zonder surveyFlow — andere tenants ongewijzigd.
@@ -3099,11 +3417,17 @@ function Demo() {
   // Andere tenants houden de 6-staps verkoop-progress hieronder.
   const surveyAnsweredCount = ['intent', 'afmeting', 'branche', 'wanneer', 'lead', 'waarInBreda', 'financiering', 'interestLocations']
     .filter((k) => state.answers[k]).length
+  // Config-survey-progress: telt beantwoorde input-steps over het totaal aantal
+  // input-steps (message-steps tellen niet mee).
+  const configInputSteps = isConfigSurvey ? configStepList().filter((s) => s.type !== 'message') : []
+  const configAnswered = configInputSteps.filter((s) => state.answers[s.key]).length
   const progress = state.view !== 'chat'
     ? null
-    : isSurvey
-      ? { current: Math.min(8, Math.max(1, surveyAnsweredCount + 1)), total: 8 }
-      : { current: Math.min(6, Math.max(1, answeredCount + 1)), total: 6 }
+    : isConfigSurvey
+      ? { current: Math.min(configInputSteps.length || 1, Math.max(1, configAnswered + 1)), total: configInputSteps.length || 1 }
+      : isSurvey
+        ? { current: Math.min(8, Math.max(1, surveyAnsweredCount + 1)), total: 8 }
+        : { current: Math.min(6, Math.max(1, answeredCount + 1)), total: 6 }
   // De aanpassen-knop tonen we vanaf het moment dat er minimaal 1 antwoord is gegeven.
   const showAnswersButton = state.view === 'chat' && Object.values(state.answers).some(Boolean)
   return (
@@ -3152,6 +3476,7 @@ function Demo() {
             onM2Submit={onM2Submit}
             onLocationSubmit={onLocationSubmit}
             onRegionSubmit={onRegionSubmit}
+            onConfigMultiSubmit={onConfigMultiSubmit}
             onReset={() => {
               clearPersisted()
               _id = 0

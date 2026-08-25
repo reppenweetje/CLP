@@ -57,6 +57,7 @@ const DEFAULT_ALLOWED = [
   'https://elster11.clp.repp.nl',
   'https://pier14.clp.repp.nl',
   'https://breda.clp.repp.nl',
+  'https://2emwh.clp.repp.nl',
   'https://clp-xi-tan.vercel.app',
   'http://localhost:5173',
   'http://localhost:5174',
@@ -351,7 +352,7 @@ serve(async (req: Request) => {
   // horen alleen in Supabase (eigen CRM), niet in de De Hofman-marketinglijst
   // waar ze anders via de BREVO_LIST_ID-fallback zouden landen. Verkoop-CLP's
   // en portal walk-ins blijven ongewijzigd naar Brevo gaan.
-  const BREVO_SKIP_SOURCES = new Set(['Breda'])
+  const BREVO_SKIP_SOURCES = new Set(['Breda', '2e MWH'])
   if (!BREVO_SKIP_SOURCES.has(v.data.source)) {
     keepAlive(
       upsertBrevoContact(
