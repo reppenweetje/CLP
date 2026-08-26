@@ -46,7 +46,10 @@ export const project = {
   contentCards: [],
   personaCopy: {},
 
-  whatsappNumber: '+31616079428',
+  // Geen eigen WhatsApp-nummer: bewust leeg zodat er GEEN WA-knop verschijnt
+  // (voorkomt kruising met het nummer van een ander project). Zet hier een
+  // eigen 2e Merwedehaven-nummer als er een WA-kanaal moet komen.
+  whatsappNumber: '',
 
   // Brochure uitgeschakeld: '#' zorgt dat een eventuele brochure-trigger
   // nergens naartoe linkt. In de peiling-flow wordt de brochure nooit

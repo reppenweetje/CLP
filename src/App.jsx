@@ -3197,7 +3197,12 @@ function Demo() {
       scroller.scrollTo({ top: Math.max(0, elTop - 12), behavior: 'smooth' })
     }
   }
-  const headerWaLink = whatsAppDeeplink(project, state.answers.lead?.firstName || '', `Graag info over ${project.displayName}`)
+  // Alleen een WA-knop tonen als het project een eigen nummer heeft. Zonder
+  // nummer geen (kapotte of gedeelde) deeplink — voorkomt dat een tenant per
+  // ongeluk het WhatsApp-nummer van een ander project toont.
+  const headerWaLink = project.whatsappNumber
+    ? whatsAppDeeplink(project, state.answers.lead?.firstName || '', `Graag info over ${project.displayName}`)
+    : null
   const headerPhoneLink = buildPhoneLink(project.phoneNumber)
   // Wijzig een eerder gegeven antwoord vanuit de antwoorden-sheet.
   // De flow rolt terug naar het punt vlak voor de oude user-bubble; de
