@@ -38,6 +38,10 @@ export const project = {
 
   portalStrategy: 'none',
 
+  // Formele aanspreekvorm (u): stuurt gedeelde componenten (bv. de
+  // ChatInput-privacyregel) naar de u-vorm i.p.v. de standaard je-vorm.
+  formalYou: true,
+
   // Geen offer-content. Alle onderstaande velden bewust leeg/veilig zodat de
   // gedeelde componenten die er guarded naar grijpen niet crashen.
   gallery: [],

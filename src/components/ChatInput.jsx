@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { project } from '../data/project.js'
 
 // chat input bar onderin het scherm
 // expliciet niet in een form element en alle pwm en autofill hints uit
@@ -71,7 +72,9 @@ export default function ChatInput({ placeholder, inputMode, validate, onSend, se
           relevant maar mag niet visueel concurreren met het input-veld.
           Verkoop-attributie zit in de Info-sheet onder de chip-bar. */}
       <div className="text-[11px] text-ink-mute/80 text-center mt-2 leading-tight">
-        We bewaren je antwoorden om je goed te helpen.{' '}
+        {project.formalYou
+          ? 'We bewaren uw antwoorden om u goed te helpen.'
+          : 'We bewaren je antwoorden om je goed te helpen.'}{' '}
         <a
           href="/privacy.html"
           target="_blank"
