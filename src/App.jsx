@@ -1502,9 +1502,13 @@ function Demo() {
       if (!s.crm) continue
       const ans = state.answers[s.key]
       if (ans === undefined || ans === null) continue
-      if (s.crm.column === 'intent_id') intent_id = ans.id ?? null
-      else if (s.crm.column === 'size_id') size_id = ans.id ?? null
-      else if (s.crm.column === 'timeline_id') timeline_id = ans.id ?? null
+      // Kolom-vragen: de id gaat naar de kolom (voor filtering/logica), en het
+      // leesbare label gaat ook naar attributes onder de step-key, zodat het
+      // CRM (dat intent_id/size_id/timeline_id niet toont) het antwoord alsnog
+      // leesbaar in de Aanmeldgegevens laat zien.
+      if (s.crm.column === 'intent_id') { intent_id = ans.id ?? null; if (ans.label) attributes[s.key] = ans.label }
+      else if (s.crm.column === 'size_id') { size_id = ans.id ?? null; if (ans.label) attributes[s.key] = ans.label }
+      else if (s.crm.column === 'timeline_id') { timeline_id = ans.id ?? null; if (ans.label) attributes[s.key] = ans.label }
       else if (s.crm.attr) {
         if (s.type === 'multi-choice') {
           const ids = Array.isArray(ans.value) ? ans.value : []
