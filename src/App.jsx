@@ -1484,7 +1484,7 @@ function Demo() {
   // Multi-choice schrijft zowel een array (attr) als een leesbare string
   // (attr_tekst), analoog aan Breda's interesse_locaties. Email-gated, dus een
   // afhaak vóór stap 17 pusht niets. Idempotent (upsert op source,session_id).
-  function pushConfigSnapshot(extraConsents = [], freshLead = null) {
+  function pushConfigSnapshot(extraConsents = [], freshLead = null, freshAnswers = null) {
     if (!isApiConfigured()) return
     const lead = freshLead || state.answers.lead || {}
     if (!lead.email) return // email is de gate, net als pushSnapshot
@@ -1500,7 +1500,10 @@ function Demo() {
     const attributes = {}
     for (const s of flat) {
       if (!s.crm) continue
-      const ans = state.answers[s.key]
+      // freshAnswers-override: het laatst-gedispatchte antwoord zit door React's
+      // async dispatch nog niet in state.answers bij de eind-push. De caller geeft
+      // het verse antwoord mee zodat de laatste vraag niet wegvalt.
+      const ans = (freshAnswers && freshAnswers[s.key] !== undefined) ? freshAnswers[s.key] : state.answers[s.key]
       if (ans === undefined || ans === null) continue
       // Kolom-vragen: de id gaat naar de kolom (voor filtering/logica), en het
       // leesbare label gaat ook naar attributes onder de step-key, zodat het
@@ -1604,7 +1607,7 @@ function Demo() {
     dispatch({ type: 'ANSWER', key: step.key, value: val, next: adv.nextQuestion })
     sendSequence(opt.label, [...noteMsgs, ...adv.messages])
     if (adv.nextQuestion === 'einde') {
-      pushConfigSnapshot([{ scope: 'peiling-afgerond', granted: true, detail: { from: 'config-end' } }])
+      pushConfigSnapshot([{ scope: 'peiling-afgerond', granted: true, detail: { from: 'config-end' } }], null, { [step.key]: val })
       trackEvent('flow:complete', { stage: 'survey-config', persona })
     }
   }
@@ -1647,7 +1650,7 @@ function Demo() {
       pushConfigSnapshot([{ scope: 'peiling-opvolging', granted: true, detail: { from: 'config-email' } }], freshLead)
     }
     if (adv.nextQuestion === 'einde') {
-      pushConfigSnapshot([{ scope: 'peiling-afgerond', granted: true, detail: { from: 'config-end' } }])
+      pushConfigSnapshot([{ scope: 'peiling-afgerond', granted: true, detail: { from: 'config-end' } }], freshLead, { [step.key]: answer })
       trackEvent('flow:complete', { stage: 'survey-config', persona })
     }
   }
@@ -1666,7 +1669,7 @@ function Demo() {
     dispatch({ type: 'ANSWER', key: stepKey, value: val, next: adv.nextQuestion })
     sendSequence(chosen, adv.messages)
     if (adv.nextQuestion === 'einde') {
-      pushConfigSnapshot([{ scope: 'peiling-afgerond', granted: true, detail: { from: 'config-end' } }])
+      pushConfigSnapshot([{ scope: 'peiling-afgerond', granted: true, detail: { from: 'config-end' } }], null, { [stepKey]: val })
       trackEvent('flow:complete', { stage: 'survey-config', persona })
     }
   }
