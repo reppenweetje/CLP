@@ -25,6 +25,7 @@ import * as elster11 from './projects/elster11.js'
 import * as pier14   from './projects/pier14.js'
 import * as breda    from './projects/breda.js'
 import * as tweemwh  from './projects/2emwh.js'
+import * as tweemwhWarm from './projects/2emerwedehaven.js'
 
 // Map van hostname (zonder protocol of path) → module met { project, uspCardOrder }.
 // Productie-pattern: <slug>.clp.repp.nl.
@@ -37,6 +38,7 @@ const PROJECTS = {
   'pier14.clp.repp.nl':   pier14,
   'breda.clp.repp.nl':    breda,
   '2emwh.clp.repp.nl':    tweemwh,
+  '2emerwedehaven.clp.repp.nl': tweemwhWarm,
   'localhost':            dehofman,
   '127.0.0.1':            dehofman,
 }

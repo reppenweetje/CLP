@@ -58,6 +58,7 @@ const DEFAULT_ALLOWED = [
   'https://pier14.clp.repp.nl',
   'https://breda.clp.repp.nl',
   'https://2emwh.clp.repp.nl',
+  'https://2emerwedehaven.clp.repp.nl',
   'https://clp-xi-tan.vercel.app',
   'http://localhost:5173',
   'http://localhost:5174',

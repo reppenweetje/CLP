@@ -63,6 +63,13 @@ export function getSessionId() {
   return safeRead(SESSION_KEY) || startNewSession()
 }
 
+// Neemt een bestaande sessie-id over (warme CLP): zo ge-upsert een afgeronde
+// flow op (source, session_id) en werkt de BESTAANDE lead bij i.p.v. een
+// duplicaat aan te maken. Alleen aanroepen met een geldige, niet-lege id.
+export function adoptSession(id) {
+  if (typeof id === 'string' && id.trim()) safeWrite(SESSION_KEY, id.trim())
+}
+
 // Auto-injecteert sessie-level props (copyVariant + ctaVariant) op elk
 // event zodat Plausible kan filteren zonder dat elke call-site die props
 // expliciet hoeft mee te geven. Variant-keys zijn sticky in localStorage,

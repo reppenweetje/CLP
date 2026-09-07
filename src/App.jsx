@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useState } from 'react'
+import { useEffect, useReducer, useRef, useState } from 'react'
 import { project, uspCardOrder } from './data/project.js'
 import { flow, getLabel, SURVEY_CHIP_KEYS } from './data/flow.js'
 import {
@@ -19,9 +19,9 @@ import {
 } from './lib/recommendation.js'
 import { parseLeadInput, mergeLead } from './lib/parseLead.js'
 import { captureAttribution, getAttribution } from './lib/attribution.js'
-import { startNewSession, trackEvent, getSessionId } from './lib/analytics.js'
+import { startNewSession, trackEvent, getSessionId, adoptSession } from './lib/analytics.js'
 import { notifyHotLead } from './lib/slack.js'
-import { pushLead, flushPending, isApiConfigured } from './lib/api.js'
+import { pushLead, flushPending, isApiConfigured, fetchLeadByToken } from './lib/api.js'
 import { notifyCallbackRequest } from './lib/callbackNotify.js'
 import { attachEventsAutoFlush } from './lib/eventsApi.js'
 import {
@@ -104,6 +104,19 @@ function isConfigEngine() {
 function configStepList() {
   return project.flowOverrides?.surveyFlow?.steps || []
 }
+// Warme CLP: leest het persoonlijke ?t=<portal_token> uit de link. Alleen
+// actief als het project warmPrefill zet (2emerwedehaven). Token moet
+// hoog-entropie zijn (>=16 tekens) — zelfde ondergrens als de Edge Function.
+function warmToken() {
+  try {
+    if (!project.warmPrefill) return null
+    if (typeof window === 'undefined' || !window.location?.search) return null
+    const t = new URLSearchParams(window.location.search).get('t')
+    return t && t.trim().length >= 16 ? t.trim() : null
+  } catch {
+    return null
+  }
+}
 function configClosingBubbles() {
   return (project.flowOverrides?.surveyFlow?.closing || []).map((text) => ({ kind: 'bot-text', text }))
 }
@@ -139,7 +152,7 @@ function buildConfigAdvance(fromIndex) {
     // met alle velden in één keer. Geen aparte label-bubble.
     if (s.type === 'contact-form') {
       if (s.intro) messages.push({ kind: 'bot-text', text: s.intro })
-      messages.push({ kind: 'config-contact', payload: { stepKey: s.key, fields: s.fields } })
+      messages.push({ kind: 'config-contact', payload: { stepKey: s.key, fields: s.fields, warm: !!s.warm } })
       return { messages, nextQuestion: s.key }
     }
     messages.push({ kind: 'bot-text', text: s.label })
@@ -909,6 +922,12 @@ function Demo() {
     return { ...init, view: 'chat' }
   })
   const [answersOpen, setAnswersOpen] = useState(false)
+  // Warme CLP: voorgevulde contactgegevens uit lead-prefetch (of null als koud
+  // / geen token / niet gevonden). Wordt als initial doorgegeven aan de
+  // contact-kaart en aan de bewerk-kaart.
+  const [contactPrefill, setContactPrefill] = useState(null)
+  // Run-once-guard voor het auto-start-effect (StrictMode-dubbelinvoke in dev).
+  const bootRef = useRef(false)
   const [optionsSheetOpen, setOptionsSheetOpen] = useState(false)
   const [credionConfirmOpen, setCredionConfirmOpen] = useState(false)
   const [showRescue, setShowRescue] = useState(false)
@@ -1298,7 +1317,7 @@ function Demo() {
     // voelt een korte typing-pauze meer als een conversatie die opstart.
     // De 'show'-arm klikt actief op "Start chat" en krijgt typeFirst=false
     // zodat de bubble meteen verschijnt en de klik niet laggy aanvoelt.
-    const { typeFirst = false } = options
+    const { typeFirst = false, keepSession = false } = options
     // Hervat-pad: bezoeker kwam via het header-logo terug naar intro met
     // chat-historie nog intact. We schakelen alleen view om en bewaren de
     // bestaande sessie + alle antwoorden zodat de chat verder loopt waar
@@ -1308,8 +1327,11 @@ function Demo() {
       dispatch({ type: 'RESUME_CHAT' })
       return
     }
-    // Cold start: eerste keer dat deze browser de chat opent.
-    startNewSession()
+    // Cold start: eerste keer dat deze browser de chat opent. keepSession
+    // (warme CLP met aangenomen lead-sessie) slaat startNewSession over zodat
+    // de zojuist aangenomen session_id blijft staan en de afgeronde flow de
+    // bestaande lead bijwerkt i.p.v. een duplicaat te maken.
+    if (!keepSession) startNewSession()
     trackEvent('session:start', { variant, copyVariant })
     trackEvent('intro:cta-clicked', { variant, copyVariant })
     logSessionStartConsent()
@@ -1322,11 +1344,49 @@ function Demo() {
   // → nieuwe sessie + START_CHAT) versus hervat (messages aanwezig na een
   // persisted reload → RESUME_CHAT zonder de welkomst-bubbles te herbouwen).
   useEffect(() => {
+    // Run-once-guard: React StrictMode (dev) invoket dit effect dubbel. Zonder
+    // guard vuurt de warme-start dan twee async start()-calls die elkaars
+    // release-queue kunnen afkappen. De ref overleeft de StrictMode-remount
+    // (zelfde fiber), dus de body draait gegarandeerd één keer.
+    if (bootRef.current) return
+    bootRef.current = true
     const introVariant = getOrAssignIntroVariant()
     try { trackEvent('intro:variant-assigned', { introVariant }) } catch {}
-    if (state.messages.length === 0) {
-      start(undefined, { typeFirst: true })
+    if (state.messages.length > 0) return // hervat: niets doen
+    // Warme CLP: als er een ?t=<portal_token> in de link staat, halen we eerst
+    // de bestaande gegevens op en nemen we de lead-sessie aan, en pas daarna
+    // starten we de chat — zodat de contact-kaart meteen voorgevuld verschijnt
+    // en een afgeronde flow de bestaande lead bijwerkt. Faalt de lookup, dan
+    // valt 'ie terug op een blanco formulier (koude flow).
+    const token = warmToken()
+    if (token) {
+      let done = false
+      const begin = (keepSession) => {
+        if (done) return
+        done = true
+        start(undefined, { typeFirst: true, keepSession })
+      }
+      fetchLeadByToken(token, project.crmProject)
+        .then((res) => {
+          if (res) {
+            if (res.sessionId) adoptSession(res.sessionId)
+            setContactPrefill({
+              naam:     res.firstName || '',
+              bedrijf:  res.company || '',
+              email:    res.email || '',
+              telefoon: res.phone || '',
+            })
+            begin(!!res.sessionId)
+          } else {
+            begin(false)
+          }
+        })
+        .catch(() => begin(false))
+      // Vangnet: als de lookup hangt, tóch starten (blanco) na 3s.
+      setTimeout(() => begin(false), 3000)
+      return
     }
+    start(undefined, { typeFirst: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   // Klik op REPP-logo in de header: sinds de startpagina is uitgefaseerd
@@ -3344,7 +3404,7 @@ function Demo() {
     if (step?.type === 'contact-form') {
       dispatch({
         type: 'ENQUEUE',
-        messages: [{ kind: 'config-contact', payload: { stepKey: step.key, fields: step.fields, initial: state.answers.contactData || null } }],
+        messages: [{ kind: 'config-contact', payload: { stepKey: step.key, fields: step.fields, warm: !!step.warm, initial: state.answers.contactData || null } }],
       })
       return
     }
@@ -3631,6 +3691,7 @@ function Demo() {
             onRegionSubmit={onRegionSubmit}
             onConfigMultiSubmit={onConfigMultiSubmit}
             onConfigContactSubmit={onConfigContactSubmit}
+            contactPrefill={contactPrefill}
             onReset={() => {
               clearPersisted()
               _id = 0

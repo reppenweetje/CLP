@@ -84,6 +84,55 @@ export function isApiConfigured() {
   return isEnabled() && !!endpoint() && !!anonKey()
 }
 
+// ── Warme-CLP prefill: lead ophalen op portal_token ─────────────────────────
+//
+// Voor de warme variant (leads die al in het CRM zitten). De persoonlijke
+// mail-link draagt ?t=<portal_token>; deze functie ruilt dat token via de
+// lead-prefetch Edge Function om voor de basis-contactgegevens zodat het
+// opt-in-formulier voorgevuld kan worden. Geen persoonsgegevens in de URL.
+//
+// Geeft ook sessionId terug: door die sessie aan te nemen ge-upsert een
+// afgeronde warme flow op (source, session_id) en werkt zo de BESTAANDE lead
+// bij i.p.v. een duplicaat te maken.
+function prefetchEndpoint() {
+  const base = readEnv('VITE_SUPABASE_URL', '')
+  if (!base) return null
+  return base.replace(/\/+$/, '') + '/functions/v1/lead-prefetch'
+}
+
+export function isPrefetchConfigured() {
+  return !!prefetchEndpoint() && !!anonKey()
+}
+
+export async function fetchLeadByToken(token, sourceKey) {
+  const url = prefetchEndpoint()
+  const key = anonKey()
+  if (!url || !key || !token) return null
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${key}`,
+        'apikey':        key,
+      },
+      body: JSON.stringify({ portal_token: token, source: sourceKey || undefined }),
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    if (!data || !data.ok || !data.found) return null
+    return {
+      firstName: data.first_name || '',
+      email:     data.email || '',
+      phone:     data.phone || '',
+      company:   data.company || '',
+      sessionId: data.session_id || '',
+    }
+  } catch {
+    return null
+  }
+}
+
 // ── Dual-write naar clp-analytics (admin-zicht) ─────────────────────────────
 //
 // Naast de reppbot-push hieronder ook een fire-and-forget kopie naar de

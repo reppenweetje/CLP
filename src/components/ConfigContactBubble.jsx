@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Avatar from './Avatar.jsx'
 
 // ConfigContactBubble — één contactkaart met meerdere velden (naam, bedrijf,
@@ -16,7 +16,7 @@ import Avatar from './Avatar.jsx'
 // gevalideerd; telefoon is optioneel.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
-export default function ConfigContactBubble({ fields = [], initial = null, onSubmit }) {
+export default function ConfigContactBubble({ fields = [], initial = null, warm = false, onSubmit }) {
   const [values, setValues] = useState(() => {
     const base = {}
     for (const f of fields) base[f.key] = (initial && initial[f.key]) || ''
@@ -24,9 +24,27 @@ export default function ConfigContactBubble({ fields = [], initial = null, onSub
   })
   const [touched, setTouched] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [dirty, setDirty] = useState(false)
+  const [primed, setPrimed] = useState(!!initial)
+
+  // Warme CLP: de voorvul-gegevens komen async binnen (lead-prefetch). Als ze
+  // ná de eerste render arriveren, vullen we het formulier alsnog — maar alleen
+  // zolang de bezoeker nog niets heeft aangepast of ingediend, zodat we een
+  // handmatige wijziging nooit overschrijven.
+  useEffect(() => {
+    if (primed || submitted || dirty || !initial) return
+    setValues((prev) => {
+      const next = { ...prev }
+      for (const f of fields) if (!next[f.key]) next[f.key] = initial[f.key] || ''
+      return next
+    })
+    setPrimed(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial])
 
   function setField(key, val) {
     if (submitted) return
+    setDirty(true)
     setValues((prev) => ({ ...prev, [key]: val }))
   }
 
@@ -56,6 +74,11 @@ export default function ConfigContactBubble({ fields = [], initial = null, onSub
         <div className="rounded-3xl rounded-tl-md bg-paper border border-mist-light overflow-hidden">
           <div className="p-4">
             <div className="text-[11px] tracking-[0.18em] text-midnite uppercase font-medium">Contactgegevens</div>
+            {warm && (
+              <div className="text-[13px] text-ink-soft mt-1.5">
+                Controleer uw gegevens en pas ze aan waar nodig.
+              </div>
+            )}
             <div className="mt-3 flex flex-col gap-3">
               {fields.map((f) => {
                 const err = touched ? fieldError(f) : null
@@ -98,7 +121,7 @@ export default function ConfigContactBubble({ fields = [], initial = null, onSub
                 onClick={handleSubmit}
                 className="w-full mt-4 bg-midnite hover:bg-midnite-soft text-paper text-sm font-medium py-2.5 rounded-full transition"
               >
-                Versturen
+                {warm ? 'Bevestigen' : 'Versturen'}
               </button>
             ) : (
               <div className="mt-4 text-sm text-emerald-700 font-medium">✓ Genoteerd, dank u wel.</div>
