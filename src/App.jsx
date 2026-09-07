@@ -135,6 +135,13 @@ function buildConfigAdvance(fromIndex) {
       i++
       continue
     }
+    // contact-form: optionele intro-bubble + één contactkaart (config-contact)
+    // met alle velden in één keer. Geen aparte label-bubble.
+    if (s.type === 'contact-form') {
+      if (s.intro) messages.push({ kind: 'bot-text', text: s.intro })
+      messages.push({ kind: 'config-contact', payload: { stepKey: s.key, fields: s.fields } })
+      return { messages, nextQuestion: s.key }
+    }
     messages.push({ kind: 'bot-text', text: s.label })
     if (s.type === 'multi-choice') {
       messages.push({ kind: 'config-multi', payload: { stepKey: s.key, options: s.options, label: s.label } })
@@ -235,11 +242,6 @@ function configFlatKeys() {
 // Korte, leesbare rij-labels voor de "antwoorden aanpassen"-sheet. Zonder
 // entry valt het terug op de (lange) vraag-tekst van de step.
 const CONFIG_ROW_LABELS = {
-  naam: 'Naam',
-  bedrijf: 'Bedrijf',
-  email: 'E-mail',
-  telefoon_gate: 'Telefonisch bereikbaar',
-  telefoon: 'Telefoonnummer',
   sector: 'Bedrijfsactiviteiten',
   huidige_locatie: 'Huidige locatie',
   reden: 'Reden ruimtevraag',
@@ -257,9 +259,17 @@ const CONFIG_ROW_LABELS = {
   opmerkingen: 'Opmerkingen',
 }
 // Bouwt de rijen voor de config-aanpassen-sheet uit de gegeven antwoorden.
+// De contactgegevens komen uit contactData (contact-form) als één rij; de
+// overige stappen elk als eigen rij.
 function buildConfigRows(answers) {
   const out = []
+  const cd = answers.contactData
+  if (cd) {
+    const parts = [cd.naam, cd.bedrijf, cd.email, cd.telefoon].filter(Boolean)
+    if (parts.length) out.push({ key: 'contact', label: 'Contactgegevens', value: parts.join(', ') })
+  }
   for (const k of configFlatKeys()) {
+    if (k === 'contact') continue
     const a = answers[k]
     if (!a || !a.label) continue
     out.push({ key: k, label: CONFIG_ROW_LABELS[k] || k, value: a.label })
@@ -1549,6 +1559,19 @@ function Demo() {
     let timeline_id = null
     const attributes = {}
     for (const s of flat) {
+      // contact-form: één step met meerdere velden. lead-velden zitten al in
+      // het lead-object; attr-velden (bv. company) uit contactData. Bij de
+      // contact-push staat contactData nog niet in state (async) → freshAnswers.
+      if (s.type === 'contact-form') {
+        const cd = (freshAnswers && freshAnswers.contactData) || state.answers.contactData || {}
+        for (const f of (s.fields || [])) {
+          if (f.crm?.attr) {
+            const v = cd[f.key]
+            if (v != null && v !== '') attributes[f.crm.attr] = v
+          }
+        }
+        continue
+      }
       if (!s.crm) continue
       // freshAnswers-override: het laatst-gedispatchte antwoord zit door React's
       // async dispatch nog niet in state.answers bij de eind-push. De caller geeft
@@ -1718,6 +1741,56 @@ function Demo() {
     if (adv.nextQuestion === 'einde') {
       pushConfigSnapshot([{ scope: 'peiling-afgerond', granted: true, detail: { from: 'config-end' } }], null, { [stepKey]: val })
       trackEvent('flow:complete', { stage: 'survey-config', persona })
+    }
+  }
+
+  // Contact-form-submit voor de config-survey. Verzamelt alle velden in één
+  // keer: lead (firstName/email/phone) + attr-velden (company) in contactData.
+  // In de initiële flow (currentQuestion === stepKey) advanceren we naar de
+  // eerste inhoudelijke vraag en pushen we de eerste snapshot (e-mail-gate).
+  // Bij een latere bewerking (via de aanpassen-sheet) werken we alleen de
+  // gegevens bij en re-pushen, zonder de peiling opnieuw te starten.
+  const onConfigContactSubmit = (stepKey, values = {}) => {
+    const { step } = findConfigStep(stepKey)
+    if (!step || step.type !== 'contact-form') return
+    const fields = step.fields || []
+    const contactData = {}
+    for (const f of fields) {
+      let v = (values[f.key] || '').trim()
+      if (f.crm?.lead === 'email') v = v.toLowerCase()
+      contactData[f.key] = v
+    }
+    let freshLead = { ...(state.answers.lead || {}) }
+    for (const f of fields) {
+      if (!f.crm?.lead) continue
+      const field = f.crm.lead === 'first_name' ? 'firstName' : f.crm.lead
+      freshLead[field] = contactData[f.key] || undefined
+    }
+    const isInitial = state.currentQuestion === stepKey
+    trackEvent('survey:answered', { key: stepKey })
+    if (isInitial) {
+      const summary = fields.map((f) => contactData[f.key]).filter(Boolean).join(', ')
+      const marker = { id: 'contact', label: summary, value: contactData, _msgCountBefore: state.messages.length }
+      const adv = buildConfigAdvanceAfter(step, null)
+      dispatch({ type: 'ANSWER', key: 'contact', value: marker, next: adv.nextQuestion })
+      dispatch({ type: 'ANSWER', key: 'contactData', value: contactData, next: adv.nextQuestion })
+      dispatch({ type: 'ANSWER', key: 'lead', value: freshLead, next: adv.nextQuestion })
+      sendSequence(null, adv.messages)
+      pushConfigSnapshot(
+        [{ scope: 'peiling-opvolging', granted: true, detail: { from: 'config-contact' } }],
+        freshLead,
+        { contactData },
+      )
+    } else {
+      // Bewerking vanuit de aanpassen-sheet: alleen bijwerken, niet advancen.
+      dispatch({ type: 'ANSWER', key: 'contactData', value: contactData, next: state.currentQuestion })
+      dispatch({ type: 'ANSWER', key: 'lead', value: freshLead, next: state.currentQuestion })
+      sendSequence(null, [{ kind: 'bot-text', text: 'Uw contactgegevens zijn bijgewerkt.' }])
+      pushConfigSnapshot(
+        [{ scope: 'peiling-opvolging', granted: true, detail: { from: 'config-contact-edit' } }],
+        freshLead,
+        { contactData },
+      )
     }
   }
 
@@ -3264,6 +3337,17 @@ function Demo() {
   // automatisch dezelfde vraag opnieuw met de chips. Geen duplicaat.
   const onEditAnswer = (key) => {
     trackEvent('answer:edit', { key })
+    // contact-form heeft geen rollback-punt (het is één in-thread kaart): we
+    // tonen een verse, voor-ingevulde contactkaart onderaan. onConfigContactSubmit
+    // detecteert dat currentQuestion !== stepKey en werkt alleen de gegevens bij.
+    const { step } = findConfigStep(key)
+    if (step?.type === 'contact-form') {
+      dispatch({
+        type: 'ENQUEUE',
+        messages: [{ kind: 'config-contact', payload: { stepKey: step.key, fields: step.fields, initial: state.answers.contactData || null } }],
+      })
+      return
+    }
     dispatch({ type: 'ROLLBACK', key })
   }
   // Volledige herstart: state wissen én de chat opnieuw opbouwen. Een kale
@@ -3546,6 +3630,7 @@ function Demo() {
             onLocationSubmit={onLocationSubmit}
             onRegionSubmit={onRegionSubmit}
             onConfigMultiSubmit={onConfigMultiSubmit}
+            onConfigContactSubmit={onConfigContactSubmit}
             onReset={() => {
               clearPersisted()
               _id = 0

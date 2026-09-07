@@ -108,64 +108,23 @@ export const project = {
       //   message       { type:'message', text }
       // CRM-targets: { lead:'first_name'|'email'|'phone' } | { column:'intent_id'|'size_id'|'timeline_id' } | { attr:'snake_case' }
       steps: [
-        // CONTACT EERST. We vragen naam, bedrijf en e-mail meteen aan het begin,
-        // met een niet-verplichte telefoon-optie. Zo hebben we altijd de
-        // contactgegevens, ook als iemand de peiling niet afmaakt. De e-mailstap
-        // is de push-gate: pas na e-mail wordt de eerste snapshot naar het CRM
-        // gestuurd.
+        // CONTACT EERST, als één formulier. Naam, bedrijf en e-mail zijn
+        // verplicht; telefoon is optioneel. Zo hebben we altijd de
+        // contactgegevens, ook als iemand de peiling niet afmaakt. E-mail is de
+        // push-gate: pas als het formulier is ingediend (incl. e-mail) gaat de
+        // eerste snapshot naar het CRM.
         {
-          type: 'message',
-          text: 'We beginnen met uw contactgegevens, zodat wij u op de hoogte kunnen houden.',
-        },
-        // 1 — naam → lead first_name
-        {
-          key: 'naam',
-          type: 'open-text',
-          label: 'Wat is uw naam?',
-          placeholder: 'Uw naam',
-          crm: { lead: 'first_name' },
-        },
-        // 2 — bedrijf → attr company (toont als Bedrijfsnaam)
-        {
-          key: 'bedrijf',
-          type: 'open-text',
-          label: 'Bij welk bedrijf werkt u?',
-          placeholder: 'Bedrijfsnaam',
-          crm: { attr: 'company' },
-        },
-        // 3 — email → lead email (pushSnapshot-gate)
-        {
-          key: 'email',
-          type: 'open-text',
-          label: 'Wat is uw e-mailadres?',
-          placeholder: 'Uw e-mailadres',
-          inputMode: 'email',
-          crm: { lead: 'email' },
-        },
-        // 4 — telefoon-optie: niet verplicht. Single-choice-gate met een
-        // vrije-tekst-followUp bij 'ja' zodat we geen leeg-verplicht-veld hoeven
-        // te forceren. De gate zelf legt vast of iemand telefonisch bereikbaar wil zijn.
-        {
-          key: 'telefoon_gate',
-          type: 'single-choice',
-          label: 'Mogen wij u ook telefonisch bereiken? Dat is niet verplicht.',
-          options: [
-            { id: 'ja', label: 'Ja, hier is mijn nummer' },
-            { id: 'nee', label: 'Liever alleen per mail' },
+          key: 'contact',
+          type: 'contact-form',
+          intro: 'We beginnen met uw contactgegevens, zodat wij u op de hoogte kunnen houden.',
+          fields: [
+            { key: 'naam', label: 'Naam', placeholder: 'Uw naam', required: true, crm: { lead: 'first_name' } },
+            { key: 'bedrijf', label: 'Bedrijf', placeholder: 'Bedrijfsnaam', required: true, crm: { attr: 'company' } },
+            { key: 'email', label: 'E-mail', placeholder: 'Uw e-mailadres', inputMode: 'email', required: true, crm: { lead: 'email' } },
+            { key: 'telefoon', label: 'Telefoon (optioneel)', placeholder: 'Uw telefoonnummer', inputMode: 'tel', required: false, crm: { lead: 'phone' } },
           ],
-          crm: { attr: 'telefonisch_bereikbaar' },
-          followUp: {
-            ja: {
-              key: 'telefoon',
-              type: 'open-text',
-              label: 'Wat is uw telefoonnummer?',
-              placeholder: 'Uw telefoonnummer',
-              inputMode: 'tel',
-              crm: { lead: 'phone' },
-            },
-          },
         },
-        // 5 — bedrijfsactiviteiten (multiselect) → attr sector (+ sector_tekst)
+        // bedrijfsactiviteiten (multiselect) → attr sector (+ sector_tekst)
         {
           key: 'sector',
           type: 'multi-choice',

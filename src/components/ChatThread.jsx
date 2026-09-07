@@ -25,6 +25,7 @@ import M2MeterBubble from './M2MeterBubble.jsx'
 import LocationSelectBubble from './LocationSelectBubble.jsx'
 import RegionSelectBubble from './RegionSelectBubble.jsx'
 import ConfigMultiSelectBubble from './ConfigMultiSelectBubble.jsx'
+import ConfigContactBubble from './ConfigContactBubble.jsx'
 
 // Bubble-kinds die we tracken voor exposure-analyse. Komt overeen met
 // de switch-cases in renderMessage(). Bot-text/user-text/typing tellen
@@ -34,13 +35,13 @@ const TRACKABLE_BUBBLE_KINDS = new Set([
   'site-plan', 'site-plan-svg', 'highlights', 'process', 'planning', 'investor',
   'price', 'price-compare', 'brochure', 'cta-card', 'warm-handoff',
   'service-card', 'lead-form', 'm2-meter', 'location-select', 'region-select',
-  'config-multi',
+  'config-multi', 'config-contact',
 ])
 
 // Scrollable chat thread. Bij nieuwe messages scrollen we zo dat
 // het laatste user-bubble bovenaan komt te staan; de bot-replies daaronder
 // blijven leesbaar zonder dat de bezoeker handmatig terug moet scrollen.
-export default function ChatThread({ messages, showTyping = false, onBrochure, onReset, onUnitView, onCalcInteract, onCredionRequest, onHandoffAction, onServiceCardAction, onServiceCardSubmitPhone, onWaRequest, onTopicJump, onPortalClick, onLeadFormSubmit, onM2Submit, onLocationSubmit, onRegionSubmit, onConfigMultiSubmit }) {
+export default function ChatThread({ messages, showTyping = false, onBrochure, onReset, onUnitView, onCalcInteract, onCredionRequest, onHandoffAction, onServiceCardAction, onServiceCardSubmitPhone, onWaRequest, onTopicJump, onPortalClick, onLeadFormSubmit, onM2Submit, onLocationSubmit, onRegionSubmit, onConfigMultiSubmit, onConfigContactSubmit }) {
   const containerRef = useRef(null)
   const prevLengthRef = useRef(0)
   const trackedIdsRef = useRef(new Set())
@@ -78,7 +79,7 @@ export default function ChatThread({ messages, showTyping = false, onBrochure, o
     <div ref={containerRef} className="flex-1 overflow-y-auto px-4 pt-4 pb-2 space-y-3">
       {messages.map((m, i) => (
         <div key={m.id} data-msg-idx={i} data-msg-id={m.id} data-msg-kind={m.kind}>
-          {renderMessage(m, { onBrochure, onReset, onUnitView, onCalcInteract, onCredionRequest, onHandoffAction, onServiceCardAction, onServiceCardSubmitPhone, onWaRequest, onTopicJump, onPortalClick, onLeadFormSubmit, onM2Submit, onLocationSubmit, onRegionSubmit, onConfigMultiSubmit })}
+          {renderMessage(m, { onBrochure, onReset, onUnitView, onCalcInteract, onCredionRequest, onHandoffAction, onServiceCardAction, onServiceCardSubmitPhone, onWaRequest, onTopicJump, onPortalClick, onLeadFormSubmit, onM2Submit, onLocationSubmit, onRegionSubmit, onConfigMultiSubmit, onConfigContactSubmit })}
         </div>
       ))}
       {showTyping && (
@@ -90,7 +91,7 @@ export default function ChatThread({ messages, showTyping = false, onBrochure, o
   )
 }
 
-function renderMessage(m, { onBrochure, onReset, onUnitView, onCalcInteract, onCredionRequest, onHandoffAction, onServiceCardAction, onServiceCardSubmitPhone, onWaRequest, onTopicJump, onPortalClick, onLeadFormSubmit, onM2Submit, onLocationSubmit, onRegionSubmit, onConfigMultiSubmit }) {
+function renderMessage(m, { onBrochure, onReset, onUnitView, onCalcInteract, onCredionRequest, onHandoffAction, onServiceCardAction, onServiceCardSubmitPhone, onWaRequest, onTopicJump, onPortalClick, onLeadFormSubmit, onM2Submit, onLocationSubmit, onRegionSubmit, onConfigMultiSubmit, onConfigContactSubmit }) {
   switch (m.kind) {
     case 'bot-text':
       return <BotMessage>{m.text}</BotMessage>
@@ -207,6 +208,14 @@ function renderMessage(m, { onBrochure, onReset, onUnitView, onCalcInteract, onC
           options={m.payload?.options}
           label={m.payload?.label}
           onSubmit={(ids, labels) => onConfigMultiSubmit && onConfigMultiSubmit(m.payload?.stepKey, ids, labels)}
+        />
+      )
+    case 'config-contact':
+      return (
+        <ConfigContactBubble
+          fields={m.payload?.fields}
+          initial={m.payload?.initial}
+          onSubmit={(values) => onConfigContactSubmit && onConfigContactSubmit(m.payload?.stepKey, values)}
         />
       )
     case 'cta-card':
