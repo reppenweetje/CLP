@@ -108,6 +108,15 @@ export const project = {
       //   message       { type:'message', text }
       // CRM-targets: { lead:'first_name'|'email'|'phone' } | { column:'intent_id'|'size_id'|'timeline_id' } | { attr:'snake_case' }
       steps: [
+        // CONTACT EERST. We vragen naam, bedrijf en e-mail meteen aan het begin,
+        // met een niet-verplichte telefoon-optie. Zo hebben we altijd de
+        // contactgegevens, ook als iemand de peiling niet afmaakt. De e-mailstap
+        // is de push-gate: pas na e-mail wordt de eerste snapshot naar het CRM
+        // gestuurd.
+        {
+          type: 'message',
+          text: 'We beginnen met uw contactgegevens, zodat wij u op de hoogte kunnen houden.',
+        },
         // 1 — naam → lead first_name
         {
           key: 'naam',
@@ -124,31 +133,54 @@ export const project = {
           placeholder: 'Bedrijfsnaam',
           crm: { attr: 'company' },
         },
-        // 3 — sector, met vrije-tekst-followUp bij 'anders'
+        // 3 — email → lead email (pushSnapshot-gate)
+        {
+          key: 'email',
+          type: 'open-text',
+          label: 'Wat is uw e-mailadres?',
+          placeholder: 'Uw e-mailadres',
+          inputMode: 'email',
+          crm: { lead: 'email' },
+        },
+        // 4 — telefoon-optie: niet verplicht. Single-choice-gate met een
+        // vrije-tekst-followUp bij 'ja' zodat we geen leeg-verplicht-veld hoeven
+        // te forceren. De gate zelf legt vast of iemand telefonisch bereikbaar wil zijn.
+        {
+          key: 'telefoon_gate',
+          type: 'single-choice',
+          label: 'Mogen wij u ook telefonisch bereiken? Dat is niet verplicht.',
+          options: [
+            { id: 'ja', label: 'Ja, hier is mijn nummer' },
+            { id: 'nee', label: 'Liever alleen per mail' },
+          ],
+          crm: { attr: 'telefonisch_bereikbaar' },
+          followUp: {
+            ja: {
+              key: 'telefoon',
+              type: 'open-text',
+              label: 'Wat is uw telefoonnummer?',
+              placeholder: 'Uw telefoonnummer',
+              inputMode: 'tel',
+              crm: { lead: 'phone' },
+            },
+          },
+        },
+        // 5 — bedrijfsactiviteiten (multiselect) → attr sector (+ sector_tekst)
         {
           key: 'sector',
-          type: 'single-choice',
-          label: 'Wat doet uw bedrijf?',
+          type: 'multi-choice',
+          label: 'Wat zijn de bedrijfsactiviteiten? Meerdere antwoorden mogelijk.',
           options: [
             { id: 'maritieme_maakindustrie', label: 'Maritieme maakindustrie' },
             { id: 'scheepsbouw', label: 'Scheepsbouw, reparatie of onderhoud' },
             { id: 'jachtbouw', label: 'Jachtbouw' },
             { id: 'overslag_logistiek', label: 'Overslag en logistiek' },
             { id: 'toeleverancier', label: 'Toeleverancier maritiem' },
-            { id: 'anders', label: 'Anders' },
+            { id: 'overig', label: 'Overig' },
           ],
           crm: { attr: 'sector' },
-          followUp: {
-            anders: {
-              key: 'sector_anders',
-              type: 'open-text',
-              label: 'Kunt u kort omschrijven wat uw bedrijf doet?',
-              placeholder: 'Korte omschrijving',
-              crm: { attr: 'sector_anders' },
-            },
-          },
         },
-        // 4 — huidige locatie
+        // 6 — huidige locatie
         {
           key: 'huidige_locatie',
           type: 'single-choice',
@@ -161,7 +193,7 @@ export const project = {
           ],
           crm: { attr: 'huidige_locatie' },
         },
-        // 5 — reden → column intent_id
+        // 7 — reden → column intent_id
         {
           key: 'reden',
           type: 'single-choice',
@@ -174,7 +206,9 @@ export const project = {
           ],
           crm: { column: 'intent_id' },
         },
-        // 6 — water_belang, met branch bij 'niet_nodig' → note + goto m2
+        // 8 — water_belang. Bij 'niet_nodig' slaan we de water-specifieke
+        // vervolgvragen over (goto m2) — ZONDER negatieve boodschap. Geen
+        // ligging aan water is prima; we sturen nergens op een negatief.
         {
           key: 'water_belang',
           type: 'single-choice',
@@ -187,12 +221,11 @@ export const project = {
           crm: { attr: 'water_belang' },
           branch: {
             niet_nodig: {
-              note: 'Goed om te weten. De 2e Merwedehaven is bedoeld voor watergebonden bedrijven. De kans op een kavel is daarmee klein. Wij nemen uw gegevens wel op en laten het weten als er iets past.',
               goto: 'm2',
             },
           },
         },
-        // 7 — water_gebruik (multiselect) → attr water_gebruik (+ _tekst)
+        // 9 — water_gebruik (multiselect) → attr water_gebruik (+ _tekst)
         {
           key: 'water_gebruik',
           type: 'multi-choice',
@@ -203,10 +236,11 @@ export const project = {
             { id: 'te_water_laten', label: 'Te water laten' },
             { id: 'overslag', label: 'Overslag' },
             { id: 'reparatie_onderhoud', label: 'Reparatie en onderhoud van schepen' },
+            { id: 'overig', label: 'Overig' },
           ],
           crm: { attr: 'water_gebruik' },
         },
-        // 8 — kade_meters
+        // 10 — kade_meters
         {
           key: 'kade_meters',
           type: 'single-choice',
@@ -220,7 +254,7 @@ export const project = {
           ],
           crm: { attr: 'kade_meters' },
         },
-        // 9 — kade_investering
+        // 11 — kade_investering
         {
           key: 'kade_investering',
           type: 'single-choice',
@@ -232,7 +266,7 @@ export const project = {
           ],
           crm: { attr: 'kade_investering' },
         },
-        // 10 — m2 (stepKey 'm2', branch-doel van water_belang) → column size_id
+        // 12 — m2 (stepKey 'm2', branch-doel van water_belang) → column size_id
         {
           key: 'm2',
           type: 'single-choice',
@@ -246,7 +280,7 @@ export const project = {
           ],
           crm: { column: 'size_id' },
         },
-        // 11 — kavel_voorkeur
+        // 13 — kavel_voorkeur
         {
           key: 'kavel_voorkeur',
           type: 'single-choice',
@@ -258,7 +292,7 @@ export const project = {
           ],
           crm: { attr: 'kavel_voorkeur' },
         },
-        // 12 — milieucategorie
+        // 14 — milieucategorie
         {
           key: 'milieucategorie',
           type: 'single-choice',
@@ -272,7 +306,7 @@ export const project = {
           ],
           crm: { attr: 'milieucategorie' },
         },
-        // 13 — termijn → column timeline_id
+        // 15 — termijn → column timeline_id
         {
           key: 'termijn',
           type: 'single-choice',
@@ -285,19 +319,7 @@ export const project = {
           ],
           crm: { column: 'timeline_id' },
         },
-        // 14 — erfpacht
-        {
-          key: 'erfpacht',
-          type: 'single-choice',
-          label: 'De grond wordt uitgegeven in erfpacht voor 75 jaar. Past dat bij uw plannen?',
-          options: [
-            { id: 'ja', label: 'Ja' },
-            { id: 'mogelijk', label: 'Mogelijk, wil ik bespreken' },
-            { id: 'nee', label: 'Nee' },
-          ],
-          crm: { attr: 'erfpacht_akkoord' },
-        },
-        // 15 — medewerkers
+        // 16 — medewerkers
         {
           key: 'medewerkers',
           type: 'single-choice',
@@ -310,7 +332,7 @@ export const project = {
           ],
           crm: { attr: 'medewerkers' },
         },
-        // 16 — hoe_gehoord
+        // 17 — hoe_gehoord
         {
           key: 'hoe_gehoord',
           type: 'single-choice',
@@ -323,39 +345,25 @@ export const project = {
           ],
           crm: { attr: 'hoe_gehoord' },
         },
-        // Overgang naar contactgegevens.
+        // 18 — open slotvraag: niet verplicht. Single-choice-gate met
+        // vrije-tekst-followUp bij 'ja', zodat wie niets kwijt wil gewoon door kan.
         {
-          type: 'message',
-          text: 'Tot slot uw contactgegevens, zodat wij u op de hoogte kunnen houden.',
-        },
-        // 17 — email → lead email (pushSnapshot-gate)
-        {
-          key: 'email',
-          type: 'open-text',
-          label: 'Wat is uw e-mailadres?',
-          placeholder: 'Uw e-mailadres',
-          inputMode: 'email',
-          crm: { lead: 'email' },
-        },
-        // 18 — telefoon → lead phone
-        {
-          key: 'telefoon',
-          type: 'open-text',
-          label: 'Wat is uw telefoonnummer?',
-          placeholder: 'Uw telefoonnummer',
-          inputMode: 'tel',
-          crm: { lead: 'phone' },
-        },
-        // 19 — terugbelvoorkeur
-        {
-          key: 'terugbelvoorkeur',
+          key: 'opmerkingen_gate',
           type: 'single-choice',
-          label: 'Wilt u dat wij bellen zodra de kavelindeling en de criteria bekend zijn?',
+          label: 'Heeft u nog specifieke wensen of opmerkingen die u wilt delen?',
           options: [
-            { id: 'bel_mij', label: 'Ja, bel mij' },
-            { id: 'alleen_mail', label: 'Nee, alleen per mail' },
+            { id: 'ja', label: 'Ja, ik wil iets meegeven' },
+            { id: 'nee', label: 'Nee, dat was het' },
           ],
-          crm: { attr: 'terugbelvoorkeur' },
+          followUp: {
+            ja: {
+              key: 'opmerkingen',
+              type: 'open-text',
+              label: 'Wat wilt u ons nog meegeven?',
+              placeholder: 'Uw wensen of opmerkingen',
+              crm: { attr: 'opmerkingen' },
+            },
+          },
         },
       ],
     },

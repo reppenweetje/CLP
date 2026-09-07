@@ -220,10 +220,60 @@ function clearPersisted() {
 // Lead is bewust niet in deze lijst zodat naam/mail/06 behouden blijven
 // tenzij de bezoeker ze expliciet vergeet via de antwoorden-sheet.
 const ANSWER_ORDER = ['intent', 'availabilityCheck', 'brochureTrigger', 'afhaakReason', 'rentRange', 'size', 'timeline', 'followup']
+// Vlakke lijst van alle beantwoordbare config-step-keys in volgorde (incl.
+// followUp-substeps). Gebruikt door de config-aware rollback zodat een edit
+// alle downstream-antwoorden wist en de bezoeker vanaf dat punt verder gaat.
+function configFlatKeys() {
+  const out = []
+  for (const s of configStepList()) {
+    if (s.type === 'message') continue
+    out.push(s.key)
+    if (s.followUp) for (const k of Object.keys(s.followUp)) out.push(s.followUp[k].key)
+  }
+  return out
+}
+// Korte, leesbare rij-labels voor de "antwoorden aanpassen"-sheet. Zonder
+// entry valt het terug op de (lange) vraag-tekst van de step.
+const CONFIG_ROW_LABELS = {
+  naam: 'Naam',
+  bedrijf: 'Bedrijf',
+  email: 'E-mail',
+  telefoon_gate: 'Telefonisch bereikbaar',
+  telefoon: 'Telefoonnummer',
+  sector: 'Bedrijfsactiviteiten',
+  huidige_locatie: 'Huidige locatie',
+  reden: 'Reden ruimtevraag',
+  water_belang: 'Ligging aan water',
+  water_gebruik: 'Gebruik van water',
+  kade_meters: 'Kademeters',
+  kade_investering: 'Investeren in kade',
+  m2: 'Oppervlakte terrein',
+  kavel_voorkeur: 'Kavelvoorkeur',
+  milieucategorie: 'Milieucategorie',
+  termijn: 'Termijn',
+  medewerkers: 'Medewerkers',
+  hoe_gehoord: 'Hoe gehoord',
+  opmerkingen_gate: 'Nog opmerkingen',
+  opmerkingen: 'Opmerkingen',
+}
+// Bouwt de rijen voor de config-aanpassen-sheet uit de gegeven antwoorden.
+function buildConfigRows(answers) {
+  const out = []
+  for (const k of configFlatKeys()) {
+    const a = answers[k]
+    if (!a || !a.label) continue
+    out.push({ key: k, label: CONFIG_ROW_LABELS[k] || k, value: a.label })
+  }
+  return out
+}
 function downstreamKeys(fromKey) {
   const idx = ANSWER_ORDER.indexOf(fromKey)
-  if (idx === -1) return [fromKey]
-  return ANSWER_ORDER.slice(idx)
+  if (idx !== -1) return ANSWER_ORDER.slice(idx)
+  // Config-survey: downstream = alle config-keys vanaf de bewerkte step.
+  const cfg = configFlatKeys()
+  const ci = cfg.indexOf(fromKey)
+  if (ci !== -1) return cfg.slice(ci)
+  return [fromKey]
 }
 function reducer(state, action) {
   switch (action.type) {
@@ -1570,10 +1620,7 @@ function Demo() {
     if (q === 'einde') {
       if (opt.id === 'opnieuw') {
         trackEvent('survey:restart', { from: 'einde' })
-        clearPersisted()
-        _id = 0
-        dispatch({ type: 'RESET' })
-        dispatch({ type: 'START_CHAT', bot: project.salesTeam?.bot, copyVariant })
+        restartChat()
         return
       }
       if (opt.id === 'aanpassen') {
@@ -3219,6 +3266,16 @@ function Demo() {
     trackEvent('answer:edit', { key })
     dispatch({ type: 'ROLLBACK', key })
   }
+  // Volledige herstart: state wissen én de chat opnieuw opbouwen. Een kale
+  // RESET laat currentQuestion op null staan (lege thread, lijkt vast); daarom
+  // hoort START_CHAT er altijd achteraan. Gebruikt door de eind-chip
+  // "Opnieuw beginnen" en de aanpassen-sheet.
+  const restartChat = () => {
+    clearPersisted()
+    _id = 0
+    dispatch({ type: 'RESET' })
+    dispatch({ type: 'START_CHAT', bot: project.salesTeam?.bot, copyVariant })
+  }
   const onForgetLead = () => {
     trackEvent('answer:forget-lead', {})
     // Het verzoek tot verwijdering ZELF eerst loggen voordat we de data
@@ -3512,11 +3569,13 @@ function Demo() {
         open={answersOpen}
         answers={state.answers}
         surveyMode={isSurvey}
+        configMode={isConfigSurvey}
+        configRows={isConfigSurvey ? buildConfigRows(state.answers) : null}
         onClose={() => setAnswersOpen(false)}
         onEdit={onEditAnswer}
         onEditLeadField={onEditLeadField}
         onForgetLead={onForgetLead}
-        onReset={() => {
+        onReset={isConfigSurvey ? restartChat : () => {
           clearPersisted()
           _id = 0
           dispatch({ type: 'RESET' })

@@ -7,7 +7,7 @@ import { useEffect } from 'react'
 // Lead-data tonen we per veld (naam / e-mail / 06) zodat de bezoeker
 // alleen het veld kan aanpassen dat hij wil veranderen, of in één keer
 // alles vergeten.
-export default function AnswersSheet({ open, answers, onClose, onEdit, onEditLeadField, onForgetLead, onReset, surveyMode }) {
+export default function AnswersSheet({ open, answers, onClose, onEdit, onEditLeadField, onForgetLead, onReset, surveyMode, configMode, configRows }) {
   useEffect(() => {
     if (!open) return
     const onKey = (e) => e.key === 'Escape' && onClose()
@@ -16,6 +16,20 @@ export default function AnswersSheet({ open, answers, onClose, onEdit, onEditLea
   }, [open, onClose])
 
   if (!open) return null
+
+  // Config-survey: alle antwoorden (incl. contactgegevens) staan als losse
+  // config-rows en zijn allemaal bewerkbaar via rollback. We tonen dan géén
+  // apart lead-blok en géén Breda-rijen.
+  if (configMode) {
+    return (
+      <ConfigSheet
+        rows={configRows || []}
+        onClose={onClose}
+        onEdit={onEdit}
+        onReset={onReset}
+      />
+    )
+  }
 
   const rows = buildRows(answers)
   const lead = answers.lead
@@ -160,6 +174,100 @@ export default function AnswersSheet({ open, answers, onClose, onEdit, onEditLea
 
         <div className="mt-4 pt-3 border-t border-mist-light text-[12px] text-ink-mute leading-relaxed text-center">
           We bewaren deze antwoorden lokaal in jouw browser.{' '}
+          <a
+            href="/privacy.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-ink-soft hover:text-midnite underline underline-offset-2 decoration-mist hover:decoration-midnite"
+          >
+            Lees ons privacystatement
+          </a>
+          .
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Config-survey-variant: platte lijst van alle antwoorden. Elke rij is
+// bewerkbaar; "Wijzig" rolt de flow terug naar dat punt (downstream-antwoorden
+// worden gewist) zodat de bezoeker vanaf daar opnieuw antwoordt.
+function ConfigSheet({ rows, onClose, onEdit, onReset }) {
+  return (
+    <div className="fixed inset-0 z-30 flex items-end sm:items-center justify-center pointer-events-none">
+      <div
+        className="pointer-events-auto absolute inset-0 bg-ink/30 backdrop-blur-sm fade-up"
+        onClick={onClose}
+      />
+      <div className="pointer-events-auto relative w-full max-w-md max-h-[85vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-paper border border-mist-light p-5 m-0 sm:m-4 shadow-2xl fade-up">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-[18px] font-semibold text-ink">Uw antwoorden</h2>
+          <button onClick={onClose} className="text-ink-soft hover:text-ink p-2 -mr-2" aria-label="sluit">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <p className="text-[13px] text-ink-soft mb-4">
+          Tik op "Wijzig" om een antwoord aan te passen. We gaan dan vanaf dat punt verder.
+        </p>
+
+        {rows.length === 0 ? (
+          <div className="rounded-2xl border border-mist-light bg-canvas-2 p-4 text-[14px] text-ink-soft text-center">
+            Nog geen antwoorden om aan te passen.
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-mist-light overflow-hidden">
+            {rows.map((row, i) => (
+              <div
+                key={row.key}
+                className={`flex items-center gap-3 px-3.5 py-3 ${i > 0 ? 'border-t border-mist-light' : ''}`}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11px] tracking-[0.16em] text-ink-mute uppercase mb-0.5">
+                    {row.label}
+                  </div>
+                  <div className="text-[14px] text-ink truncate">{row.value}</div>
+                </div>
+                <button
+                  onClick={() => {
+                    onEdit(row.key)
+                    onClose()
+                  }}
+                  className="text-[13px] text-midnite hover:text-midnite-soft border border-mist hover:border-midnite px-3 py-1.5 rounded-full transition shrink-0"
+                >
+                  Wijzig
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <button
+          onClick={onClose}
+          className="mt-4 w-full text-[14px] text-ink-soft hover:text-ink border border-mist hover:border-midnite py-2.5 rounded-full transition"
+        >
+          Terug
+        </button>
+
+        {onReset && (
+          <button
+            onClick={() => {
+              if (typeof window !== 'undefined' && !window.confirm('Wilt u opnieuw beginnen? Uw antwoorden worden gewist.')) {
+                return
+              }
+              onReset()
+              onClose()
+            }}
+            className="mt-2 w-full text-[13px] text-ink-mute hover:text-rose-700 py-2 text-center transition"
+          >
+            Opnieuw beginnen
+          </button>
+        )}
+
+        <div className="mt-4 pt-3 border-t border-mist-light text-[12px] text-ink-mute leading-relaxed text-center">
+          We bewaren deze antwoorden lokaal in uw browser.{' '}
           <a
             href="/privacy.html"
             target="_blank"
