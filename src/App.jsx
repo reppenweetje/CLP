@@ -301,6 +301,7 @@ function downstreamKeys(fromKey) {
 function reducer(state, action) {
   switch (action.type) {
     case 'START_CHAT': {
+      try { window.__startChat = (window.__startChat || 0) + 1 } catch {}
       const bot = action.bot || { name: 'Jesse', org: 'REPP' }
       // Variant uit action gebruiken; default 'a' als afwezig (server-side
       // render of pre-engagement init).
@@ -900,7 +901,9 @@ export default function App() {
 }
 function Demo() {
   const [state, dispatch] = useReducer(reducer, initial, (init) => {
+    try { window.__clpInit = (window.__clpInit || 0) + 1 } catch {}
     const loaded = loadPersisted()
+    try { window.__clpInitLoadedMsgs = loaded?.messages?.length ?? -1 } catch {}
     if (loaded) {
       return {
         ...init,
