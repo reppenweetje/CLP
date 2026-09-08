@@ -104,6 +104,23 @@ function isConfigEngine() {
 function configStepList() {
   return project.flowOverrides?.surveyFlow?.steps || []
 }
+// Voornaam uit een CRM-naamveld, voor de persoonlijke begroeting. Dat veld
+// bevat lang niet altijd een nette voornaam: soms een volledige naam, soms een
+// bedrijfsnaam, soms een mailadres. We nemen alleen het eerste woord, en enkel
+// als dat er als een naam uitziet. Twijfel? Dan liever neutraal begroeten dan
+// iemand met "Autotransportbedrijf" aanspreken.
+const GEEN_VOORNAAM = new Set([
+  // Tussenvoegsels en lidwoorden: staan die vooraan, dan is het geen voornaam
+  // maar een achternaam of bedrijfsnaam ("De Vroom montage B.V.").
+  'de', 'het', 'een', 'van', 'der', 'den', 'ten', 'ter', 'te', 'du', 'la', 'le', 'op', 'aan', 'in',
+])
+function firstNameOf(raw) {
+  const first = String(raw || '').trim().split(/\s+/)[0] || ''
+  if (first.length < 2 || first.length > 20) return ''
+  if (!/^[\p{L}][\p{L}'-]*$/u.test(first)) return ''
+  if (GEEN_VOORNAAM.has(first.toLowerCase())) return ''
+  return first.charAt(0).toUpperCase() + first.slice(1)
+}
 // Warme CLP: het persoonlijke prefill-token uit de mail-link (`?t=...`).
 //
 // Het inline-scriptje in index.html haalt 't token al vóór Plausible en de
@@ -349,7 +366,17 @@ function reducer(state, action) {
       // intro en de eerste vraag uittypen. Alleen actief bij engine==='config';
       // Breda valt door naar de bestaande surveyFlow-tak hieronder.
       if (surveyFlow?.engine === 'config') {
-        const introBubbles = (surveyFlow.intro || []).map((text) => ({ kind: 'bot-text', text }))
+        // Warme variant: als we de naam al kennen (prefill), begroeten we de
+        // bezoeker persoonlijk. Zonder bruikbare naam valt 'ie terug op de
+        // neutrale intro, zodat er nooit een half ingevulde zin verschijnt.
+        const voornaam = firstNameOf(action.prefillName)
+        const introLines = (voornaam && surveyFlow.introPersoonlijk)
+          ? surveyFlow.introPersoonlijk
+          : (surveyFlow.intro || [])
+        const introBubbles = introLines.map((text) => ({
+          kind: 'bot-text',
+          text: String(text).replace(/\{voornaam\}/g, voornaam),
+        }))
         const firstAdvance = buildConfigAdvance(0)
         return {
           ...state,
@@ -1345,7 +1372,7 @@ function Demo() {
     // voelt een korte typing-pauze meer als een conversatie die opstart.
     // De 'show'-arm klikt actief op "Start chat" en krijgt typeFirst=false
     // zodat de bubble meteen verschijnt en de klik niet laggy aanvoelt.
-    const { typeFirst = false } = options
+    const { typeFirst = false, prefillName = null } = options
     // Hervat-pad: bezoeker kwam via het header-logo terug naar intro met
     // chat-historie nog intact. We schakelen alleen view om en bewaren de
     // bestaande sessie + alle antwoorden zodat de chat verder loopt waar
@@ -1360,7 +1387,7 @@ function Demo() {
     trackEvent('session:start', { variant, copyVariant })
     trackEvent('intro:cta-clicked', { variant, copyVariant })
     logSessionStartConsent()
-    dispatch({ type: 'START_CHAT', bot: project.salesTeam?.bot, copyVariant, typeFirst })
+    dispatch({ type: 'START_CHAT', bot: project.salesTeam?.bot, copyVariant, typeFirst, prefillName })
   }
   // IntroScreen is uitgefaseerd: iedere bezoeker landt direct in de chat.
   // We loggen de oude introVariant-toewijzing nog wel zodat lopende Plausible-
@@ -1386,10 +1413,10 @@ function Demo() {
     const token = warmToken()
     if (token) {
       let done = false
-      const begin = () => {
+      const begin = (prefillName = null) => {
         if (done) return
         done = true
-        start(undefined, { typeFirst: true })
+        start(undefined, { typeFirst: true, prefillName })
       }
       fetchLeadByToken(token)
         .then((res) => {
@@ -1403,7 +1430,7 @@ function Demo() {
               telefoon: res.phone || '',
             })
           }
-          begin()
+          begin(res ? res.firstName : null)
         })
         .catch(begin)
       // Vangnet: als de lookup hangt, tóch starten (blanco) na 3s.

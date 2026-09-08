@@ -27,8 +27,19 @@ const adsContact = adsSurvey.steps.find((s) => s.key === 'contact')
 const warmContact = {
   ...adsContact,
   warm: true,
-  intro: 'Fijn dat u er weer bent. Dit hebben wij van u genoteerd. Kloppen deze gegevens nog? U kunt ze aanpassen.',
+  // Korter dan in de koude variant: de begroeting staat nu al in de intro, dus
+  // hier alleen nog waar het om gaat.
+  intro: 'Dit hebben wij van u genoteerd. Kloppen deze gegevens nog? U kunt ze aanpassen.',
 }
+
+// Persoonlijke intro voor wie via de mail binnenkomt en die we dus al kennen.
+// Wordt gebruikt zodra er een bruikbare voornaam uit de prefill komt; anders
+// valt de flow terug op de neutrale intro uit de koude variant.
+const introPersoonlijk = [
+  'Welkom terug, {voornaam}.',
+  'Fijn dat u meedenkt over de 2e Merwedehaven in Dordrecht.',
+  'Ik stel u een paar korte vragen over uw bedrijf en uw ruimtevraag. Daarna houden wij u persoonlijk op de hoogte.',
+]
 
 const steps = adsSurvey.steps.map((s) => (s.key === 'contact' ? warmContact : s))
 
@@ -45,6 +56,7 @@ export const project = {
     ...adsProject.flowOverrides,
     surveyFlow: {
       ...adsSurvey,
+      introPersoonlijk,
       steps,
     },
   },
