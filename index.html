@@ -48,6 +48,26 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
+    <!-- Prefill-token afvangen en DIRECT uit de URL halen.
+         Staat bewust vóór Plausible en de Meta Pixel: die vuren allebei een
+         pageview met de huidige URL, dus als het token er dan nog in staat
+         lekt het naar analytics. Hier stoppen we 'm in een JS-variabele en
+         vervangen we de history-entry, zodat het token ook niet in de
+         browsergeschiedenis, bookmarks of Referer-headers belandt.
+         App.jsx leest 'm uit window.__clpPrefillToken. -->
+    <script>
+      (function () {
+        try {
+          var u = new URL(window.location.href)
+          var t = u.searchParams.get('t')
+          if (!t) return
+          window.__clpPrefillToken = t
+          u.searchParams.delete('t')
+          window.history.replaceState(null, '', u.pathname + (u.search || '') + (u.hash || ''))
+        } catch (e) { /* stil falen: zonder strip gewoon doorladen */ }
+      })()
+    </script>
+
     <!-- Privacy-friendly analytics by Plausible.
          Per-project script-URL want elke Plausible-preset bevat een hardcoded
          data-domain. Hostname-loader kiest de juiste script bij elke pageview

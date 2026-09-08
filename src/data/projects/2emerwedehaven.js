@@ -20,9 +20,10 @@ const adsContact = adsSurvey.steps.find((s) => s.key === 'contact')
 
 // Warme contact-step: zelfde velden en CRM-mapping als de koude variant, maar
 // gemarkeerd warm:true (andere kop/knop-copy in ConfigContactBubble) en met een
-// voorgevulde-intro. De velden worden door App.jsx voorgevuld met de opgehaalde
-// gegevens; e-mail en telefoon blijven aanpasbaar (bezoeker mag een ander adres
-// invoeren als de gegevens niet meer kloppen).
+// voorgevulde-intro. App.jsx vult de velden met de gegevens uit de
+// clp_prefill-RPC (opgezocht op het prefill_token uit de mail-link). Alle
+// velden blijven aanpasbaar: de bezoeker mag een ander e-mailadres of nummer
+// invoeren als de gegevens niet meer kloppen.
 const warmContact = {
   ...adsContact,
   warm: true,
@@ -36,9 +37,8 @@ export const project = {
   id: '2emerwedehaven',
   name: '2emerwedehaven',
 
-  // Zet aan dat App.jsx bij binnenkomst met ?t=<portal_token> de gegevens
-  // ophaalt en het contact-formulier voorvult (en de bijbehorende sessie
-  // aanneemt zodat een afgeronde flow de bestaande lead bijwerkt).
+  // Zet aan dat App.jsx bij binnenkomst met ?t=<prefill_token> de gegevens
+  // ophaalt (clp_prefill-RPC) en het contact-formulier voorvult.
   warmPrefill: true,
 
   flowOverrides: {

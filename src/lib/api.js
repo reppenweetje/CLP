@@ -84,28 +84,32 @@ export function isApiConfigured() {
   return isEnabled() && !!endpoint() && !!anonKey()
 }
 
-// ── Warme-CLP prefill: lead ophalen op portal_token ─────────────────────────
+// ── Warme-CLP prefill: lead ophalen op prefill_token ────────────────────────
 //
-// Voor de warme variant (leads die al in het CRM zitten). De persoonlijke
-// mail-link draagt ?t=<portal_token>; deze functie ruilt dat token via de
-// lead-prefetch Edge Function om voor de basis-contactgegevens zodat het
-// opt-in-formulier voorgevuld kan worden. Geen persoonsgegevens in de URL.
+// Voor de warme variant (leads die al in het CRM zitten). Het CRM mailt een
+// persoonlijke link `?t=<PREFILL_TOKEN>`; die token ruilen we hier om voor
+// alleen de contactvelden, zodat het opt-in-formulier voorgevuld kan worden.
 //
-// Geeft ook sessionId terug: door die sessie aan te nemen ge-upsert een
-// afgeronde warme flow op (source, session_id) en werkt zo de BESTAANDE lead
-// bij i.p.v. een duplicaat te maken.
-function prefetchEndpoint() {
+// Server-kant: `clp_prefill(p_token)` is een SECURITY DEFINER-RPC met execute
+// voor anon. Die geeft UITSLUITEND first_name/last_name/email/phone/
+// company_name terug — nooit de hele leadrij en geen andere tokens. Onbekend
+// of te kort token levert een lege array op (geen fout), dus de bezoeker
+// krijgt dan gewoon een leeg formulier.
+//
+// Bewust `prefill_token`, niet `portal_token`: die laatste hoort bij het
+// De Hofman-portaal en heeft een ander doel en andere levensduur.
+function prefillRpcEndpoint() {
   const base = readEnv('VITE_SUPABASE_URL', '')
   if (!base) return null
-  return base.replace(/\/+$/, '') + '/functions/v1/lead-prefetch'
+  return base.replace(/\/+$/, '') + '/rest/v1/rpc/clp_prefill'
 }
 
-export function isPrefetchConfigured() {
-  return !!prefetchEndpoint() && !!anonKey()
+export function isPrefillConfigured() {
+  return !!prefillRpcEndpoint() && !!anonKey()
 }
 
-export async function fetchLeadByToken(token, sourceKey) {
-  const url = prefetchEndpoint()
+export async function fetchLeadByToken(token) {
+  const url = prefillRpcEndpoint()
   const key = anonKey()
   if (!url || !key || !token) return null
   try {
@@ -116,19 +120,21 @@ export async function fetchLeadByToken(token, sourceKey) {
         'Authorization': `Bearer ${key}`,
         'apikey':        key,
       },
-      body: JSON.stringify({ portal_token: token, source: sourceKey || undefined }),
+      body: JSON.stringify({ p_token: token }),
     })
     if (!res.ok) return null
-    const data = await res.json()
-    if (!data || !data.ok || !data.found) return null
+    const rows = await res.json()
+    const row = Array.isArray(rows) ? rows[0] : null
+    if (!row) return null
+    const naam = [row.first_name, row.last_name].filter(Boolean).join(' ').trim()
     return {
-      firstName: data.first_name || '',
-      email:     data.email || '',
-      phone:     data.phone || '',
-      company:   data.company || '',
-      sessionId: data.session_id || '',
+      firstName: naam,
+      email:     row.email || '',
+      phone:     row.phone || '',
+      company:   row.company_name || '',
     }
   } catch {
+    // Stil falen: prefill is een gemak, geen blokkade. Nooit het token loggen.
     return null
   }
 }

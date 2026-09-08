@@ -19,7 +19,7 @@ import {
 } from './lib/recommendation.js'
 import { parseLeadInput, mergeLead } from './lib/parseLead.js'
 import { captureAttribution, getAttribution } from './lib/attribution.js'
-import { startNewSession, trackEvent, getSessionId, adoptSession } from './lib/analytics.js'
+import { startNewSession, trackEvent, getSessionId } from './lib/analytics.js'
 import { notifyHotLead } from './lib/slack.js'
 import { pushLead, flushPending, isApiConfigured, fetchLeadByToken } from './lib/api.js'
 import { notifyCallbackRequest } from './lib/callbackNotify.js'
@@ -104,15 +104,34 @@ function isConfigEngine() {
 function configStepList() {
   return project.flowOverrides?.surveyFlow?.steps || []
 }
-// Warme CLP: leest het persoonlijke ?t=<portal_token> uit de link. Alleen
-// actief als het project warmPrefill zet (2emerwedehaven). Token moet
-// hoog-entropie zijn (>=16 tekens) — zelfde ondergrens als de Edge Function.
+// Warme CLP: het persoonlijke prefill-token uit de mail-link (`?t=...`).
+//
+// Het inline-scriptje in index.html haalt 't token al vóór Plausible en de
+// Meta Pixel uit de URL en zet 'm op window.__clpPrefillToken, zodat het niet
+// in analytics, browsergeschiedenis of Referer-headers belandt. Hier lezen we
+// die variabele; de URL-fallback is alleen voor het geval dat script niet
+// draaide, en strip 't token dan alsnog direct.
+//
+// Alleen actief als het project warmPrefill zet (2emerwedehaven). Minimale
+// lengte 16 zodat een afgekapte of onzin-waarde niet eens een lookup kost.
 function warmToken() {
   try {
     if (!project.warmPrefill) return null
-    if (typeof window === 'undefined' || !window.location?.search) return null
-    const t = new URLSearchParams(window.location.search).get('t')
-    return t && t.trim().length >= 16 ? t.trim() : null
+    if (typeof window === 'undefined') return null
+    let t = window.__clpPrefillToken || null
+    if (!t && window.location?.search) {
+      const params = new URLSearchParams(window.location.search)
+      t = params.get('t')
+      if (t) {
+        params.delete('t')
+        const qs = params.toString()
+        window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : '') + (window.location.hash || ''))
+      }
+    }
+    // Uit het geheugen wissen zodra 'ie gelezen is: nergens langer bewaren dan nodig.
+    try { delete window.__clpPrefillToken } catch { window.__clpPrefillToken = null }
+    t = (t || '').trim()
+    return t.length >= 16 ? t : null
   } catch {
     return null
   }
@@ -1317,7 +1336,7 @@ function Demo() {
     // voelt een korte typing-pauze meer als een conversatie die opstart.
     // De 'show'-arm klikt actief op "Start chat" en krijgt typeFirst=false
     // zodat de bubble meteen verschijnt en de klik niet laggy aanvoelt.
-    const { typeFirst = false, keepSession = false } = options
+    const { typeFirst = false } = options
     // Hervat-pad: bezoeker kwam via het header-logo terug naar intro met
     // chat-historie nog intact. We schakelen alleen view om en bewaren de
     // bestaande sessie + alle antwoorden zodat de chat verder loopt waar
@@ -1327,11 +1346,8 @@ function Demo() {
       dispatch({ type: 'RESUME_CHAT' })
       return
     }
-    // Cold start: eerste keer dat deze browser de chat opent. keepSession
-    // (warme CLP met aangenomen lead-sessie) slaat startNewSession over zodat
-    // de zojuist aangenomen session_id blijft staan en de afgeronde flow de
-    // bestaande lead bijwerkt i.p.v. een duplicaat te maken.
-    if (!keepSession) startNewSession()
+    // Cold start: eerste keer dat deze browser de chat opent.
+    startNewSession()
     trackEvent('session:start', { variant, copyVariant })
     trackEvent('intro:cta-clicked', { variant, copyVariant })
     logSessionStartConsent()
@@ -1361,29 +1377,28 @@ function Demo() {
     const token = warmToken()
     if (token) {
       let done = false
-      const begin = (keepSession) => {
+      const begin = () => {
         if (done) return
         done = true
-        start(undefined, { typeFirst: true, keepSession })
+        start(undefined, { typeFirst: true })
       }
-      fetchLeadByToken(token, project.crmProject)
+      fetchLeadByToken(token)
         .then((res) => {
+          // Onbekend/verlopen token → res is null → gewoon een leeg formulier,
+          // geen foutmelding. Dat is een normale uitkomst, geen storing.
           if (res) {
-            if (res.sessionId) adoptSession(res.sessionId)
             setContactPrefill({
               naam:     res.firstName || '',
               bedrijf:  res.company || '',
               email:    res.email || '',
               telefoon: res.phone || '',
             })
-            begin(!!res.sessionId)
-          } else {
-            begin(false)
           }
+          begin()
         })
-        .catch(() => begin(false))
+        .catch(begin)
       // Vangnet: als de lookup hangt, tóch starten (blanco) na 3s.
-      setTimeout(() => begin(false), 3000)
+      setTimeout(begin, 3000)
       return
     }
     start(undefined, { typeFirst: true })
