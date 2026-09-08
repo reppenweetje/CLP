@@ -97,27 +97,39 @@
       })()
     </script>
 
-    <!-- Meta Pixel Code -->
+    <!-- Meta Pixel Code
+         Alleen op domeinen waar ook advertenties naartoe lopen. Pagina's die
+         puur vanuit de mail worden bezocht (bv. de warme 2e Merwedehaven-CLP)
+         staan in GEEN_PIXEL: daar valt niets te optimaliseren, en dan hoort het
+         gedrag van bekende CRM-contacten ook niet naar Meta te gaan.
+         App.jsx controleert zelf op window.fbq, dus zonder pixel worden alle
+         Meta-events vanzelf stille no-ops. -->
     <script>
-      !function(f,b,e,v,n,t,s)
-      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-      n.queue=[];t=b.createElement(e);t.async=!0;
-      t.src=v;s=b.getElementsByTagName(e)[0];
-      s.parentNode.insertBefore(t,s)}(window, document,'script',
-      'https://connect.facebook.net/en_US/fbevents.js');
-      fbq('set', 'autoConfig', false, '2003219213613252');
-      fbq('init', '2003219213613252');
-      fbq('track', 'PageView');
+      (function () {
+        var GEEN_PIXEL = ['2emerwedehaven.clp.repp.nl']
+        try {
+          if (GEEN_PIXEL.indexOf(window.location.hostname) !== -1) return
+        } catch (e) { /* bij twijfel: gewoon laden */ }
+        !function(f,b,e,v,n,t,s)
+        {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+        n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+        n.queue=[];t=b.createElement(e);t.async=!0;
+        t.src=v;s=b.getElementsByTagName(e)[0];
+        s.parentNode.insertBefore(t,s)}(window, document,'script',
+        'https://connect.facebook.net/en_US/fbevents.js');
+        fbq('set', 'autoConfig', false, '2003219213613252');
+        fbq('init', '2003219213613252');
+        fbq('track', 'PageView');
+      })()
     </script>
     <!-- End Meta Pixel Code -->
   </head>
   <body class="bg-canvas text-ink">
-    <!-- Meta Pixel noscript fallback (moved to body for HTML5 spec compliance) -->
-    <noscript><img height="1" width="1" style="display:none"
-      src="https://www.facebook.com/tr?id=2003219213613252&ev=PageView&noscript=1"
-    /></noscript>
+    <!-- Bewust geen noscript-pixel meer. De CLP is een JS-app: zonder JavaScript
+         is er niets te zien en dus ook niets te meten. Zo'n vaste img-tag valt
+         bovendien niet per domein uit te zetten, waardoor 'ie alsnog zou vuren
+         op pagina's waar we juist geen Meta-tracking willen. -->
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
