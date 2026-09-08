@@ -36,6 +36,14 @@ export const project = {
   // (BREVO_SKIP_SOURCES). Registreer '2e MWH' backend-zijde voor go-live.
   crmProject: '2e MWH',
 
+  // CRM-label dat de lead krijgt zodra hij de bedrijfsactiviteiten heeft
+  // doorgegeven (de eerste vraag na de contactgegevens). Vanaf dat punt is het
+  // een volwaardige peiling-lead en niet alleen een achtergelaten mailadres.
+  leadLabel: '2emwh',
+  // Antwoord-key die het label triggert. Los configureerbaar zodat een ander
+  // project een andere vraag als drempel kan nemen.
+  leadLabelAfter: 'sector',
+
   portalStrategy: 'none',
 
   // Formele aanspreekvorm (u): stuurt gedeelde componenten (bv. de

@@ -16,6 +16,38 @@ import Avatar from './Avatar.jsx'
 // gevalideerd; telefoon is optioneel.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
+// Telefooncontrole. Bewust soepel in wat we accepteren (spaties, streepjes,
+// haakjes en punten mogen), maar streng in de lengte, zodat een typefout of
+// een half ingetikt nummer meteen opvalt in plaats van pas bij het nabellen.
+// Geeft null terug als het klopt, anders een leesbare melding.
+function phoneError(raw) {
+  const cleaned = String(raw).replace(/[\s\-().]/g, '')
+  if (!/^\+?\d+$/.test(cleaned)) return 'Gebruik alleen cijfers, eventueel met + ervoor.'
+  // 00 31 ... → +31 ...
+  const normalized = cleaned.startsWith('00') ? '+' + cleaned.slice(2) : cleaned
+  if (normalized.startsWith('+')) {
+    const digits = normalized.slice(1)
+    if (digits.startsWith('31')) {
+      const national = digits.slice(2)
+      if (national.length < 9) return 'Dit nummer is te kort.'
+      if (national.length > 9) return 'Dit nummer is te lang.'
+      return null
+    }
+    // Buitenlands nummer: E.164 staat 8 tot 15 cijfers toe.
+    if (digits.length < 8) return 'Dit nummer is te kort.'
+    if (digits.length > 15) return 'Dit nummer is te lang.'
+    return null
+  }
+  if (normalized.startsWith('0')) {
+    if (normalized.length < 10) return 'Dit nummer is te kort.'
+    if (normalized.length > 10) return 'Dit nummer is te lang.'
+    return null
+  }
+  // Zonder 0 of landcode: alleen een kaal mobiel nummer (bv. 612345678).
+  if (normalized.length === 9) return null
+  return normalized.length > 9 ? 'Dit nummer is te lang.' : 'Dit nummer is te kort.'
+}
+
 export default function ConfigContactBubble({ fields = [], initial = null, warm = false, onSubmit }) {
   const [values, setValues] = useState(() => {
     const base = {}
@@ -52,6 +84,8 @@ export default function ConfigContactBubble({ fields = [], initial = null, warm 
     const v = (values[f.key] || '').trim()
     if (f.required && !v) return 'Vul dit veld in.'
     if (f.crm?.lead === 'email' && v && !EMAIL_RE.test(v)) return 'Dit lijkt geen geldig e-mailadres.'
+    // Telefoon is optioneel: leeg mag, maar ingevuld moet kloppen.
+    if (f.inputMode === 'tel' && v) return phoneError(v)
     return null
   }
 

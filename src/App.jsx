@@ -1683,6 +1683,20 @@ function Demo() {
       }
       // crm.lead-velden zitten al in het lead-object (firstName/email/phone).
     }
+    // CRM-label. De bezoeker is pas een volwaardige peiling-lead zodra hij de
+    // drempelvraag heeft beantwoord (voor 2e MWH: de bedrijfsactiviteiten, de
+    // eerste vraag na de contactgegevens). Vanaf dat moment gaat het label mee
+    // in élke push, dus ook bij alle antwoorden die daarna nog volgen.
+    const labelKey = project.leadLabelAfter
+    if (project.leadLabel && labelKey) {
+      const gate = (freshAnswers && freshAnswers[labelKey] !== undefined)
+        ? freshAnswers[labelKey]
+        : state.answers[labelKey]
+      const answered = Array.isArray(gate?.value)
+        ? gate.value.length > 0
+        : !!(gate && (gate.value ?? gate.label))
+      if (answered) attributes.label = project.leadLabel
+    }
     const session = {
       sessionId:   getSessionId(),
       events:      [],
@@ -1746,6 +1760,7 @@ function Demo() {
     if (sub) {
       dispatch({ type: 'ANSWER', key: step.key, value: val, next: sub.key })
       sendSequence(opt.label, [{ kind: 'bot-text', text: sub.label }])
+      pushConfigSnapshot([], null, { [step.key]: val })
       return
     }
     // branch: optionele note-bubble + goto (stepKey of 'end').
@@ -1760,10 +1775,15 @@ function Demo() {
     }
     dispatch({ type: 'ANSWER', key: step.key, value: val, next: adv.nextQuestion })
     sendSequence(opt.label, [...noteMsgs, ...adv.messages])
-    if (adv.nextQuestion === 'einde') {
-      pushConfigSnapshot([{ scope: 'peiling-afgerond', granted: true, detail: { from: 'config-end' } }], null, { [step.key]: val })
-      trackEvent('flow:complete', { stage: 'survey-config', persona })
-    }
+    // Elk antwoord meteen wegschrijven (idempotente upsert), zodat een bezoeker
+    // die halverwege afhaakt niet als leeg mailadres in het CRM blijft staan.
+    const isEnd = adv.nextQuestion === 'einde'
+    pushConfigSnapshot(
+      isEnd ? [{ scope: 'peiling-afgerond', granted: true, detail: { from: 'config-end' } }] : [],
+      null,
+      { [step.key]: val },
+    )
+    if (isEnd) trackEvent('flow:complete', { stage: 'survey-config', persona })
   }
 
   // Vrije-tekst-antwoord op een open-text config-step (incl. followUp-substep).
@@ -1799,14 +1819,16 @@ function Demo() {
     }
     trackEvent('survey:answered', { key: step.key })
     sendSequence(stored, adv.messages)
-    // Capture halverwege bij e-mail; nogmaals aan het eind (idempotent).
-    if (step.crm?.lead === 'email') {
-      pushConfigSnapshot([{ scope: 'peiling-opvolging', granted: true, detail: { from: 'config-email' } }], freshLead)
-    }
-    if (adv.nextQuestion === 'einde') {
-      pushConfigSnapshot([{ scope: 'peiling-afgerond', granted: true, detail: { from: 'config-end' } }], freshLead, { [step.key]: answer })
-      trackEvent('flow:complete', { stage: 'survey-config', persona })
-    }
+    // Elk antwoord meteen wegschrijven (idempotente upsert), zodat ook een
+    // halverwege afgebroken peiling bewaard blijft.
+    const isEnd = adv.nextQuestion === 'einde'
+    const consents = isEnd
+      ? [{ scope: 'peiling-afgerond', granted: true, detail: { from: 'config-end' } }]
+      : step.crm?.lead === 'email'
+        ? [{ scope: 'peiling-opvolging', granted: true, detail: { from: 'config-email' } }]
+        : []
+    pushConfigSnapshot(consents, freshLead, { [step.key]: answer })
+    if (isEnd) trackEvent('flow:complete', { stage: 'survey-config', persona })
   }
 
   // Multiselect-submit voor een multi-choice config-step. Slaat array + labels
@@ -1822,10 +1844,15 @@ function Demo() {
     const adv = buildConfigAdvanceAfter(step, null)
     dispatch({ type: 'ANSWER', key: stepKey, value: val, next: adv.nextQuestion })
     sendSequence(chosen, adv.messages)
-    if (adv.nextQuestion === 'einde') {
-      pushConfigSnapshot([{ scope: 'peiling-afgerond', granted: true, detail: { from: 'config-end' } }], null, { [stepKey]: val })
-      trackEvent('flow:complete', { stage: 'survey-config', persona })
-    }
+    // Meteen wegschrijven. Dit is ook het moment waarop de bedrijfsactiviteiten
+    // binnenkomen en de lead dus zijn CRM-label krijgt.
+    const isEnd = adv.nextQuestion === 'einde'
+    pushConfigSnapshot(
+      isEnd ? [{ scope: 'peiling-afgerond', granted: true, detail: { from: 'config-end' } }] : [],
+      null,
+      { [stepKey]: val },
+    )
+    if (isEnd) trackEvent('flow:complete', { stage: 'survey-config', persona })
   }
 
   // Contact-form-submit voor de config-survey. Verzamelt alle velden in één
