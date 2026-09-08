@@ -239,6 +239,12 @@ function persist(state) {
     const toSave = {
       view: state.view,
       messages: state.messages,
+      // De nog-niet-uitgetypte bubbles horen er ook bij. Zonder dit raakte een
+      // herstart halverwege het uittypen (refresh, of een remount) de rest van
+      // de thread kwijt: `messages` hervatte dan met een halve conversatie en
+      // een lege queue, waardoor de laatste vraag nooit verscheen en de chat
+      // permanent vast leek te zitten.
+      messageQueue: state.messageQueue,
       currentQuestion: state.currentQuestion,
       answers: state.answers,
       leadDraft: state.leadDraft,
@@ -925,7 +931,10 @@ function Demo() {
         ...init,
         ...loaded,
         behaviors: { ...EMPTY_BEHAVIORS, ...(loaded.behaviors || {}) },
-        messageQueue: [],
+        // Hervat de nog niet uitgetypte bubbles. Was hier hardcoded leeg,
+        // waardoor een refresh of remount midden in het uittypen de rest van
+        // de thread definitief liet verdwijnen (chat leek dan vast te zitten).
+        messageQueue: Array.isArray(loaded.messageQueue) ? loaded.messageQueue : [],
         debugOpen: false,
         // Forceer 'chat' ook voor terugkerende bezoekers: een eventueel
         // opgeslagen view:'intro' (uit de A/B-test-periode) mag de startpagina
