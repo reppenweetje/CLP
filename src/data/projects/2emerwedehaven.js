@@ -32,14 +32,22 @@ const warmContact = {
   intro: 'Dit hebben wij van u genoteerd. Kloppen deze gegevens nog? U kunt ze aanpassen.',
 }
 
-// Persoonlijke intro voor wie via de mail binnenkomt en die we dus al kennen.
-// Wordt gebruikt zodra er een bruikbare voornaam uit de prefill komt; anders
-// valt de flow terug op de neutrale intro uit de koude variant.
-const introPersoonlijk = [
-  'Welkom terug, {voornaam}.',
-  'Fijn dat u meedenkt over de 2e Merwedehaven in Dordrecht.',
-  'Ik stel u een paar korte vragen over uw bedrijf en uw ruimtevraag. Daarna houden wij u persoonlijk op de hoogte.',
+// Intro voor wie via de mail binnenkomt. Pakt bewust de draad van die mail op:
+// zelfde aanleiding ("er komt ruimte vrij aan het water") en dezelfde vraag
+// ("is uw zoekvraag nog actueel"), zodat de CLP geen nieuw verhaal begint.
+//
+// LET OP: hier NIET verwijzen naar de 3e Merwedehaven. De genodigden komen uit
+// meerdere lijsten, dus dat klopt niet voor iedereen. We doen daarom geen
+// enkele uitspraak over waar iemand eerder vandaan kwam.
+//
+// Twee varianten: met naam (als de prefill een bruikbare voornaam oplevert) en
+// zonder. Beide blijven warm, want in beide gevallen komt de bezoeker uit de mail.
+const introRegels = [
+  'Er komt ruimte vrij aan het water in de 2e Merwedehaven in Dordrecht.',
+  'Wij horen graag of uw zoekvraag nog actueel is en hoe die er nu uitziet. Uw antwoorden nemen wij mee in de volgende ronde.',
 ]
+const introPersoonlijk = ['Welkom terug, {voornaam}.', ...introRegels]
+const introNeutraal = ['Welkom terug.', ...introRegels]
 
 const steps = adsSurvey.steps.map((s) => (s.key === 'contact' ? warmContact : s))
 
@@ -56,6 +64,9 @@ export const project = {
     ...adsProject.flowOverrides,
     surveyFlow: {
       ...adsSurvey,
+      // Overschrijft de koude intro: ook zonder bruikbare voornaam komt deze
+      // bezoeker uit de mail, dus nooit de ads-intro tonen.
+      intro: introNeutraal,
       introPersoonlijk,
       steps,
     },
