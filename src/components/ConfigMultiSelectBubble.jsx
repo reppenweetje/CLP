@@ -10,7 +10,7 @@ import Avatar from './Avatar.jsx'
 // Visueel gespiegeld op LocationSelectBubble.jsx (paper-bubble + Avatar links
 // + Bevestig-knop + submitted-state), maar volledig data-gedreven via props
 // zodat elke multi-choice step 'm kan hergebruiken zonder eigen component.
-export default function ConfigMultiSelectBubble({ options = [], label, onSubmit }) {
+export default function ConfigMultiSelectBubble({ options = [], label, required = false, onSubmit }) {
   const [selected, setSelected] = useState([])
   const [submitted, setSubmitted] = useState(false)
 
@@ -21,6 +21,10 @@ export default function ConfigMultiSelectBubble({ options = [], label, onSubmit 
 
   function handleConfirm() {
     if (submitted) return
+    // Verplichte meerkeuze (bv. de bedrijfsactiviteiten): zonder keuze zou de
+    // lead geen label krijgen en dus nooit in het overzicht verschijnen, ook
+    // niet als hij de rest wel invult. Daarom hier tegenhouden.
+    if (required && selected.length === 0) return
     setSubmitted(true)
     const ids = selected
     const labels = options.filter((o) => ids.includes(o.id)).map((o) => o.label)
@@ -66,7 +70,12 @@ export default function ConfigMultiSelectBubble({ options = [], label, onSubmit 
               <button
                 type="button"
                 onClick={handleConfirm}
-                className="w-full mt-4 bg-midnite hover:bg-midnite-soft text-paper text-sm font-medium py-2.5 rounded-full transition"
+                disabled={required && selected.length === 0}
+                className={`w-full mt-4 text-sm font-medium py-2.5 rounded-full transition ${
+                  required && selected.length === 0
+                    ? 'bg-mist-light text-ink-mute cursor-not-allowed'
+                    : 'bg-midnite hover:bg-midnite-soft text-paper'
+                }`}
               >
                 Bevestig
               </button>

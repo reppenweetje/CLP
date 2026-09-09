@@ -193,7 +193,7 @@ function buildConfigAdvance(fromIndex) {
     }
     messages.push({ kind: 'bot-text', text: s.label })
     if (s.type === 'multi-choice') {
-      messages.push({ kind: 'config-multi', payload: { stepKey: s.key, options: s.options, label: s.label } })
+      messages.push({ kind: 'config-multi', payload: { stepKey: s.key, options: s.options, label: s.label, required: !!s.required } })
     }
     return { messages, nextQuestion: s.key }
   }

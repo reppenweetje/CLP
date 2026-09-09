@@ -140,6 +140,9 @@ export const project = {
           key: 'sector',
           type: 'multi-choice',
           label: 'Wat zijn de bedrijfsactiviteiten? Meerdere antwoorden mogelijk.',
+          // Verplicht: dit is de drempelvraag die het CRM-label zet. Zonder
+          // keuze zou de lead nooit als peiling-lead worden geteld.
+          required: true,
           options: [
             { id: 'maritieme_maakindustrie', label: 'Maritieme maakindustrie' },
             { id: 'scheepsbouw', label: 'Scheepsbouw, reparatie of onderhoud' },

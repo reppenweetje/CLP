@@ -207,6 +207,7 @@ function renderMessage(m, { onBrochure, onReset, onUnitView, onCalcInteract, onC
         <ConfigMultiSelectBubble
           options={m.payload?.options}
           label={m.payload?.label}
+          required={m.payload?.required}
           onSubmit={(ids, labels) => onConfigMultiSubmit && onConfigMultiSubmit(m.payload?.stepKey, ids, labels)}
         />
       )
