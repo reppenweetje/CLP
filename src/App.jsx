@@ -1686,12 +1686,6 @@ function Demo() {
             if (v != null && v !== '') attributes[f.crm.attr] = v
           }
         }
-        // Eerder bekende contactgegevens die de bezoeker heeft gewijzigd. Staan
-        // niet in fields (het zijn geen invulvelden), maar moeten wel mee zodat
-        // het oude adres of nummer niet verloren gaat bij het overschrijven.
-        for (const extra of ['email_eerder', 'telefoon_eerder']) {
-          if (cd[extra]) attributes[extra] = cd[extra]
-        }
         continue
       }
       if (!s.crm) continue
@@ -1915,15 +1909,9 @@ function Demo() {
       const field = f.crm.lead === 'first_name' ? 'firstName' : f.crm.lead
       freshLead[field] = contactData[f.key] || undefined
     }
-    // Past de bezoeker zijn e-mail of telefoon aan? Dan overschrijven we het
-    // bekende gegeven op de CRM-record. Leg het oude daarom apart vast, zodat
-    // sales beide houdt en ziet dat er iets is gewijzigd.
-    const eerder = contactPrefill || {}
-    for (const [veld, attr] of [['email', 'email_eerder'], ['telefoon', 'telefoon_eerder']]) {
-      const oud = (eerder[veld] || '').trim()
-      const nieuw = (contactData[veld] || '').trim()
-      if (oud && nieuw && oud.toLowerCase() !== nieuw.toLowerCase()) contactData[attr] = oud
-    }
+    // Past de bezoeker zijn e-mail of telefoon aan, dan is dat simpelweg het
+    // nieuwe gegeven voor deze lead: het oude wordt overschreven. Bewust geen
+    // tweede adres bijhouden, dat levert alleen verwarring op in het CRM.
     const isInitial = state.currentQuestion === stepKey
     trackEvent('survey:answered', { key: stepKey })
     if (isInitial) {
