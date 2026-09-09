@@ -1940,6 +1940,18 @@ function Demo() {
     }
   }
 
+  // "Bent u niet <naam>?" op de warme contactkaart. Gebeurt als iemand de mail
+  // heeft doorgestuurd: de ontvanger ziet dan de gegevens van een collega en
+  // zou bij invullen diens record overschrijven. We knippen daarom de band met
+  // die lead door: nieuwe sessie, dus een eigen record, en het formulier leeg.
+  const onConfigContactNotYou = () => {
+    trackEvent('warm:not-you', {})
+    startNewSession()
+    setContactPrefill(null)
+    dispatch({ type: 'ANSWER', key: 'lead', value: undefined, next: state.currentQuestion })
+    dispatch({ type: 'ANSWER', key: 'contactData', value: undefined, next: state.currentQuestion })
+  }
+
   const onChipPick = (opt) => {
     const q = state.currentQuestion
     if (!q) return
@@ -3777,6 +3789,7 @@ function Demo() {
             onRegionSubmit={onRegionSubmit}
             onConfigMultiSubmit={onConfigMultiSubmit}
             onConfigContactSubmit={onConfigContactSubmit}
+            onConfigContactNotYou={onConfigContactNotYou}
             contactPrefill={contactPrefill}
             onReset={() => {
               clearPersisted()

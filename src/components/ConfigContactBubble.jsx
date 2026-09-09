@@ -48,7 +48,7 @@ function phoneError(raw) {
   return normalized.length > 9 ? 'Dit nummer is te lang.' : 'Dit nummer is te kort.'
 }
 
-export default function ConfigContactBubble({ fields = [], initial = null, warm = false, onSubmit }) {
+export default function ConfigContactBubble({ fields = [], initial = null, warm = false, onSubmit, onNotYou }) {
   const [values, setValues] = useState(() => {
     const base = {}
     for (const f of fields) base[f.key] = (initial && initial[f.key]) || ''
@@ -159,6 +159,25 @@ export default function ConfigContactBubble({ fields = [], initial = null, warm 
               </button>
             ) : (
               <div className="mt-4 text-sm text-emerald-700 font-medium">✓ Genoteerd, dank u wel.</div>
+            )}
+            {/* Doorgestuurde mail: de ontvanger ziet dan de gegevens van een
+                collega. Zonder deze uitweg zou hij die record overschrijven.
+                Hiermee begint hij schoon, als losse lead. */}
+            {warm && !submitted && onNotYou && (initial?.naam || initial?.email) && (
+              <button
+                type="button"
+                onClick={() => {
+                  const leeg = {}
+                  for (const f of fields) leeg[f.key] = ''
+                  setValues(leeg)
+                  setDirty(true)
+                  setTouched(false)
+                  onNotYou()
+                }}
+                className="w-full mt-2.5 text-[12px] text-ink-mute hover:text-midnite transition"
+              >
+                {initial?.naam ? `Bent u niet ${initial.naam}?` : 'Zijn dit niet uw gegevens?'}
+              </button>
             )}
           </div>
         </div>
