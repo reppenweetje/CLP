@@ -48,6 +48,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
+    <!-- Meta domeinverificatie voor 2emwh.clp.repp.nl. Bewust als meta-tag én
+         als bestand in public/: de DNS-route kan hier niet, want een expliciet
+         record op die subdomeinnaam zou de wildcard *.clp.repp.nl uitschakelen
+         en de site onbereikbaar maken. De tag staat op alle tenants; dat is
+         onschadelijk, verificatie geldt per domein. -->
+    <meta name="facebook-domain-verification" content="3l1ztrjf5vewxmyg6om7l4djhf9fhw" />
+
     <!-- Prefill-token afvangen en DIRECT uit de URL halen.
          Staat bewust vóór Plausible en de Meta Pixel: die vuren allebei een
          pageview met de huidige URL, dus als het token er dan nog in staat
