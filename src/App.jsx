@@ -1729,6 +1729,10 @@ function Demo() {
         : !!(gate && (gate.value ?? gate.label))
       if (answered) attributes.label = project.leadLabel
     }
+    // Bron: via welke ingang deze lead binnenkwam. Advertentie-verkeer landt op
+    // het ads-domein, de mailing op de warme variant. Zo blijven ze in de
+    // spreadsheet uit elkaar te houden.
+    if (project.leadSource) attributes.bron = project.leadSource
     const session = {
       sessionId:   getSessionId(),
       events:      [],

@@ -60,6 +60,9 @@ export const project = {
   // ophaalt (clp_prefill-RPC) en het contact-formulier voorvult.
   warmPrefill: true,
 
+  // Deze variant wordt alleen vanuit de mail bezocht, nooit via advertenties.
+  leadSource: 'mail',
+
   flowOverrides: {
     ...adsProject.flowOverrides,
     surveyFlow: {

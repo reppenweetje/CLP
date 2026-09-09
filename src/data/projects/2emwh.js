@@ -43,6 +43,9 @@ export const project = {
   // Antwoord-key die het label triggert. Los configureerbaar zodat een ander
   // project een andere vraag als drempel kan nemen.
   leadLabelAfter: 'sector',
+  // Waar de lead vandaan komt. Verschijnt als kolom "Bron" in de spreadsheet,
+  // zodat advertentie-leads te onderscheiden zijn van wie uit de mail komt.
+  leadSource: 'ads',
 
   portalStrategy: 'none',
 
