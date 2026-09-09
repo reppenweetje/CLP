@@ -1819,7 +1819,7 @@ function Demo() {
       null,
       { [step.key]: val },
     )
-    if (isEnd) trackEvent('flow:complete', { stage: 'survey-config', persona })
+    if (isEnd) { trackEvent('flow:complete', { stage: 'survey-config', persona }); fireMetaCustom('FullLeadComplete', 'config-einde', {}) }
   }
 
   // Vrije-tekst-antwoord op een open-text config-step (incl. followUp-substep).
@@ -1864,7 +1864,7 @@ function Demo() {
         ? [{ scope: 'peiling-opvolging', granted: true, detail: { from: 'config-email' } }]
         : []
     pushConfigSnapshot(consents, freshLead, { [step.key]: answer })
-    if (isEnd) trackEvent('flow:complete', { stage: 'survey-config', persona })
+    if (isEnd) { trackEvent('flow:complete', { stage: 'survey-config', persona }); fireMetaCustom('FullLeadComplete', 'config-einde', {}) }
   }
 
   // Multiselect-submit voor een multi-choice config-step. Slaat array + labels
@@ -1888,7 +1888,7 @@ function Demo() {
       null,
       { [stepKey]: val },
     )
-    if (isEnd) trackEvent('flow:complete', { stage: 'survey-config', persona })
+    if (isEnd) { trackEvent('flow:complete', { stage: 'survey-config', persona }); fireMetaCustom('FullLeadComplete', 'config-einde', {}) }
   }
 
   // Contact-form-submit voor de config-survey. Verzamelt alle velden in één
@@ -1918,6 +1918,15 @@ function Demo() {
     // tweede adres bijhouden, dat levert alleen verwarring op in het CRM.
     const isInitial = state.currentQuestion === stepKey
     trackEvent('survey:answered', { key: stepKey })
+    // Meta Lead-event bij de eerste e-mail-capture. De config-survey liep niet
+    // langs trackNewLeadFields (dat hangt aan de verkoop-flow), waardoor er
+    // nooit een conversie naar Meta ging en de Custom Conversion op nul bleef.
+    // Alleen de eerste keer, anders telt een correctie als tweede lead.
+    const alBekend = state.answers.lead?.email
+    if (!alBekend && freshLead.email) {
+      trackEvent('lead-email:submitted', { email: freshLead.email })
+      fireMetaLead('config-contact', { hasPhone: !!freshLead.phone })
+    }
     if (isInitial) {
       const summary = fields.map((f) => contactData[f.key]).filter(Boolean).join(', ')
       const marker = { id: 'contact', label: summary, value: contactData, _msgCountBefore: state.messages.length }
