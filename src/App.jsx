@@ -19,7 +19,7 @@ import {
 } from './lib/recommendation.js'
 import { parseLeadInput, mergeLead } from './lib/parseLead.js'
 import { captureAttribution, getAttribution } from './lib/attribution.js'
-import { startNewSession, trackEvent, getSessionId } from './lib/analytics.js'
+import { startNewSession, trackEvent, getSessionId, adoptSession } from './lib/analytics.js'
 import { notifyHotLead } from './lib/slack.js'
 import { pushLead, flushPending, isApiConfigured, fetchLeadByToken } from './lib/api.js'
 import { notifyCallbackRequest } from './lib/callbackNotify.js'
@@ -1372,7 +1372,7 @@ function Demo() {
     // voelt een korte typing-pauze meer als een conversatie die opstart.
     // De 'show'-arm klikt actief op "Start chat" en krijgt typeFirst=false
     // zodat de bubble meteen verschijnt en de klik niet laggy aanvoelt.
-    const { typeFirst = false, prefillName = null } = options
+    const { typeFirst = false, prefillName = null, keepSession = false } = options
     // Hervat-pad: bezoeker kwam via het header-logo terug naar intro met
     // chat-historie nog intact. We schakelen alleen view om en bewaren de
     // bestaande sessie + alle antwoorden zodat de chat verder loopt waar
@@ -1382,8 +1382,10 @@ function Demo() {
       dispatch({ type: 'RESUME_CHAT' })
       return
     }
-    // Cold start: eerste keer dat deze browser de chat opent.
-    startNewSession()
+    // Cold start: eerste keer dat deze browser de chat opent. keepSession slaat
+    // dit over voor de warme CLP, die zojuist de sessie van de bestaande lead
+    // heeft aangenomen; een nieuwe sessie zou daar juist een duplicaat opleveren.
+    if (!keepSession) startNewSession()
     trackEvent('session:start', { variant, copyVariant })
     trackEvent('intro:cta-clicked', { variant, copyVariant })
     logSessionStartConsent()
@@ -1413,16 +1415,19 @@ function Demo() {
     const token = warmToken()
     if (token) {
       let done = false
-      const begin = (prefillName = null) => {
+      const begin = (prefillName = null, keepSession = false) => {
         if (done) return
         done = true
-        start(undefined, { typeFirst: true, prefillName })
+        start(undefined, { typeFirst: true, prefillName, keepSession })
       }
       fetchLeadByToken(token)
         .then((res) => {
           // Onbekend/verlopen token → res is null → gewoon een leeg formulier,
           // geen foutmelding. Dat is een normale uitkomst, geen storing.
           if (res) {
+            // Sessie van de bestaande lead overnemen VOOR de chat start, zodat
+            // alles wat straks wordt weggeschreven op diezelfde CRM-record landt.
+            if (res.sessionId) adoptSession(res.sessionId)
             setContactPrefill({
               naam:     res.firstName || '',
               bedrijf:  res.company || '',
@@ -1430,7 +1435,7 @@ function Demo() {
               telefoon: res.phone || '',
             })
           }
-          begin(res ? res.firstName : null)
+          begin(res ? res.firstName : null, !!(res && res.sessionId))
         })
         .catch(begin)
       // Vangnet: als de lookup hangt, tóch starten (blanco) na 3s.
@@ -1681,6 +1686,12 @@ function Demo() {
             if (v != null && v !== '') attributes[f.crm.attr] = v
           }
         }
+        // Eerder bekende contactgegevens die de bezoeker heeft gewijzigd. Staan
+        // niet in fields (het zijn geen invulvelden), maar moeten wel mee zodat
+        // het oude adres of nummer niet verloren gaat bij het overschrijven.
+        for (const extra of ['email_eerder', 'telefoon_eerder']) {
+          if (cd[extra]) attributes[extra] = cd[extra]
+        }
         continue
       }
       if (!s.crm) continue
@@ -1903,6 +1914,15 @@ function Demo() {
       if (!f.crm?.lead) continue
       const field = f.crm.lead === 'first_name' ? 'firstName' : f.crm.lead
       freshLead[field] = contactData[f.key] || undefined
+    }
+    // Past de bezoeker zijn e-mail of telefoon aan? Dan overschrijven we het
+    // bekende gegeven op de CRM-record. Leg het oude daarom apart vast, zodat
+    // sales beide houdt en ziet dat er iets is gewijzigd.
+    const eerder = contactPrefill || {}
+    for (const [veld, attr] of [['email', 'email_eerder'], ['telefoon', 'telefoon_eerder']]) {
+      const oud = (eerder[veld] || '').trim()
+      const nieuw = (contactData[veld] || '').trim()
+      if (oud && nieuw && oud.toLowerCase() !== nieuw.toLowerCase()) contactData[attr] = oud
     }
     const isInitial = state.currentQuestion === stepKey
     trackEvent('survey:answered', { key: stepKey })

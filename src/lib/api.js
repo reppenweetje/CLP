@@ -132,6 +132,9 @@ export async function fetchLeadByToken(token) {
       email:     row.email || '',
       phone:     row.phone || '',
       company:   row.company_name || '',
+      // Sessie van de bestaande lead. Door die over te nemen werkt een
+      // ingevulde peiling diezelfde CRM-record bij i.p.v. een tweede aan te maken.
+      sessionId: row.session_id || '',
     }
   } catch {
     // Stil falen: prefill is een gemak, geen blokkade. Nooit het token loggen.

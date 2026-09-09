@@ -63,6 +63,14 @@ export function getSessionId() {
   return safeRead(SESSION_KEY) || startNewSession()
 }
 
+// Neemt de sessie van een bestaande lead over (warme CLP). Leads worden
+// ge-upsert op (source, session_id); door dezelfde sessie te gebruiken werkt de
+// ingevulde peiling de BESTAANDE CRM-record bij in plaats van er een tweede
+// naast te zetten. Alleen aanroepen met een geldige, niet-lege id.
+export function adoptSession(id) {
+  if (typeof id === 'string' && id.trim()) safeWrite(SESSION_KEY, id.trim())
+}
+
 // Auto-injecteert sessie-level props (copyVariant + ctaVariant) op elk
 // event zodat Plausible kan filteren zonder dat elke call-site die props
 // expliciet hoeft mee te geven. Variant-keys zijn sticky in localStorage,
