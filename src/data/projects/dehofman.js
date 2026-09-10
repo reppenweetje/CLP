@@ -30,28 +30,30 @@ export const project = {
   flowOverrides: {
     rentLeadVariant: 'huurder',
     // Size-vraag herschreven nu alleen de XXL nog beschikbaar is. De drie
-    // maten (105/113/192) verwijzen naar de oorspronkelijke L/XL/XXL-formaten
+    // maten (105/113/190) verwijzen naar de oorspronkelijke L/XL/XXL-formaten
     // zodat analytics ziet welk formaat de bezoeker eigenlijk zocht, maar elke
     // optie stuurt recommendUnit naar de XXL (unit: 'XXL') — het enige type dat
     // nog te koop is. De 105/113-keuzes krijgen via recommendIntroByChoice een
     // disclosure dat L en XL verkocht zijn.
     sizeQuestion: {
       label: 'Wat voor afmeting zoek je ongeveer?',
+      // De optie-id's blijven ongewijzigd (rond_192 is legacy): ze zitten in
+      // bewaarde antwoorden, in recommendIntroByChoice en in de analytics.
       options: [
         { id: 'rond_105', label: 'Rond 105 m²', score: 12, unit: 'XXL' },
         { id: 'rond_113', label: 'Rond 113 m²', score: 13, unit: 'XXL' },
-        { id: 'rond_192', label: 'Rond 192 m²', score: 15, unit: 'XXL' },
+        { id: 'rond_192', label: 'Rond 190 m²', score: 15, unit: 'XXL' },
       ],
     },
   },
 
   // Per-keuze intro-tekst boven de aanbevelings-bubble (keyed op size-optie-id).
-  // Wie niet meteen de 192 (XXL) kiest, krijgt eerst de disclosure dat L en XL
-  // verkocht zijn en dat alleen de twee XXL-kopunits nog beschikbaar zijn.
+  // Wie niet meteen de grootste maat (XXL) kiest, krijgt eerst de disclosure dat L en XL
+  // verkocht zijn en dat er nog één XXL-kopunit beschikbaar is.
   recommendIntroByChoice: {
-    rond_105: 'De L- en XL-units zijn inmiddels verkocht. We hebben nog twee ruime XXL-kopunits over, circa 192 m² verdeeld over drie lagen.',
-    rond_113: 'De L- en XL-units zijn inmiddels verkocht. We hebben nog twee ruime XXL-kopunits over, circa 192 m² verdeeld over drie lagen.',
-    rond_192: 'Op basis van je antwoorden past de XXL-kopunit goed: circa 192 m² verdeeld over drie lagen. Nog twee beschikbaar.',
+    rond_105: 'De L- en XL-units zijn inmiddels verkocht. We hebben nog één ruime XXL-kopunit over, circa 190 m² verdeeld over drie lagen.',
+    rond_113: 'De L- en XL-units zijn inmiddels verkocht. We hebben nog één ruime XXL-kopunit over, circa 190 m² verdeeld over drie lagen.',
+    rond_192: 'Op basis van je antwoorden past de XXL-kopunit goed: circa 190 m² verdeeld over drie lagen. Dit is de laatste beschikbare unit.',
   },
 
   // Gallery wisselt visueel tussen exterieur en interieur shots zodat de
@@ -91,7 +93,7 @@ export const project = {
       id: 'availability',
       tag: 'Beschikbaarheid',
       title: 'Bijna uitverkocht',
-      body: 'De L- en XL-units zijn verkocht. Alleen de twee ruime XXL-kopunits zijn nog beschikbaar.',
+      body: 'De L- en XL-units zijn verkocht. Er is nog één ruime XXL-kopunit beschikbaar.',
       image: '/images/availability-2026.jpg',
     },
     {
@@ -104,8 +106,8 @@ export const project = {
     {
       id: 'unit-xxl',
       tag: 'Unit XXL',
-      title: 'Circa 191 m² over drie lagen',
-      body: 'Ruimste variant, mogelijk met bedrijfsgebonden woning en eigen dakterras. Nog twee kopunits beschikbaar.',
+      title: 'Circa 190 m² over drie lagen',
+      body: 'Ruimste variant, mogelijk met bedrijfsgebonden woning en eigen dakterras. Dit is de laatste beschikbare unit.',
       // Officiële XXL-render (XXL UNIT HOFMAN.jpg). Niet meer xxl-woning.jpg —
       // dat dakterras-render was verouderd.
       image: '/images/xxl-unit.jpg',
@@ -181,14 +183,14 @@ export const project = {
   },
 
   status: {
-    // 10 van 14 verkocht, 2 onder voorbehoud (units 6, 13) ≈ 86% weg.
-    // Alleen de twee XXL-kopunits (7, 14) zijn nog vrij beschikbaar.
-    soldPercent: 86,
-    headline: 'Bijna uitverkocht. L en XL zijn weg, alleen de twee XXL-kopunits zijn nog beschikbaar.',
+    // 11 van 14 verkocht, 2 onder voorbehoud (units 6, 13) ≈ 93% weg.
+    // Alleen XXL-kopunit 14 is nog vrij beschikbaar; unit 7 is verkocht.
+    soldPercent: 93,
+    headline: 'Bijna uitverkocht. L en XL zijn weg, er is nog één XXL-kopunit beschikbaar.',
     units: {
       L: { label: 'Uitverkocht', state: 'sold_out' },
       XL: { label: 'Uitverkocht', state: 'sold_out' },
-      XXL: { label: 'Nog twee beschikbaar', state: 'available' },
+      XXL: { label: 'Nog één beschikbaar', state: 'available' },
     },
   },
 
@@ -203,7 +205,7 @@ export const project = {
         { number: 4, type: 'L', state: 'sold' },
         { number: 5, type: 'L', state: 'sold' },
         { number: 6, type: 'L', state: 'sold_ov' },
-        { number: 7, type: 'XXL', state: 'available' },
+        { number: 7, type: 'XXL', state: 'sold' },
       ]},
       { units: [
         { number: 8, type: 'XL', state: 'sold' },
@@ -270,18 +272,18 @@ export const project = {
     },
     {
       type: 'XXL',
-      size: 191,
+      size: 190,
       levels: 3,
       parking: 1,
       priceFrom: 475000,
-      pricePerM2: 2487,
+      pricePerM2: 2500,
       state: 'available',
-      stateLabel: 'Nog twee beschikbaar',
+      stateLabel: 'Nog één beschikbaar',
       uses: ['3-laags bedrijfsunit', 'Variant met bedrijfsgebonden woning'],
       image: '/images/xxl-unit.jpg',
-      pitch: 'Drie lagen. Mogelijk met bedrijfsgebonden woning en eigen dakterras. Nog twee kopunits beschikbaar.',
+      pitch: 'Drie lagen. Mogelijk met bedrijfsgebonden woning en eigen dakterras. Dit is de laatste beschikbare kopunit.',
       specs: [
-        'Circa 191 m² over drie lagen',
+        'Circa 190 m² over drie lagen',
         'Optie bedrijfsgebonden woning',
         'Eigen dakterras',
         'Elektrische overheaddeur',
@@ -407,7 +409,7 @@ export const project = {
     {
       id: 'scarcity',
       title: 'Beschikbaarheid',
-      body: 'Bijna uitverkocht. L en XL zijn verkocht, alleen de twee ruime XXL-kopunits zijn nog beschikbaar.',
+      body: 'Bijna uitverkocht. L en XL zijn verkocht. Van de veertien units is er nog één beschikbaar: een XXL-kopunit.',
       tag: 'Schaarste',
     },
     {

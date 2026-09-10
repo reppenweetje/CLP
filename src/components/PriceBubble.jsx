@@ -29,7 +29,10 @@ export default function PriceBubble({ units, note }) {
                     {isAvailable && (
                       <div className="mt-1 flex items-center gap-1 text-[11px] font-medium text-emerald-700">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                        <span>beschikbaar</span>
+                        {/* stateLabel i.p.v. een vast woord: dan komt schaarste
+                            ("Nog één beschikbaar") ook in de prijslijst terug.
+                            Elk project vult dit veld, met terugval voor de zekerheid. */}
+                        <span>{u.stateLabel || 'beschikbaar'}</span>
                       </div>
                     )}
                   </div>
